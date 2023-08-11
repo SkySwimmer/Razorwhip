@@ -1,0 +1,2 @@
+rootProject.name = 'Razorwhip Project'
+include("sentinel-launcher")

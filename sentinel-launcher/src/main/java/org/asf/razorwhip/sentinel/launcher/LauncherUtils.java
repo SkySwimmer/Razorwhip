@@ -487,8 +487,14 @@ public class LauncherUtils {
 		LauncherUtils.log("Updating asset modifications to " + version + "...", true);
 		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
 				new File("assetmodifications"));
-		LauncherUtils.log("Updating client modifications to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications"), new File("client"));
+		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+			String clientVersion = clientDir.getName().substring("client-".length());
+			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
+					clientDir);
+		}
+		LauncherUtils.log("Updating default payloads to " + version + "...", true);
+		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"), new File("payloads"));
 
 		// Delete
 		LauncherUtils.deleteDir(new File("emulationsoftwaretmp"));
