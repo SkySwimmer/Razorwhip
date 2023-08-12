@@ -180,14 +180,7 @@ public class DynamicClassLoader extends URLClassLoader {
 
 	@Override
 	public Class<?> loadClass(String name) throws ClassNotFoundException {
-		for (LoadedClassProvider prov : loadedClassProviders) {
-			Class<?> cls = prov.provide(name);
-			if (cls != null)
-				return cls;
-		}
-		if (loadedClasses.containsKey(name))
-			return loadedClasses.get(name);
-		return super.loadClass(name);
+		return loadClass(name, true);
 	}
 
 	@Override
@@ -223,7 +216,7 @@ public class DynamicClassLoader extends URLClassLoader {
 		for (URL u : getURLs()) {
 			try {
 				if (!u.toString().endsWith(".class")) {
-					if (u.toString().endsWith(".jar") || u.toString().endsWith(".zip")) {
+					if (!u.toString().endsWith("/")) {
 						try {
 							u = new URL("jar:" + u.toString() + "!/" + path);
 						} catch (MalformedURLException e) {

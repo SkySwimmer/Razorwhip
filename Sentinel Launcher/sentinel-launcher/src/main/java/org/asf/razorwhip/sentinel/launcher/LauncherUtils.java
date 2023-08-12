@@ -227,8 +227,10 @@ public class LauncherUtils {
 	public static void log(String message, boolean statusUpdate) {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
-				if (statusUpdate)
+				if (statusUpdate) {
 					statusLabel.setText(" " + message);
+					panel.repaint();
+				}
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
@@ -253,6 +255,7 @@ public class LauncherUtils {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				statusLabel.setText(" " + message);
+				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
 		}

@@ -110,14 +110,9 @@ public class LauncherMain {
 		panel_1.setLayout(new BorderLayout(0, 0));
 		LauncherUtils.panel = panel_1;
 
-		JPanel panel = new JPanel();
-		panel.setBackground(new Color(255, 255, 255, 0));
-		panel_1.add(panel, BorderLayout.CENTER);
-		panel.setLayout(new BorderLayout(0, 0));
-
 		JPanel panel_4 = new JPanel();
 		panel_4.setPreferredSize(new Dimension(10, 30));
-		panel.add(panel_4, BorderLayout.SOUTH);
+		panel_1.add(panel_4, BorderLayout.SOUTH);
 		panel_4.setBackground(new Color(10, 10, 10, 100));
 		panel_4.setLayout(new BorderLayout(0, 0));
 
@@ -144,7 +139,7 @@ public class LauncherMain {
 
 		JPanel panelLabels = new JPanel();
 		panelLabels.setBackground(Color.LIGHT_GRAY);
-		panel.add(panelLabels, BorderLayout.CENTER);
+		panel_1.add(panelLabels, BorderLayout.CENTER);
 		panelLabels.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
 		JPanel panel_2 = new JPanel();
@@ -209,7 +204,7 @@ public class LauncherMain {
 			if (!gameDescriptorFile.exists() || !emulationSoftwareFile.exists()
 					|| (System.getProperty("debugShowSetup") != null
 							&& !System.getProperty("debugShowSetup").equals("false"))) {
-				// Open setup wizard
+				// Open setup wizard for selecting descriptor and emulation software
 				LauncherUtils.log("Opening setup...");
 				// TODO
 				gameDescriptorFile = gameDescriptorFile;
@@ -230,12 +225,12 @@ public class LauncherMain {
 				urlBaseSoftwareFile = emulationSoftwareFile.toURI().toString();
 			if (!urlBaseSoftwareFile.endsWith("/"))
 				urlBaseSoftwareFile += "/";
-			LauncherUtils.addUrlToComponentClassLoader(new URL(urlBaseDescriptorFile));
-			LauncherUtils.addUrlToComponentClassLoader(new URL(urlBaseSoftwareFile));
+			LauncherUtils.addUrlToComponentClassLoader(gameDescriptorFile.toURI().toURL());
+			LauncherUtils.addUrlToComponentClassLoader(emulationSoftwareFile.toURI().toURL());
 
 			// Read descriptor info
 			LauncherUtils.log("Loading game descriptor information...");
-			gameDescriptor = LauncherUtils.parseProperties(downloadString(urlBaseSoftwareFile + "descriptorinfo"));
+			gameDescriptor = LauncherUtils.parseProperties(downloadString(urlBaseDescriptorFile + "descriptorinfo"));
 			descriptorSourceClass = gameDescriptor.get("Game-Descriptor-Class");
 			LauncherUtils.gameID = gameDescriptor.get("Game-ID");
 			if (descriptorSourceClass == null)
@@ -303,7 +298,7 @@ public class LauncherMain {
 			String stackTrace = "";
 			for (StackTraceElement ele : e.getStackTrace())
 				stackTrace += "\n     At: " + ele;
-			log("Error occurred: " + e + stackTrace);
+			System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 			JOptionPane.showMessageDialog(frmSentinelLauncher,
 					"An error occured while running the launcher.\nUnable to continue, the launcher will now close.\n\nError details: "
 							+ e + stackTrace + "\nPlease report this error to the server operators.",
@@ -327,6 +322,8 @@ public class LauncherMain {
 				boolean updatedDescriptor = false;
 				String descriptorClsName = descriptorSourceClass;
 				String softwareClsName = softwareSourceClass;
+
+				// TODO: hash checks
 
 				// Check for game descriptor updates
 				if (!dirModeDescriptorFileF) {
@@ -385,6 +382,9 @@ public class LauncherMain {
 						}
 					}
 				}
+
+				// TODO: check asset archive data
+				// Redownload if updated, download if not present (use setup wizard)
 
 				// Check for software updates
 				if (!dirModeSoftwareFileF) {
@@ -487,6 +487,9 @@ public class LauncherMain {
 					}
 				}
 
+				// TODO: re-extract software package if the descriptor updated but not the
+				// software
+
 				try {
 					// Load object
 					LauncherUtils.log("Loading game descriptor class...");
@@ -549,6 +552,7 @@ public class LauncherMain {
 						String stackTrace = "";
 						for (StackTraceElement ele : e.getStackTrace())
 							stackTrace += "\n     At: " + ele;
+						System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 						JOptionPane.showMessageDialog(frmSentinelLauncher,
 								"An error occured while running the launcher.\nUnable to continue, the launcher will now close.\n\nError details: "
 										+ e + stackTrace + "\nPlease report this error to the server operators.",
@@ -569,11 +573,6 @@ public class LauncherMain {
 		InputStream strm = conn.getInputStream();
 		String data = new String(strm.readAllBytes(), "UTF-8");
 		return data;
-	}
-
-	private void log(String message) {
-		lblStatusLabel.setText(" " + message);
-		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] " + message);
 	}
 
 }

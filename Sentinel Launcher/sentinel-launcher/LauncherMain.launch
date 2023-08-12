@@ -15,6 +15,6 @@
     <listAttribute key="org.eclipse.jdt.launching.MODULEPATH"/>
     <stringAttribute key="org.eclipse.jdt.launching.MODULE_NAME" value="sentinel-launcher"/>
     <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="sentinel-launcher"/>
-    <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-DdebugGameDescriptorHintClass=testdescriptor.SentinelTestGameDescriptor -DdebugEmulationSoftwareHintClass=testsoftware.SentinelTestEmuSoftware -DdebugShowSetup=true"/>
+    <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-DdebugGameDescriptorHintClass=testdescriptor.SentinelTestGameDescriptor -DdebugEmulationSoftwareHintClass=testsoftware.SentinelTestEmuSoftware"/>
     <stringAttribute key="org.eclipse.jdt.launching.WORKING_DIRECTORY" value="${workspace_loc:sentinel-launcher/run}"/>
 </launchConfiguration>
