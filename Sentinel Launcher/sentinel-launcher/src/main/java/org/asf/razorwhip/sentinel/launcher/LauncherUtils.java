@@ -9,6 +9,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,22 +27,34 @@ import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 
 public class LauncherUtils {
 
+	static String[] args;
+
 	static BackgroundPanel panel;
 	static JPanel progressPanel;
 	static JProgressBar progressBar;
 	static JLabel statusLabel;
-
+	
 	static DynamicClassLoader loader = new DynamicClassLoader();
 
 	static String gameID;
 	static String softwareID;
 	static String softwareVersion;
 	static String softwareName;
+
 	static IGameDescriptor gameDescriptor;
 	static IEmulationSoftwareProvider emulationSoftware;
 
 	static void addUrlToComponentClassLoader(URL url) {
 		loader.addUrl(url);
+	}
+
+	/**
+	 * Retrieves the program arguments
+	 * 
+	 * @return Program argument strings
+	 */
+	public static String[] getProgramArguments() {
+		return args;
 	}
 
 	/**
@@ -101,6 +115,8 @@ public class LauncherUtils {
 	 * Shows the progress panel
 	 */
 	public static void showProgressPanel() {
+		if (LauncherUtils.progressPanel == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressPanel.setVisible(true);
@@ -114,6 +130,8 @@ public class LauncherUtils {
 	 * Hides the progress panel
 	 */
 	public static void hideProgressPanel() {
+		if (LauncherUtils.progressPanel == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressPanel.setVisible(false);
@@ -127,6 +145,8 @@ public class LauncherUtils {
 	 * Resets the progress bar
 	 */
 	public static void resetProgressBar() {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(100);
@@ -144,6 +164,8 @@ public class LauncherUtils {
 	 * @param max   Progress max
 	 */
 	public static void setProgress(int value, int max) {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(max);
@@ -160,6 +182,8 @@ public class LauncherUtils {
 	 * @param value Progress value
 	 */
 	public static void setProgress(int value) {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setValue(value);
@@ -175,6 +199,8 @@ public class LauncherUtils {
 	 * @param value Progress value to increase with
 	 */
 	public static void increaseProgress(int value) {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				if (progressBar.getValue() + value > progressBar.getMaximum())
@@ -191,6 +217,8 @@ public class LauncherUtils {
 	 * Increases the progress bar value
 	 */
 	public static void increaseProgress() {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				if (progressBar.getValue() + 1 > progressBar.getMaximum())
@@ -209,6 +237,8 @@ public class LauncherUtils {
 	 * @param max Progress max value
 	 */
 	public static void setProgressMax(int max) {
+		if (LauncherUtils.progressBar == null)
+			return;
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(max);
@@ -226,12 +256,14 @@ public class LauncherUtils {
 	 */
 	public static void log(String message, boolean statusUpdate) {
 		try {
-			SwingUtilities.invokeAndWait(() -> {
-				if (statusUpdate) {
-					statusLabel.setText(" " + message);
-					panel.repaint();
-				}
-			});
+			if (LauncherUtils.statusLabel != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					if (statusUpdate) {
+						statusLabel.setText(" " + message);
+						panel.repaint();
+					}
+				});
+			}
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] " + message);
@@ -253,10 +285,12 @@ public class LauncherUtils {
 	 */
 	public static void setStatus(String message) {
 		try {
-			SwingUtilities.invokeAndWait(() -> {
-				statusLabel.setText(" " + message);
-				panel.repaint();
-			});
+			if (LauncherUtils.statusLabel != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					statusLabel.setText(" " + message);
+					panel.repaint();
+				});
+			}
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 	}
@@ -294,6 +328,7 @@ public class LauncherUtils {
 		URLConnection conn = new URL(url).openConnection();
 		InputStream strm = conn.getInputStream();
 		String data = new String(strm.readAllBytes(), "UTF-8");
+		strm.close();
 		return data;
 	}
 
@@ -315,6 +350,8 @@ public class LauncherUtils {
 	 * @param dir Directory to download
 	 */
 	public static void deleteDir(File dir) {
+		if (!dir.exists())
+			return;
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
 			deleteDir(subDir);
 		}
@@ -377,11 +414,14 @@ public class LauncherUtils {
 		LauncherUtils.showProgressPanel();
 		URLConnection urlConnection = new URL(url).openConnection();
 		try {
-			SwingUtilities.invokeAndWait(() -> {
-				LauncherUtils.progressBar.setMaximum(urlConnection.getContentLength() / 1000);
-				LauncherUtils.progressBar.setValue(0);
-				LauncherUtils.panel.repaint();
-			});
+			int l = urlConnection.getContentLength();
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					LauncherUtils.progressBar.setMaximum(l < 1000 ? 1 : l / 1000);
+					LauncherUtils.progressBar.setValue(0);
+					LauncherUtils.panel.repaint();
+				});
+			}
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 		InputStream data = urlConnection.getInputStream();
@@ -392,18 +432,25 @@ public class LauncherUtils {
 				break;
 			else {
 				out.write(b);
-				SwingUtilities.invokeLater(() -> {
-					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getValue() + 1);
-					LauncherUtils.panel.repaint();
-				});
+				if (progressBar != null) {
+					SwingUtilities.invokeLater(() -> {
+						LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getValue() + 1);
+						LauncherUtils.panel.repaint();
+					});
+				}
 			}
 		}
 		out.close();
 		data.close();
-		SwingUtilities.invokeLater(() -> {
-			LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
-			LauncherUtils.panel.repaint();
-		});
+		try {
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					LauncherUtils.panel.repaint();
+				});
+			}
+		} catch (InvocationTargetException | InterruptedException e) {
+		}
 	}
 
 	/**
@@ -433,11 +480,13 @@ public class LauncherUtils {
 		en = archive.entries();
 		try {
 			int fcount = count;
-			SwingUtilities.invokeAndWait(() -> {
-				progressBar.setMaximum(fcount);
-				progressBar.setValue(0);
-				panel.repaint();
-			});
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					progressBar.setMaximum(fcount);
+					progressBar.setValue(0);
+					panel.repaint();
+				});
+			}
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 
@@ -460,18 +509,75 @@ public class LauncherUtils {
 				os.close();
 			}
 
-			SwingUtilities.invokeLater(() -> {
-				progressBar.setValue(progressBar.getValue() + 1);
-				panel.repaint();
-			});
+			if (progressBar != null) {
+				SwingUtilities.invokeLater(() -> {
+					progressBar.setValue(progressBar.getValue() + 1);
+					panel.repaint();
+				});
+			}
 		}
 
 		// finish progress
-		SwingUtilities.invokeLater(() -> {
-			progressBar.setValue(progressBar.getValue() + 1);
-			panel.repaint();
-		});
+		try {
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					LauncherUtils.panel.repaint();
+				});
+			}
+		} catch (InvocationTargetException | InterruptedException e) {
+		}
 		archive.close();
+	}
+
+	private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
+	/**
+	 * Converts a byte array to a HEX string
+	 * 
+	 * @param bytes Byte array
+	 * @return Hex string
+	 */
+	public static String bytesToHex(byte[] bytes) {
+		char[] hexChars = new char[bytes.length * 2];
+		for (int j = 0; j < bytes.length; j++) {
+			int v = bytes[j] & 0xFF;
+			hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+			hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+		}
+		return new String(hexChars);
+	}
+
+	/**
+	 * Creates a sha-256 hash
+	 * 
+	 * @param data Data to hash
+	 * @return Hash string
+	 */
+	public static String sha256Hash(byte[] data) {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-256");
+			byte[] hash = digest.digest(data);
+			return bytesToHex(hash).toLowerCase();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Creates a sha-512 hash
+	 * 
+	 * @param data Data to hash
+	 * @return Hash string
+	 */
+	public static String sha512Hash(byte[] data) {
+		try {
+			MessageDigest digest = MessageDigest.getInstance("SHA-512");
+			byte[] hash = digest.digest(data);
+			return bytesToHex(hash).toLowerCase();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	static void extractEmulationSoftware(File sourceFile, String version) throws IOException {
@@ -481,23 +587,34 @@ public class LauncherUtils {
 		LauncherUtils.unZip(sourceFile, new File("emulationsoftwaretmp"));
 
 		// Update data
-		LauncherUtils.log("Updating server to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "baseserver"), new File("server"));
-		LauncherUtils.log("Updating extra server files to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "expandedserver"), new File("server"));
-		LauncherUtils.log("Updating data to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
-		LauncherUtils.log("Updating asset modifications to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
-				new File("assetmodifications"));
+		if (new File("emulationsoftwaretmp", "baseserver").exists()) {
+			LauncherUtils.log("Updating server software to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "baseserver"), new File("server"));
+		}
+		if (new File("emulationsoftwaretmp", "expandedserver").exists()) {
+			LauncherUtils.log("Updating extra server files to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "expandedserver"), new File("server"));
+		}
+		if (new File("emulationsoftwaretmp", "rootdata").exists()) {
+			LauncherUtils.log("Updating data to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
+		}
+		if (new File("emulationsoftwaretmp", "assetmodifications").exists()) {
+			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
+					new File("assetmodifications"));
+		}
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
 					clientDir);
 		}
-		LauncherUtils.log("Updating default payloads to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"), new File("payloads"));
+		if (new File("emulationsoftwaretmp", "defaultpayloads").exists()) {
+			LauncherUtils.log("Updating default payloads to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"),
+					new File("payloads"));
+		}
 
 		// Delete
 		LauncherUtils.deleteDir(new File("emulationsoftwaretmp"));
@@ -510,13 +627,20 @@ public class LauncherUtils {
 		LauncherUtils.unZip(sourceFile, new File("gamedescriptortmp"));
 
 		// Update data
-		LauncherUtils.log("Updating default payloads to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"), new File("payloads"));
-		LauncherUtils.log("Updating data to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
-		LauncherUtils.log("Updating asset modifications to " + version + "...", true);
-		LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
-				new File("assetmodifications"));
+		if (new File("emulationsoftwaretmp", "defaultpayloads").exists()) {
+			LauncherUtils.log("Updating default payloads to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"),
+					new File("payloads"));
+		}
+		if (new File("emulationsoftwaretmp", "rootdata").exists()) {
+			LauncherUtils.log("Updating data to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
+		}
+		if (new File("emulationsoftwaretmp", "assetmodifications").exists()) {
+			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
+					new File("assetmodifications"));
+		}
 
 		// Delete
 		LauncherUtils.deleteDir(new File("gamedescriptortmp"));

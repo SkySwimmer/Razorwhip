@@ -4,3 +4,5 @@ Game-ID: testgame
 
 Project-Name: Test Project
 Software-Class: testsoftware.SentinelTestEmuSoftware
+
+Update-List-URL: file:///run/media/stefan/Externe HDD1/AerialWorks Software Foundation/Development/Razorwhip/Sentinel Launcher/sentinel-launcher/run/test/updates.json
