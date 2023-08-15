@@ -351,8 +351,6 @@ public class LauncherMain {
 				if (overrodeSGD)
 					updatedDescriptor = true;
 
-				// TODO: signature checks
-
 				// Check for game descriptor updates
 				if (!dirModeDescriptorFileF) {
 					if (gameDescriptor.containsKey("Update-List-URL")
@@ -410,6 +408,39 @@ public class LauncherMain {
 												System.exit(1);
 											}
 											hashSuccess = false;
+										}
+									}
+
+									// Verify signature
+									if (hashSuccess) {
+										LauncherUtils.log("Verifying signature...", true);
+										if (!LauncherUtils.verifyPackageSignature(new File("gamedescriptor.sgd.tmp"),
+												new File("gamedescriptor-publickey.pem"))) {
+											// Warn
+											while (true) {
+												if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
+														"WARNING! Failed to verify package signature!\n" //
+																+ "\n" //
+																+ "Failed to verify the update of the game descriptor file!\n"
+																+ "The file that was downloaded may have been tampered with, proceed with caution!\n"
+																+ "\n"
+																+ "It is recommended to contact the developers if possible and ask them if the keys have changed between versions "
+																+ current + " and " + latest + ".\n" //
+																+ "\n" //
+																+ "Do you wish to continue with the update? Selecting no will cancel the update." //
+														, "Warning", JOptionPane.YES_NO_OPTION,
+														JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+													if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
+															"Are you sure you want to ignore the file signature?",
+															"Warning", JOptionPane.YES_NO_OPTION,
+															JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+														break;
+													} else
+														continue;
+												}
+												hashSuccess = false;
+												break;
+											}
 										}
 									}
 
@@ -528,6 +559,41 @@ public class LauncherMain {
 										}
 									}
 
+									// Verify signature
+									if (hashSuccess) {
+										LauncherUtils.log("Verifying signature...", true);
+										if (!LauncherUtils.verifyPackageSignature(new File("emulationsoftware.svp.tmp"),
+												new File("emulationsoftware-publickey.pem"))) {
+											// Warn
+											while (true) {
+												if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
+														"WARNING! Failed to verify package signature!\n" //
+																+ "\n" //
+																+ "Failed to verify the update of the emulation software package '"
+																+ LauncherUtils.softwareName + "'!\n"
+																+ "The file that was downloaded may have been tampered with, proceed with caution!\n"
+																+ "\n"
+																+ "It is recommended to contact the developers if possible and ask them if the keys have changed between versions "
+																+ LauncherUtils.softwareVersion + " and " + latest
+																+ ".\n" //
+																+ "\n" //
+																+ "Do you wish to continue with the update? Selecting no will cancel the update." //
+														, "Warning", JOptionPane.YES_NO_OPTION,
+														JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+													if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
+															"Are you sure you want to ignore the file signature?",
+															"Warning", JOptionPane.YES_NO_OPTION,
+															JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+														break;
+													} else
+														continue;
+												}
+												hashSuccess = false;
+												break;
+											}
+										}
+									}
+
 									// Check success
 									if (hashSuccess) {
 										// Rename old file
@@ -636,8 +702,20 @@ public class LauncherMain {
 					}
 				}
 
-				// TODO: re-extract software package if the descriptor updated but not the
-				// software
+				// Re-extract software package if the descriptor updated but not the software
+				if (updatedDescriptor && !updatedSoftware) {
+					// Re-extract
+					LauncherUtils.log("Re-extracting software...", true);
+					LauncherUtils.resetProgressBar();
+					LauncherUtils.showProgressPanel();
+
+					// Update
+					LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"),
+							LauncherUtils.softwareVersion);
+
+					// Reset
+					LauncherUtils.setStatus("Preparing launcher...");
+				}
 
 				// Add to classpath
 				LauncherUtils.addUrlToComponentClassLoader(new File("gamedescriptor.sgd").toURI().toURL());
