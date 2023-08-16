@@ -6,14 +6,14 @@
 	"fileDescription4": "the SAC protocol is relative to the SAC root (the folder the SAC Config file is in)",
 	
 	"fileDescription5": "The verification key path is used to verify archive descriptor packages",
-	"archiveDescriptorVerificationkey": "sac://publickey.pem",
+	"archiveDescriptorVerificationkey": "https://raw.githubusercontent.com/SkySwimmer/Razorwhip/main/Sentinel%20Launcher/sod-sentinel-game-descriptor/sod-asset-archive-settings/publickey.pem",
 	
 	"fileDescription6": "The following option controls if unsigned archive descriptors are allowed, not recommended to enable",
 	"allowUnsignedArchiveDescriptors": false,
 	
 	"fileDescription7": "The following option defines the path to the asset archive list",
-	"assetArchiveList": "sac://assetarchives.json",
+	"assetArchiveList": "https://raw.githubusercontent.com/SkySwimmer/Razorwhip/main/Sentinel%20Launcher/sod-sentinel-game-descriptor/sod-asset-archive-settings/assetarchives.json",
 	
 	"fileDescription8": "The following option defines the root path of the archive descriptor folder",
-	"descriptorRoot": "sac://descriptors"
+	"descriptorRoot": "https://raw.githubusercontent.com/SkySwimmer/Razorwhip/main/Sentinel%20Launcher/sod-sentinel-game-descriptor/sod-asset-archive-settings/descriptors"
 }
