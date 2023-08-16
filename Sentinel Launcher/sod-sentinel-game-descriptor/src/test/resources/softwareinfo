@@ -1,0 +1,6 @@
+Software-ID: test
+Software-Version: 1.0.0.A1
+Game-ID: schoolofdragons
+
+Project-Name: Test Project
+Software-Class: testsodsoftware.SentinelTestEmuSoftware

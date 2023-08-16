@@ -1,2 +1,3 @@
 Game-ID: testgame
 Game-Descriptor-Class: testdescriptor.SentinelTestGameDescriptor
+Asset-Information-Root-URL: sgd://asset-information/

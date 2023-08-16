@@ -19,4 +19,9 @@ public interface IEmulationSoftwareProvider {
 	 */
 	public default void postUpdate() {
 	}
+
+	/**
+	 * Called to show the launcher option window
+	 */
+	public void showOptionWindow();
 }

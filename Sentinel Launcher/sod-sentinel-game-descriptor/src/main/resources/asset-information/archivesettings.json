@@ -1,0 +1,19 @@
+{
+	"fileDescription1": "Sentinel Asset Controller Configuration (SAC Config), this file controls settings related to sentinel's asset system",
+	"fileDescription2": "This file MUST always be signed, the signature file is called 'archivesettings.json.sig' and key is called 'publickey.pem'",
+	"fileDescription3": "Use sentinel's toolset to generate the key file and signature, DO NOT DISTRIBUTE THE PRIVATEKEY.PEM FILE.",
+	
+	"fileDescription4": "the SAC protocol is relative to the SAC root (the folder the SAC Config file is in)",
+	
+	"fileDescription5": "The verification key path is used to verify archive descriptor packages",
+	"archiveDescriptorVerificationkey": "sac://publickey.pem",
+	
+	"fileDescription6": "The following option controls if unsigned archive descriptors are allowed, not recommended to enable",
+	"allowUnsignedArchiveDescriptors": false,
+	
+	"fileDescription7": "The following option defines the path to the asset archive list",
+	"assetArchiveList": "sac://assetarchives.json",
+	
+	"fileDescription8": "The following option defines the root path of the archive descriptor folder",
+	"descriptorRoot": "sac://descriptors"
+}

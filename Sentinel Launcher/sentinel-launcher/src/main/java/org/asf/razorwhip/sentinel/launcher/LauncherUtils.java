@@ -12,6 +12,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 import java.security.InvalidKeyException;
@@ -40,6 +41,12 @@ import javax.swing.SwingUtilities;
 
 import org.asf.razorwhip.sentinel.launcher.api.IEmulationSoftwareProvider;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.windows.VersionManagerWindow;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class LauncherUtils {
 
@@ -57,8 +64,13 @@ public class LauncherUtils {
 	static String softwareVersion;
 	static String softwareName;
 
+	static LauncherMain launcherWindow;
+
 	static IGameDescriptor gameDescriptor;
 	static IEmulationSoftwareProvider emulationSoftware;
+
+	static JsonObject sacConfig;
+	static boolean assetManagementAvailable = false;
 
 	static void addUrlToComponentClassLoader(URL url) {
 		loader.addUrl(url);
@@ -210,6 +222,24 @@ public class LauncherUtils {
 	}
 
 	/**
+	 * Retrieves the progress bar value
+	 * 
+	 * @return Progress bar value
+	 */
+	public static int getProgress() {
+		return progressBar.getValue();
+	}
+
+	/**
+	 * Retrieves the max progress bar value
+	 * 
+	 * @return Progress bar max value
+	 */
+	public static int getProgressMax() {
+		return progressBar.getMaximum();
+	}
+
+	/**
 	 * Increases the progress bar value
 	 * 
 	 * @param value Progress value to increase with
@@ -217,16 +247,13 @@ public class LauncherUtils {
 	public static void increaseProgress(int value) {
 		if (LauncherUtils.progressBar == null)
 			return;
-		try {
-			SwingUtilities.invokeAndWait(() -> {
-				if (progressBar.getValue() + value > progressBar.getMaximum())
-					progressBar.setValue(progressBar.getMaximum());
-				else
-					progressBar.setValue(progressBar.getValue() + value);
-				panel.repaint();
-			});
-		} catch (InvocationTargetException | InterruptedException e) {
-		}
+		SwingUtilities.invokeLater(() -> {
+			if (progressBar.getValue() + value > progressBar.getMaximum())
+				progressBar.setValue(progressBar.getMaximum());
+			else
+				progressBar.setValue(progressBar.getValue() + value);
+			panel.repaint();
+		});
 	}
 
 	/**
@@ -235,16 +262,13 @@ public class LauncherUtils {
 	public static void increaseProgress() {
 		if (LauncherUtils.progressBar == null)
 			return;
-		try {
-			SwingUtilities.invokeAndWait(() -> {
-				if (progressBar.getValue() + 1 > progressBar.getMaximum())
-					progressBar.setValue(progressBar.getMaximum());
-				else
-					progressBar.setValue(progressBar.getValue() + 1);
-				panel.repaint();
-			});
-		} catch (InvocationTargetException | InterruptedException e) {
-		}
+		SwingUtilities.invokeLater(() -> {
+			if (progressBar.getValue() + 1 > progressBar.getMaximum())
+				progressBar.setValue(progressBar.getMaximum());
+			else
+				progressBar.setValue(progressBar.getValue() + 1);
+			panel.repaint();
+		});
 	}
 
 	/**
@@ -385,12 +409,14 @@ public class LauncherUtils {
 	 * @throws IOException If copying fails
 	 */
 	public static void copyDirWithProgress(File source, File destination) throws IOException {
+		if (!source.exists())
+			return;
 		LauncherUtils.setProgress(0, indexDir(source));
 		LauncherUtils.showProgressPanel();
 
 		destination.mkdirs();
 		for (File subDir : source.listFiles(t -> t.isDirectory())) {
-			copyDirWithoutProgress(subDir, new File(destination, subDir.getName()));
+			copyDirWithProgress(subDir, new File(destination, subDir.getName()));
 			LauncherUtils.increaseProgress();
 		}
 		for (File file : source.listFiles(t -> !t.isDirectory())) {
@@ -594,6 +620,52 @@ public class LauncherUtils {
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * Shows the client version manager
+	 * 
+	 * @param firstTime True if this is the first time the window is displayed,
+	 *                  false otherwise, should be false unless called internally by
+	 *                  the launcher itself
+	 * @return True if saved, false if cancelled
+	 * @throws IOException If an error occurs loading the window
+	 */
+	public static boolean showVersionManager(boolean firstTime) throws IOException {
+		VersionManagerWindow window = new VersionManagerWindow(launcherWindow.frmSentinelLauncher, firstTime);
+		boolean saved = window.showDialog();
+
+		// Check changes
+		if (saved) {
+			// Redownload descriptor
+			if (new File("assets/descriptor.hash").exists())
+				new File("assets/descriptor.hash").delete();
+
+			// Delete removed clients
+			File localVersions = new File("clienthashes.json");
+			if (localVersions.exists()) {
+				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
+						.getAsJsonObject();
+				JsonArray clientList = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
+						.getAsJsonArray();
+				for (String version : localHashList.keySet()) {
+					// Check if present
+					boolean found = false;
+					for (JsonElement ele : clientList) {
+						if (ele.getAsString().equals(version)) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						// Delete client
+						deleteDir(new File("client-" + version));
+					}
+				}
+			}
+		}
+
+		return saved;
 	}
 
 	/**
@@ -815,6 +887,7 @@ public class LauncherUtils {
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications"), clientDir);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
 					clientDir);
 		}
@@ -848,6 +921,13 @@ public class LauncherUtils {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
 					new File("assetmodifications"));
+		}
+		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+			String clientVersion = clientDir.getName().substring("client-".length());
+			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications"), clientDir);
+			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
+					clientDir);
 		}
 
 		// Delete

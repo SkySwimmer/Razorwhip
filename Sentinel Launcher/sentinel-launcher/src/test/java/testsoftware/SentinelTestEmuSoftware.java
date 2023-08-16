@@ -8,7 +8,12 @@ public class SentinelTestEmuSoftware implements IEmulationSoftwareProvider {
 
 	@Override
 	public void init() {
-		JOptionPane.showMessageDialog(null, "Test version 1");
+		getClass();
+	}
+
+	@Override
+	public void showOptionWindow() {
+		JOptionPane.showMessageDialog(null, "Test");
 	}
 
 }

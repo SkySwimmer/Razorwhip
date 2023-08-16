@@ -1,0 +1,33 @@
+{
+	"4e1243bd22c66e76c2ba9eddc1f91394e57f9f83": {
+		"archiveName": "Test archive",
+		"thanksTo": "Test Organization Name (placeholder)",
+		
+		"url": "sac://archives/test",
+		"type": "test-archive-v1",
+		
+		"allowFullDownload": true,
+		"allowStreaming": true,
+		
+		"clients": {
+			"1.0": "sac://clients/1.0.zip"
+		}
+	},
+	"9054fbe0b622c638224d50d20824d2ff6782e308": {
+		"archiveName": "Test archive (old)",
+		"thanksTo": "Test Organization Name (placeholder)",
+		
+		"url": "sac://archives/test-deprecated",
+		"type": "test-archive-v1",
+		
+		"deprecated": true,
+		"deprecationNotice": "This archive has been deprecated",
+		
+		"allowFullDownload": true,
+		"allowStreaming": false,
+		
+		"clients": {
+			"1.0": "sac://clients/1.0.zip"
+		}
+	}
+}

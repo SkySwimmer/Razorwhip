@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+	id 'maven-publish'
+	id "com.github.johnrengelman.shadow" version "7.0.0"
+}
+
+version = "1.0.0.A1"
+group = "org.asf.razorwhip.sentinel.sod"
+
+sourceCompatibility = '1.17'
+targetCompatibility = '1.17'
+
+def authorname = "AerialWorks Software Foundation"
+
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+repositories {
+    mavenCentral()
+}
+
+task javaDocs(type: Javadoc) {
+	classpath = sourceSets.main.runtimeClasspath
+	source = sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: 'javaDocs') {
+	from javadoc
+	classifier = 'javadoc'
+	exclude "**/extra/**"
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+	classifier = 'sources'
+	from sourceSets.main.allSource
+	exclude "**/extra/**"
+}
+
+artifacts {
+	archives javadocJar
+	archives sourcesJar
+	archives shadowJar
+}
+
+dependencies {
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
+	
+	implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.21'
+	implementation project(":sentinel-launcher")
+}
