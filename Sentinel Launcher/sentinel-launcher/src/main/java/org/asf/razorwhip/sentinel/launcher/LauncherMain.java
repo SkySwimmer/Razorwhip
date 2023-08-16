@@ -802,7 +802,7 @@ public class LauncherMain {
 				new File("assets").mkdirs();
 				try {
 					byte[] verifConfigPubKeyB = pemDecode(downloadString(assetSourceURL + "publickey.pem"));
-					String configString = downloadString(assetSourceURL + "archivesettings.json");
+					byte[] configStringB = downloadBytes(assetSourceURL + "archivesettings.json");
 					byte[] configSignature = downloadBytes(assetSourceURL + "archivesettings.json.sig");
 
 					// Load key
@@ -813,8 +813,9 @@ public class LauncherMain {
 					LauncherUtils.log("Verifying signature of SAC configuration...");
 					Signature s = Signature.getInstance("Sha512WithRSA");
 					s.initVerify(verifConfigPubKey);
-					s.update(configString.getBytes("UTF-8"));
+					s.update(configStringB);
 					if (!s.verify(configSignature)) {
+						LauncherUtils.log("Verification failure!");
 						JOptionPane.showMessageDialog(frmSentinelLauncher,
 								"Failed to verify the signature of the asset archive configuration.\n\nThe launcher cannot download or update assets and clients at this time.",
 								"Launcher Error", JOptionPane.ERROR_MESSAGE);
@@ -824,7 +825,7 @@ public class LauncherMain {
 
 					// Save
 					LauncherUtils.log("Saving SAC configuration...");
-					Files.writeString(Path.of("assets/sac-config.json"), configString);
+					Files.write(Path.of("assets/sac-config.json"), configStringB);
 				} catch (Exception e) {
 					SwingUtilities.invokeAndWait(() -> {
 						String stackTrace = "";
