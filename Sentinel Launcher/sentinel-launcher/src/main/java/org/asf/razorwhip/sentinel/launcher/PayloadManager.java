@@ -621,6 +621,7 @@ public class PayloadManager {
 		}
 		LauncherUtils.setStatus("Preparing to load payloads...");
 
+		// TODO: debugging
 		// TODO: load payload classes
 
 		discoveredPayloads = discoveredPayloads;
