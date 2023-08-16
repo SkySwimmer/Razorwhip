@@ -62,6 +62,8 @@ public class LauncherMain {
 	private JLabel lblStatusLabel;
 	private boolean shiftDown;
 
+	// TODO: archive mirror tool
+
 	/**
 	 * Launch the application.
 	 */
@@ -1345,10 +1347,11 @@ public class LauncherMain {
 								versions.toArray(t -> new String[t]), archiveDef, archiveDescriptor, assetHashes);
 					}
 				}
-
+				
 				// Payloads
 				// TODO: payloads
 
+				// Launcher logic
 				// TODO: launcher logic
 			} catch (Exception e) {
 				try {
