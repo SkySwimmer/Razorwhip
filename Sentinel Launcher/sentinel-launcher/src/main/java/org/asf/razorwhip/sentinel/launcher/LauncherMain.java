@@ -63,6 +63,7 @@ public class LauncherMain {
 	private boolean shiftDown;
 
 	// TODO: archive mirror tool
+	// TODO: assetversionsdo modifications to add user and modified assets
 
 	/**
 	 * Launch the application.
@@ -356,6 +357,7 @@ public class LauncherMain {
 				// Set label
 				LauncherUtils.log("Preparing launcher...", true);
 				LauncherUtils.resetProgressBar();
+				PayloadManager.deletePayloadsPendingRemoval();
 
 				boolean updatedSoftware = false;
 				boolean updatedDescriptor = false;
@@ -467,7 +469,9 @@ public class LauncherMain {
 										updatedDescriptor = true;
 
 										// Update
+										PayloadManager.discoverPayloads();
 										LauncherUtils.extractGameDescriptor(new File("gamedescriptor.sgd"), latest);
+										PayloadManager.indexPayloads();
 
 										// Reload
 										LauncherUtils.log("Reloading launcher...", true);
@@ -619,8 +623,10 @@ public class LauncherMain {
 										updatedSoftware = true;
 
 										// Update
+										PayloadManager.discoverPayloads();
 										LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"),
 												latest);
+										PayloadManager.indexPayloads();
 
 										// Reload
 										LauncherUtils.log("Reloading launcher...", true);
@@ -725,12 +731,18 @@ public class LauncherMain {
 					LauncherUtils.showProgressPanel();
 
 					// Update
+					PayloadManager.discoverPayloads();
 					LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"),
 							LauncherUtils.softwareVersion);
+					PayloadManager.indexPayloads();
 
 					// Reset
 					LauncherUtils.setStatus("Preparing launcher...");
 				}
+
+				// Hide bars
+				LauncherUtils.hideProgressPanel();
+				LauncherUtils.resetProgressBar();
 
 				// Add to classpath
 				LauncherUtils.addUrlToComponentClassLoader(new File("gamedescriptor.sgd").toURI().toURL());
@@ -1015,6 +1027,14 @@ public class LauncherMain {
 					streaming = false;
 				archiveDef = archiveLst.get(id).getAsJsonObject();
 
+				// Check archive descriptor
+				LauncherUtils.setStatus("Checking for updates...");
+				LauncherUtils.log("Verifying connection...");
+				boolean assetConnection = LauncherUtils.gameDescriptor
+						.verifyAssetConnection(archiveDef.get("url").getAsString());
+				updateArchiveDescriptor(urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL, assetConnection,
+						archiveDef);
+
 				// Check if shift is down, if so, open option menu
 				LauncherUtils.setStatus("Press shift for options... (5)");
 				LauncherUtils.log("Checking for manual input...");
@@ -1038,6 +1058,10 @@ public class LauncherMain {
 						if (!archiveDef.get("allowStreaming").getAsBoolean() || (archiveDef.has("deprecated")
 								&& archiveDef.has("deprecationNotice") && archiveDef.get("deprecated").getAsBoolean()))
 							streaming = false;
+						assetConnection = LauncherUtils.gameDescriptor
+								.verifyAssetConnection(archiveDef.get("url").getAsString());
+						updateArchiveDescriptor(urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL,
+								assetConnection, archiveDef);
 						break;
 					}
 					Thread.sleep(100);
@@ -1046,7 +1070,7 @@ public class LauncherMain {
 				// Check connection if needed
 				LauncherUtils.setStatus("Checking for updates...");
 				LauncherUtils.log("Verifying connection...");
-				boolean assetConnection = LauncherUtils.gameDescriptor
+				assetConnection = LauncherUtils.gameDescriptor
 						.verifyAssetConnection(archiveDef.get("url").getAsString());
 				if (streaming) {
 					if (!assetConnection) {
@@ -1097,92 +1121,6 @@ public class LauncherMain {
 						}
 					}
 				}
-
-				// Check archive descriptor
-				LauncherUtils.setStatus("Checking for updates...");
-				String cHashDescriptor = "";
-				if (new File("assets/descriptor.hash").exists())
-					cHashDescriptor = Files.readString(Path.of("assets/descriptor.hash")).replace("\r", "")
-							.replace("\n", "");
-				if (assetConnection && LauncherUtils.assetManagementAvailable) {
-					LauncherUtils.log("Checking for updates for the archive descriptor...");
-					String dir = parseURL(LauncherUtils.sacConfig.get("descriptorRoot").getAsString(),
-							urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL);
-					if (!dir.endsWith("/"))
-						dir += "/";
-					String rHashDescriptor = downloadString(dir + archiveDef.get("type").getAsString() + ".hash")
-							.replace("\r", "").replace("\n", "");
-
-					// Check
-					if (!rHashDescriptor.equalsIgnoreCase(cHashDescriptor)) {
-						// Update
-						LauncherUtils.log("Updating archive information...", true);
-
-						// Show bars
-						LauncherUtils.resetProgressBar();
-						LauncherUtils.showProgressPanel();
-
-						// Download
-						LauncherUtils.downloadFile(dir + archiveDef.get("type").getAsString() + ".zip",
-								new File("assets/descriptor.zip"));
-
-						// Hide bars
-						LauncherUtils.hideProgressPanel();
-						LauncherUtils.resetProgressBar();
-
-						// Verify signature
-						LauncherUtils.log("Verifying signature... Please wait...", true);
-						if (!LauncherUtils.verifyPackageSignature(new File("assets/descriptor.zip"),
-								new File("assets/sac-publickey.pem"))) {
-							// Check if signed
-							if (!LauncherUtils.isPackageSigned(new File("assets/descriptor.zip"))) {
-								// Unsigned
-								// Check support
-								LauncherUtils.log("Package is unsigned.");
-								if (!LauncherUtils.sacConfig.get("allowUnsignedArchiveDescriptors").getAsBoolean()) {
-									LauncherUtils.log("Package is unsigned.");
-									JOptionPane.showMessageDialog(frmSentinelLauncher,
-											"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
-											"Update error", JOptionPane.ERROR_MESSAGE);
-									System.exit(1);
-								}
-							} else {
-								LauncherUtils.log("Signature verification failure.");
-								JOptionPane.showMessageDialog(frmSentinelLauncher,
-										"Failed to verify integrity of archive descriptor file.\n\nPlease report this error to the project's archival team.",
-										"Update error", JOptionPane.ERROR_MESSAGE);
-								System.exit(1);
-							}
-						}
-
-						// Extract
-						LauncherUtils.log("Extracting archive information...", true);
-						if (new File("assets/descriptor").exists())
-							LauncherUtils.deleteDir(new File("assets/descriptor"));
-						LauncherUtils.unZip(new File("assets/descriptor.zip"), new File("assets/descriptor"));
-
-						// Hide bars
-						LauncherUtils.hideProgressPanel();
-						LauncherUtils.resetProgressBar();
-
-						// Write hash
-						Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
-					}
-				} else {
-					LauncherUtils
-							.log("Skipped archive descriptor update check as there is no asset server connection.");
-					if (cHashDescriptor.equals("")) {
-						JOptionPane.showMessageDialog(frmSentinelLauncher,
-								"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
-								"No connection to server", JOptionPane.ERROR_MESSAGE);
-						System.exit(1);
-					}
-				}
-
-				// Hide bars
-				LauncherUtils.hideProgressPanel();
-				LauncherUtils.resetProgressBar();
-
 				// Load descriptor
 				LauncherUtils.setStatus("Checking for updates...");
 				LauncherUtils.log("Loading archive descriptor...");
@@ -1226,7 +1164,7 @@ public class LauncherMain {
 								LauncherUtils.gameDescriptor.downloadClient(
 										archiveDef.get("clients").getAsJsonObject().get(clientVersion).getAsString(),
 										clientVersion, new File("client-" + clientVersion), archiveDef,
-										archiveDescriptor);
+										archiveDescriptor, cHash);
 
 								// Modify client
 								LauncherUtils.log("Modifying client " + clientVersion + "...", true);
@@ -1347,9 +1285,21 @@ public class LauncherMain {
 								versions.toArray(t -> new String[t]), archiveDef, archiveDescriptor, assetHashes);
 					}
 				}
-				
+
+				// Hide bars
+				LauncherUtils.hideProgressPanel();
+				LauncherUtils.resetProgressBar();
+				LauncherUtils.setStatus("Checking for updates...");
+
 				// Payloads
-				// TODO: payloads
+				PayloadManager.checkForUpdates();
+
+				// Discover and load payloads
+				LauncherUtils.log("Discovering payloads...");
+				PayloadManager.discoverPayloads();
+				LauncherUtils.log("Loading payloads...", true);
+				PayloadManager.initPayloads();
+				PayloadManager.showPayloadManagementWindowIfNeeded();
 
 				// Launcher logic
 				// TODO: launcher logic
@@ -1372,6 +1322,90 @@ public class LauncherMain {
 		}, "Launcher Thread");
 		th.setDaemon(true);
 		th.start();
+	}
+
+	private void updateArchiveDescriptor(String urlBaseDescriptorFileF, String urlBaseSoftwareFileF,
+			String assetSourceURL, boolean assetConnection, JsonObject archiveDef) throws IOException {
+		String cHashDescriptor = "";
+		if (new File("assets/descriptor.hash").exists())
+			cHashDescriptor = Files.readString(Path.of("assets/descriptor.hash")).replace("\r", "").replace("\n", "");
+		if (assetConnection && LauncherUtils.assetManagementAvailable) {
+			LauncherUtils.log("Checking for updates for the archive descriptor...");
+			String dir = parseURL(LauncherUtils.sacConfig.get("descriptorRoot").getAsString(), urlBaseDescriptorFileF,
+					urlBaseSoftwareFileF, assetSourceURL);
+			if (!dir.endsWith("/"))
+				dir += "/";
+			String rHashDescriptor = downloadString(dir + archiveDef.get("type").getAsString() + ".hash")
+					.replace("\r", "").replace("\n", "");
+
+			// Check
+			if (!rHashDescriptor.equalsIgnoreCase(cHashDescriptor)) {
+				// Update
+				LauncherUtils.log("Updating archive information...", true);
+
+				// Show bars
+				LauncherUtils.resetProgressBar();
+				LauncherUtils.showProgressPanel();
+
+				// Download
+				LauncherUtils.downloadFile(dir + archiveDef.get("type").getAsString() + ".zip",
+						new File("assets/descriptor.zip"));
+
+				// Hide bars
+				LauncherUtils.hideProgressPanel();
+				LauncherUtils.resetProgressBar();
+
+				// Verify signature
+				LauncherUtils.log("Verifying signature... Please wait...", true);
+				if (!LauncherUtils.verifyPackageSignature(new File("assets/descriptor.zip"),
+						new File("assets/sac-publickey.pem"))) {
+					// Check if signed
+					if (!LauncherUtils.isPackageSigned(new File("assets/descriptor.zip"))) {
+						// Unsigned
+						// Check support
+						LauncherUtils.log("Package is unsigned.");
+						if (!LauncherUtils.sacConfig.get("allowUnsignedArchiveDescriptors").getAsBoolean()) {
+							LauncherUtils.log("Package is unsigned.");
+							JOptionPane.showMessageDialog(frmSentinelLauncher,
+									"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
+									"Update error", JOptionPane.ERROR_MESSAGE);
+							System.exit(1);
+						}
+					} else {
+						LauncherUtils.log("Signature verification failure.");
+						JOptionPane.showMessageDialog(frmSentinelLauncher,
+								"Failed to verify integrity of archive descriptor file.\n\nPlease report this error to the project's archival team.",
+								"Update error", JOptionPane.ERROR_MESSAGE);
+						System.exit(1);
+					}
+				}
+
+				// Extract
+				LauncherUtils.log("Extracting archive information...", true);
+				if (new File("assets/descriptor").exists())
+					LauncherUtils.deleteDir(new File("assets/descriptor"));
+				LauncherUtils.unZip(new File("assets/descriptor.zip"), new File("assets/descriptor"));
+
+				// Hide bars
+				LauncherUtils.hideProgressPanel();
+				LauncherUtils.resetProgressBar();
+
+				// Write hash
+				Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
+			}
+		} else {
+			LauncherUtils.log("Skipped archive descriptor update check as there is no asset server connection.");
+			if (cHashDescriptor.equals("")) {
+				JOptionPane.showMessageDialog(frmSentinelLauncher,
+						"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
+						"No connection to server", JOptionPane.ERROR_MESSAGE);
+				System.exit(1);
+			}
+		}
+
+		// Hide bars
+		LauncherUtils.hideProgressPanel();
+		LauncherUtils.resetProgressBar();
 	}
 
 	private void indexAssetHashes(HashMap<String, String> assetHashes, File hashFile)

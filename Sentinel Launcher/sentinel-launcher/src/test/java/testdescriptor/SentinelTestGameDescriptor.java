@@ -22,7 +22,7 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 
 	@Override
 	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef) throws IOException {
+			JsonObject descriptorDef, String clientHash) throws IOException {
 		clientOutputDir.mkdirs();
 		// TODO Auto-generated method stub
 

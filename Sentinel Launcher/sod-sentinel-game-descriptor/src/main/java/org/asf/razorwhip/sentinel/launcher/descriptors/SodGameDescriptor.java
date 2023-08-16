@@ -44,11 +44,26 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 	@Override
 	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef) throws IOException {
+			JsonObject descriptorDef, String clientHash) throws IOException {
 		// Download zip
 		new File("clientzips").mkdirs();
 		LauncherUtils.log("Downloading " + version + " client...", true);
 		LauncherUtils.downloadFile(url, new File("clientzips/" + version + ".zip"));
+
+		// Verify hash
+		LauncherUtils.log("Verifying integrity...", true);
+		String cHash = LauncherUtils
+				.sha512Hash(Files.readAllBytes(new File("clientzips/" + version + ".zip").toPath()));
+		if (!cHash.equals(clientHash)) {
+			// Retry
+			LauncherUtils.log("Downloading " + version + " client...", true);
+			LauncherUtils.downloadFile(url, new File("clientzips/" + version + ".zip"));
+			LauncherUtils.log("Verifying integrity...", true);
+			cHash = LauncherUtils.sha512Hash(Files.readAllBytes(new File("clientzips/" + version + ".zip").toPath()));
+			if (!cHash.equals(clientHash)) {
+				throw new IOException("Integrity check failed!");
+			}
+		}
 
 		// Extract
 		LauncherUtils.log("Extracting " + version + " client...", true);
@@ -65,7 +80,8 @@ public class SodGameDescriptor implements IGameDescriptor {
 		String endpoint = descriptorDef.get("clientEndpoints").getAsJsonObject().get(version).getAsString();
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
-		replaceData(resourcesData, endpoint, "localhost:5317/");
+		endpoint += "DWADragonsUnity/";
+		replaceData(resourcesData, endpoint, "localhost:5317/DWADragonsUnity/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 	}
 

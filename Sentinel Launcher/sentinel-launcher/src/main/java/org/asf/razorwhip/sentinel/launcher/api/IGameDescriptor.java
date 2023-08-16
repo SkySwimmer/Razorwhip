@@ -42,10 +42,11 @@ public interface IGameDescriptor {
 	 * @param clientOutputDir Client output directory
 	 * @param archiveDef      Archive definition object
 	 * @param descriptorDef   Descriptor definition object
+	 * @param clientHash      Expected client hash
 	 * @throws IOException If downloading fails
 	 */
 	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef) throws IOException;
+			JsonObject descriptorDef, String clientHash) throws IOException;
 
 	/**
 	 * Called to modify clients
