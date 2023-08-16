@@ -869,32 +869,51 @@ public class LauncherMain {
 				if (LauncherUtils.assetManagementAvailable) {
 					// Download key
 					LauncherUtils.log("Downloading SAC security key...");
-					String sacKeyPem = downloadString(
-							parseURL(LauncherUtils.sacConfig.get("archiveDescriptorVerificationkey").getAsString(),
-									urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL));
+					String sacKeyPem;
+					try {
+						sacKeyPem = downloadString(
+								parseURL(LauncherUtils.sacConfig.get("archiveDescriptorVerificationkey").getAsString(),
+										urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL));
 
-					// Save key
-					LauncherUtils.log("Saving SAC security key...");
-					Files.writeString(Path.of("assets/sac-publickey.pem"), sacKeyPem);
+						// Save key
+						LauncherUtils.log("Saving SAC security key...");
+						Files.writeString(Path.of("assets/sac-publickey.pem"), sacKeyPem);
 
-					// Check assets
-					LauncherUtils.log("Downloading archive list...");
-					String archiveList = downloadString(
-							parseURL(LauncherUtils.sacConfig.get("assetArchiveList").getAsString(),
-									urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL));
+						// Check assets
+						LauncherUtils.log("Downloading archive list...");
+						String archiveList = downloadString(
+								parseURL(LauncherUtils.sacConfig.get("assetArchiveList").getAsString(),
+										urlBaseDescriptorFileF, urlBaseSoftwareFileF, assetSourceURL));
 
-					// Save list
-					LauncherUtils.log("Saving archive list...");
-					Files.writeString(Path.of("assets/assetarchives.json"), archiveList);
+						// Save list
+						LauncherUtils.log("Saving archive list...");
+						Files.writeString(Path.of("assets/assetarchives.json"), archiveList);
+					} catch (IOException e) {
+						// Check if the game can be played without a internet connection
+						LauncherUtils.assetManagementAvailable = false;
+						LauncherUtils.log("Could not download SAC files, verifying state...");
+						if (!new File("assets/assetarchives.json").exists()
+								|| !new File("assets/sac-publickey.pem").exists()
+								|| !new File("assets/localdata.json").exists()) {
+							LauncherUtils.log("Missing critical files, unable to start the game.");
+							JOptionPane.showMessageDialog(frmSentinelLauncher,
+									"Unable to download critical files, please verify your internet connection.",
+									"Launcher Error", JOptionPane.ERROR_MESSAGE);
+							System.exit(1);
+						}
+						LauncherUtils.log("Assets are available, game should be playable.");
+					}
 
 					// Verify
-					LauncherUtils.log("Verifying local asset archives...");
-					File localArchiveSettings = new File("assets/localdata.json");
-					if (!localArchiveSettings.exists()) {
-						// Show selection window
-						LauncherUtils.log("Waiting for initial client setup...", true);
-						if (!LauncherUtils.showVersionManager(!localArchiveSettings.exists()))
-							System.exit(0);
+					if (LauncherUtils.assetManagementAvailable) {
+						LauncherUtils.log("Verifying local asset archives...");
+						File localArchiveSettings = new File("assets/localdata.json");
+						if (!localArchiveSettings.exists()) {
+							// Show selection window
+							LauncherUtils.log("Waiting for initial client setup...", true);
+							if (!LauncherUtils.showVersionManager(!localArchiveSettings.exists()))
+								System.exit(0);
+						}
 					}
 				} else {
 					// Check if the game can be played without a internet connection
