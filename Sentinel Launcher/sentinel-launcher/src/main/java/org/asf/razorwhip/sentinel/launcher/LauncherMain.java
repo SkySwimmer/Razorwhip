@@ -1770,17 +1770,17 @@ public class LauncherMain {
 			String source = url.substring(4);
 			while (source.startsWith("/"))
 				source = source.substring(1);
-			url = urlBaseDescriptorFileF + "/" + source;
+			url = urlBaseDescriptorFileF + source;
 		} else if (url.startsWith("svp:")) {
 			String source = url.substring(4);
 			while (source.startsWith("/"))
 				source = source.substring(1);
-			url = urlBaseSoftwareFileF + "/" + source;
+			url = urlBaseSoftwareFileF + source;
 		} else if (sentinelAssetRoot != null && url.startsWith("sac:")) {
 			String source = url.substring(4);
 			while (source.startsWith("/"))
 				source = source.substring(1);
-			url = sentinelAssetRoot + "/" + source;
+			url = sentinelAssetRoot + source;
 		}
 		return url;
 	}

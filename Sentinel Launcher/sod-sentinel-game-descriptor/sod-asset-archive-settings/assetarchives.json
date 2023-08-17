@@ -9,6 +9,9 @@
 		"allowFullDownload": true,
 		"allowStreaming": true,
 		
+		"deprecated": false,
+		"deprecationNotice": null,
+		
 		"clients": {
 			"3.31.0": "https://assetarchive.projectedge.net/clients/original-3.31.0.zip",
 			"3.12.0": "https://assetarchive.projectedge.net/clients/original-3.12.0.zip",
@@ -23,32 +26,5 @@
 			"1.14.0": "https://assetarchive.projectedge.net/clients/original-1.14.0.zip",
 			"1.13.0": "https://assetarchive.projectedge.net/clients/original-1.13.0.zip"
 		}
-	},
-	
-	"84e24c33-f85b-4ef7-a2ac-1de26380b376": {
-		"archiveName": "AerialWorks Software Foundation - Project Edge",
-		"thanksTo": "Nexus Emu. (formerly ASF)",
-		
-		"url": "https://aerialworks.ddns.net:5319/",
-		"type": "projectedge-legacy-v1",
-		
-		"allowFullDownload": true,
-		"allowStreaming": false,
-		
-		"encryptedManifests": true,
-		"edgeFormatManifests": true,
-		
-		"clientEndpoint": "https://aerialworks.ddns.net:5319/",
-		
-		"deprecated": true,
-		"deprecationNotice": "The AerialWorks Servers have been sunsetted!\nWhile they still serve assets for now, they no longer server gameplay.\n\nThese servers are scheduled to go down at a unspecified date, avoid use.",
-		
-		"clients": {
-			"3.31.0": "https://aerialworks.ddns.net:5319/Modified%20Builds/modified%203.31.0.zip",
-			"3.12.0": "https://aerialworks.ddns.net:5319/Modified%20Builds/modified%203.12.0.zip",
-			"2.12.0": "https://aerialworks.ddns.net:5319/Modified%20Builds/modified%202.12.0.zip",
-			"2.9.0": "https://aerialworks.ddns.net:5319/Modified%20Builds/modified%202.9.0.zip",
-			"2.8.0": "https://aerialworks.ddns.net:5319/Modified%20Builds/modified%202.8.0.zip"
-		}
-	}	
+	}
 }
