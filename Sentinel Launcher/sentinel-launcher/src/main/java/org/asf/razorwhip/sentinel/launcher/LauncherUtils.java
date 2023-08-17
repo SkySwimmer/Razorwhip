@@ -29,6 +29,7 @@ import java.util.Base64;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -40,6 +41,8 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.asf.razorwhip.sentinel.launcher.api.IEmulationSoftwareProvider;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.api.ObjectTag;
@@ -626,6 +629,85 @@ public class LauncherUtils {
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 		archive.close();
+	}
+
+	/**
+	 * Extracts tar.gz files
+	 * 
+	 * @param input  File to extract
+	 * @param output Folder to extract into
+	 * @throws IOException If extracting fails
+	 */
+	public static void unTarGz(File input, File output) throws IOException {
+		output.mkdirs();
+
+		// count entries
+		InputStream file = new FileInputStream(input);
+		GZIPInputStream gzip = new GZIPInputStream(file);
+		TarArchiveInputStream tar = new TarArchiveInputStream(gzip);
+		int count = 0;
+		while (tar.getNextEntry() != null) {
+			count++;
+		}
+		tar.close();
+		gzip.close();
+		file.close();
+
+		// prepare and log
+		file = new FileInputStream(input);
+		gzip = new GZIPInputStream(file);
+		tar = new TarArchiveInputStream(gzip);
+		try {
+			int fcount = count;
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					progressBar.setMaximum(fcount);
+					progressBar.setValue(0);
+					panel.repaint();
+				});
+			}
+		} catch (InvocationTargetException | InterruptedException e) {
+		}
+
+		// extract
+		while (true) {
+			ArchiveEntry ent = tar.getNextEntry();
+			if (ent == null)
+				break;
+
+			if (ent.isDirectory()) {
+				new File(output, ent.getName()).mkdirs();
+			} else {
+				File out = new File(output, ent.getName());
+				if (out.getParentFile() != null && !out.getParentFile().exists())
+					out.getParentFile().mkdirs();
+				FileOutputStream os = new FileOutputStream(out);
+				InputStream is = tar;
+				is.transferTo(os);
+				os.close();
+			}
+
+			if (progressBar != null) {
+				SwingUtilities.invokeLater(() -> {
+					progressBar.setValue(progressBar.getValue() + 1);
+					panel.repaint();
+				});
+			}
+		}
+
+		// finish progress
+		try {
+			if (progressBar != null) {
+				SwingUtilities.invokeAndWait(() -> {
+					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					LauncherUtils.panel.repaint();
+				});
+			}
+		} catch (InvocationTargetException | InterruptedException e) {
+		}
+		tar.close();
+		gzip.close();
+		file.close();
 	}
 
 	private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();

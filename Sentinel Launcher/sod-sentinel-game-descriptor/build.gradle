@@ -36,6 +36,10 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 	exclude "**/extra/**"
 }
 
+shadowJar {
+	from "clientmods/assetfix/build/mod"
+}
+
 artifacts {
 	archives javadocJar
 	archives sourcesJar
@@ -46,5 +50,10 @@ dependencies {
 	implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
 	
 	implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.21'
+	implementation group: 'org.bouncycastle', name: 'bcpkix-jdk14', version: '1.73'
+	implementation group: 'javax.activation', name: 'activation', version: '1.1.1'
+	implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-xml', version: '2.15.2'
+	
 	implementation project(":sentinel-launcher")
+	implementation project(":deps:connective-http")
 }

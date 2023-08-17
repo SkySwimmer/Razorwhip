@@ -739,7 +739,7 @@ public class PayloadManagerWindow extends JDialog {
 			}
 
 			// Add
-			String name = id + ".spf";
+			String name = (id.endsWith(".spf") ? id : id + ".spf");
 			int i = 1;
 			while (new File("payloads", name).exists()) {
 				name = id + "-" + i++ + ".spf";

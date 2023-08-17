@@ -10,20 +10,34 @@ import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
+import javax.swing.JOptionPane;
+
+import org.asf.connective.ConnectiveHttpServer;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.data.LauncherController;
+import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler;
+import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler.IPreProcessor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.ApplicationManifestPreProcessor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.AssetVersionsPreProcessor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.XmlPreProcessor;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
 
-	// TODO: archive mirror tool
+	public static final String ASSET_SERVER_VERSION = "1.0.0.A1";
 
 	@Override
 	public void init() {
@@ -295,37 +309,240 @@ public class SodGameDescriptor implements IGameDescriptor {
 		fO.close();
 	}
 
+	public void prepareLaunch(String streamingAssetsURL, File localAssetsDir, File assetModifications,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Consumer<String> errorCallback) {
+		// Log
+		LauncherUtils.log("Preparing asset server...", true);
+
+		// Create server
+		ConnectiveHttpServer server = ConnectiveHttpServer.create("HTTP/1.1",
+				Map.of("Address", "0.0.0.0", "Port", "5317"));
+		try {
+			server.registerProcessor(new ContentServerRequestHandler(archiveDef, descriptorDef, localAssetsDir, "/",
+					new IPreProcessor[] {
+
+							new ApplicationManifestPreProcessor(descriptorDef),
+
+							new XmlPreProcessor(descriptorDef),
+
+							new AssetVersionsPreProcessor(assetModifications)
+
+					}, streamingAssetsURL, assetModifications));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		// Start
+		try {
+			server.start();
+		} catch (IOException e) {
+			// Check if its the right server
+			try {
+				InputStream strm = new URL("http://localhost:5317/sentineltest/sod/testrunning").openStream();
+				byte[] data = strm.readAllBytes();
+				strm.close();
+				if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
+					throw new IOException();
+			} catch (Exception e2) {
+				errorCallback.accept("Port 5317 is in use and not in use by a compatible Sentinel asset archive!");
+				return;
+			}
+		}
+
+		// Success
+		successCallback.run();
+	}
+
 	@Override
 	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
 			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
 			Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
-		successCallback = successCallback;
-		successCallback.run();
+		prepareLaunch(assetArchiveURL, null, assetModifications, archiveDef, descriptorDef, clientVersion, clientDir,
+				successCallback, errorCallback);
 	}
 
 	@Override
 	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
 			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
 			Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
-		successCallback = successCallback;
-		successCallback.run();
+		prepareLaunch(null, assetArchive, assetModifications, archiveDef, descriptorDef, clientVersion, clientDir,
+				successCallback, errorCallback);
 	}
 
 	@Override
 	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
 			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
 			Runnable exitCallback, Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
-		successCallback.run();
+		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
 	}
 
 	@Override
 	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
 			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
 			Runnable exitCallback, Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
+		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
+	}
+
+	private void launchGame(String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
+			Consumer<String> errorCallback) {
+		// Check tags
+		if (!LauncherUtils.hasTag("no_launch_client")) {
+			try {
+				// Launch client
+				LauncherUtils.log("Preparing to launch client...", true);
+
+				// Prepare
+				ProcessBuilder builder;
+				String plat;
+
+				// Determine platform
+				if (System.getProperty("os.name").toLowerCase().contains("win")
+						&& !System.getProperty("os.name").toLowerCase().contains("darwin")) { // Windows
+					plat = "windows";
+				} else if (System.getProperty("os.name").toLowerCase().contains("darwin")
+						|| System.getProperty("os.name").toLowerCase().contains("mac")) { // MacOS
+					plat = "macos";
+				} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {// Linux
+					plat = "linux";
+				} else
+					throw new IOException("Unsupported platform");
+
+				// Prepare startup
+				File clientFile = new File(clientDir, "DOMain.exe");
+				if (plat.equals("windows"))
+					builder = new ProcessBuilder(clientFile.getAbsolutePath()); // Windows
+				else if (plat.equals("macos") || plat.equals("linux")) {
+					builder = new ProcessBuilder("wine", clientFile.getAbsolutePath()); // Linux/macos, need wine
+					File prefix = new File("wineprefix");
+					if (!new File(prefix, "completed").exists()) {
+						prefix.mkdirs();
+
+						// Set overrides
+						LauncherUtils.log("Configuring wine...", true);
+						LauncherUtils.resetProgressBar();
+						try {
+							ProcessBuilder proc = new ProcessBuilder("wine", "reg", "add",
+									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "winhttp", "/d",
+									"native,builtin", "/f");
+							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+							proc.start().waitFor();
+							proc = new ProcessBuilder("wine", "reg", "add",
+									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d11", "/d", "native",
+									"/f");
+							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+							proc.start().waitFor();
+							proc = new ProcessBuilder("wine", "reg", "add",
+									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d10core", "/d",
+									"native", "/f");
+							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+							proc.start().waitFor();
+							proc = new ProcessBuilder("wine", "reg", "add",
+									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "dxgi", "/d", "native",
+									"/f");
+							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+							proc.start().waitFor();
+							proc = new ProcessBuilder("wine", "reg", "add",
+									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d9", "/d", "native",
+									"/f");
+							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+							proc.start().waitFor();
+						} catch (Exception e) {
+							prefix.delete();
+							JOptionPane.showMessageDialog(null,
+									"Failed to configure wine, please make sure you have wine installed.",
+									"Launcher Error", JOptionPane.ERROR_MESSAGE);
+							System.exit(1);
+						}
+
+						// Download DXVK
+						if (plat.equals("linux")) {
+							LauncherUtils.log("Installing DXVK...", true);
+							String man = LauncherUtils
+									.downloadString("https://api.github.com/repos/doitsujin/dxvk/releases/latest");
+							JsonArray assets = JsonParser.parseString(man).getAsJsonObject().get("assets")
+									.getAsJsonArray();
+							String dxvk = null;
+							for (JsonElement ele : assets) {
+								JsonObject asset = ele.getAsJsonObject();
+								if (asset.get("name").getAsString().endsWith(".tar.gz")
+										&& !asset.get("name").getAsString().contains("steam")) {
+									dxvk = asset.get("browser_download_url").getAsString();
+									break;
+								}
+							}
+							if (dxvk == null)
+								throw new Exception("Failed to find a DXVK download.");
+							LauncherUtils.resetProgressBar();
+							LauncherUtils.showProgressPanel();
+							LauncherUtils.downloadFile(dxvk, new File("dxvk.tar.gz"));
+
+							// Extract
+							LauncherUtils.log("Extracting DXVK...", true);
+							LauncherUtils.resetProgressBar();
+							LauncherUtils.showProgressPanel();
+							LauncherUtils.unTarGz(new File("dxvk.tar.gz"), new File("dxvk"));
+							LauncherUtils.hideProgressPanel();
+							LauncherUtils.resetProgressBar();
+
+							// Install
+							LauncherUtils.log("Installing DXVK...", true);
+							File dxvkDir = new File("dxvk").listFiles()[0];
+							File wineSys = new File(prefix, "drive_c/windows");
+							wineSys.mkdirs();
+
+							// Install for x32
+							new File(wineSys, "syswow64").mkdirs();
+							for (File f : new File(dxvkDir, "x32").listFiles()) {
+								Files.copy(f.toPath(), new File(wineSys, "syswow64/" + f.getName()).toPath(),
+										StandardCopyOption.REPLACE_EXISTING);
+							}
+
+							// Install for x64
+							new File(wineSys, "system32").mkdirs();
+							for (File f : new File(dxvkDir, "x64").listFiles()) {
+								Files.copy(f.toPath(), new File(wineSys, "system32/" + f.getName()).toPath(),
+										StandardCopyOption.REPLACE_EXISTING);
+							}
+						}
+
+						// Mark done
+						new File(prefix, "completed").createNewFile();
+					}
+					builder.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+				} else
+					throw new IOException("Unsupported platform");
+				builder.inheritIO();
+				builder.directory(clientDir);
+
+				// Log
+				LauncherUtils.log("Launching client...", true);
+				Process proc = builder.start();
+				proc.onExit().thenAccept(t -> {
+					// Exited
+					exitCallback.run();
+				});
+			} catch (Exception e) {
+				String stackTrace = "";
+				Throwable t = e;
+				while (t != null) {
+					for (StackTraceElement ele : t.getStackTrace())
+						stackTrace += "\n     At: " + ele;
+					t = t.getCause();
+					if (t != null)
+						stackTrace += "\nCaused by: " + t;
+				}
+				errorCallback.accept("An error occurred while starting the client: " + e + stackTrace);
+			}
+		} else {
+			// Pass control to payloads etc
+			LauncherController cont = new LauncherController();
+			cont.errorCallback = errorCallback;
+			cont.exitCallback = exitCallback;
+			LauncherUtils.getTag("no_launch_client").setValue(LauncherController.class, cont);
+		}
+
+		// Finish
 		successCallback.run();
 	}
 

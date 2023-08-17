@@ -1,3 +1,4 @@
 rootProject.name = 'Sentinel Launcher'
 include("sentinel-launcher")
 include("sod-sentinel-game-descriptor")
+include("deps:connective-http")

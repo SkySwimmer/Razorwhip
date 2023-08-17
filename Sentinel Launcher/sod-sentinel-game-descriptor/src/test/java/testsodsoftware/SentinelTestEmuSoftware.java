@@ -20,8 +20,8 @@ public class SentinelTestEmuSoftware implements IEmulationSoftwareProvider {
 	@Override
 	public void showOptionWindow() {
 		try {
-//			LauncherUtils.showVersionManager(false);
-			PayloadManager.showPayloadManagementWindow();
+			LauncherUtils.showVersionManager(false);
+//			PayloadManager.showPayloadManagementWindow();
 		} catch (IOException e) {
 		}
 	}
