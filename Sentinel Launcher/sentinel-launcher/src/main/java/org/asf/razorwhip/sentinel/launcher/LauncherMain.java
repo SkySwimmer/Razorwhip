@@ -64,8 +64,6 @@ public class LauncherMain {
 	private JLabel lblStatusLabel;
 	private boolean shiftDown;
 
-	// TODO: assetversionsdo modifications to add user and modified assets
-
 	/**
 	 * Launch the application.
 	 */
