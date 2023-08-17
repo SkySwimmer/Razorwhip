@@ -271,9 +271,9 @@
   </ItemGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /s /i ..\..\game\BepInEx\plugins\$(SolutionName) ..\..\build\mod\BepInEx\plugins\$(SolutionName) /Y" Condition="'$(OS)' != 'Unix'" />
-    <Exec Command="mkdir -p ../../build/mod/BepInEx/plugins" Condition="'$(OS)' == 'Unix'" />
-    <Exec Command="cp -rf ../../game/BepInEx/plugins/$(SolutionName)/. ../../build/mod/BepInEx/plugins" Condition="'$(OS)' == 'Unix'" />
+    <Exec Command="xcopy /s /i ..\..\game\BepInEx\plugins\$(SolutionName) ..\..\build\mod\clientmodifications\BepInEx\plugins\$(SolutionName) /Y" Condition="'$(OS)' != 'Unix'" />
+    <Exec Command="mkdir -p ../../build/mod/clientmodifications/BepInEx/plugins" Condition="'$(OS)' == 'Unix'" />
+    <Exec Command="cp -rf ../../game/BepInEx/plugins/$(SolutionName)/. ../../build/mod/clientmodifications/BepInEx/plugins" Condition="'$(OS)' == 'Unix'" />
   </Target>
   
   <ProjectExtensions>
