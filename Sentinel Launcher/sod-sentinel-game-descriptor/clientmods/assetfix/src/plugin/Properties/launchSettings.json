@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Run in SoD": {
+      "commandName": "Executable",
+      "executablePath": "./DOMain.exe",
+      "workingDirectory": "../../game"
+    }
+  }
+}
