@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -45,6 +46,7 @@ import javax.swing.border.BevelBorder;
 
 import org.asf.razorwhip.sentinel.launcher.api.IEmulationSoftwareProvider;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.api.ISentinelPayload;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -62,7 +64,6 @@ public class LauncherMain {
 	private JLabel lblStatusLabel;
 	private boolean shiftDown;
 
-	// TODO: archive mirror tool
 	// TODO: assetversionsdo modifications to add user and modified assets
 
 	/**
@@ -1336,10 +1337,215 @@ public class LauncherMain {
 				PayloadManager.postInitPayloads();
 
 				// Prepare to start game
-				// TODO
+				LauncherUtils.log("Preparing to start the game...", true);
 
-				// Launcher logic
-				// TODO: launcher logic
+				// Find version to star
+				JsonObject lastClient = new JsonObject();
+				if (!new File("lastclient.json").exists()) {
+					// Ask user which client they wish to use
+					if (!LauncherUtils.showClientSelector())
+						System.exit(0);
+				}
+				lastClient = JsonParser.parseString(Files.readString(Path.of("lastclient.json"))).getAsJsonObject();
+				String lastVersion = lastClient.get("version").getAsString();
+
+				// Prepare
+				new File("assetmodifications").mkdirs();
+				if (streaming) {
+					JsonObject archiveDefF = archiveDef;
+					LauncherUtils.gameDescriptor.prepareLaunchWithStreamingAssets(archiveDef.get("url").getAsString(),
+							new File("assetmodifications"), archiveDef, archiveDescriptor, lastVersion,
+							new File("client-" + lastVersion), () -> {
+								// Success
+								// Call emulation software
+								LauncherUtils.emulationSoftware.prepareLaunchWithStreamingAssets(
+										archiveDefF.get("url").getAsString(), new File("assetmodifications"),
+										archiveDefF, archiveDescriptor, lastVersion, new File("client-" + lastVersion),
+										() -> {
+											// Success
+
+											// Call payloads
+											int i = 0;
+											String[] payloads = PayloadManager.getLoadedPayloadIds();
+											callPrepareWithStreamingForPayload(payloads, i,
+													archiveDefF.get("url").getAsString(),
+													new File("assetmodifications"), archiveDefF, archiveDescriptor,
+													lastVersion, new File("client-" + lastVersion), () -> {
+														// Success
+
+														// Launch
+														LauncherUtils.log("Launching game...", true);
+
+														// Call event
+														LauncherUtils.emulationSoftware.onGameStarting(lastVersion,
+																new File("client-" + lastVersion));
+
+														// Call event for payloads
+														for (String pl : PayloadManager.getLoadedPayloadIds()) {
+															ISentinelPayload p = PayloadManager.getPayload(pl);
+															if (p != null)
+																p.onGameStarting(lastVersion,
+																		new File("client-" + lastVersion));
+														}
+
+														// Start game
+														LauncherUtils.gameDescriptor.startGameWithStreamingAssets(
+																archiveDefF.get("url").getAsString(),
+																new File("assetmodifications"), archiveDefF,
+																archiveDescriptor, lastVersion,
+																new File("client-" + lastVersion), () -> {
+																	// Close
+																	LauncherUtils.log("Launch success!", true);
+																	frmSentinelLauncher.setVisible(false);
+
+																	// Call event
+																	LauncherUtils.emulationSoftware.onGameLaunchSuccess(
+																			lastVersion,
+																			new File("client-" + lastVersion));
+
+																	// Call event for payloads
+																	for (String pl : PayloadManager
+																			.getLoadedPayloadIds()) {
+																		ISentinelPayload p = PayloadManager
+																				.getPayload(pl);
+																		if (p != null)
+																			p.onGameLaunchSuccess(lastVersion,
+																					new File("client-" + lastVersion));
+																	}
+																}, () -> {
+																	// Exit
+																	LauncherUtils.log("Game exited.", true);
+
+																	// Call event
+																	LauncherUtils.emulationSoftware.onGameExit(
+																			lastVersion,
+																			new File("client-" + lastVersion));
+
+																	// Call event for payloads
+																	for (String pl : PayloadManager
+																			.getLoadedPayloadIds()) {
+																		ISentinelPayload p = PayloadManager
+																				.getPayload(pl);
+																		if (p != null)
+																			p.onGameExit(lastVersion,
+																					new File("client-" + lastVersion));
+																	}
+
+																	// Exit
+																	System.exit(0);
+																}, error -> {
+																	// Error
+																	launchGameError(error);
+																});
+													}, error -> {
+														// Error
+														launchGameError(error);
+													});
+										}, error -> {
+											// Error
+											launchGameError(error);
+										});
+							}, error -> {
+								// Error
+								launchGameError(error);
+							});
+				} else {
+					JsonObject archiveDefF = archiveDef;
+					LauncherUtils.gameDescriptor.prepareLaunchWithLocalAssets(new File("assets/assetarchive"),
+							new File("assetmodifications"), archiveDef, archiveDescriptor, lastVersion,
+							new File("client-" + lastVersion), () -> {
+								// Success
+								// Call emulation software
+								LauncherUtils.emulationSoftware.prepareLaunchWithLocalAssets(
+										new File("assets/assetarchive"), new File("assetmodifications"), archiveDefF,
+										archiveDescriptor, lastVersion, new File("client-" + lastVersion), () -> {
+											// Success
+
+											// Call payloads
+											int i = 0;
+											String[] payloads = PayloadManager.getLoadedPayloadIds();
+											callPrepareWithLocalForPayload(payloads, i, new File("assets/assetarchive"),
+													new File("assetmodifications"), archiveDefF, archiveDescriptor,
+													lastVersion, new File("client-" + lastVersion), () -> {
+														// Success
+
+														// Launch
+														LauncherUtils.log("Launching game...", true);
+
+														// Call event
+														LauncherUtils.emulationSoftware.onGameStarting(lastVersion,
+																new File("client-" + lastVersion));
+
+														// Call event for payloads
+														for (String pl : PayloadManager.getLoadedPayloadIds()) {
+															ISentinelPayload p = PayloadManager.getPayload(pl);
+															if (p != null)
+																p.onGameStarting(lastVersion,
+																		new File("client-" + lastVersion));
+														}
+
+														// Start game
+														LauncherUtils.gameDescriptor.startGameWithLocalAssets(
+																new File("assets/assetarchive"),
+																new File("assetmodifications"), archiveDefF,
+																archiveDescriptor, lastVersion,
+																new File("client-" + lastVersion), () -> {
+																	// Close
+																	LauncherUtils.log("Launch success!", true);
+																	frmSentinelLauncher.setVisible(false);
+
+																	// Call event
+																	LauncherUtils.emulationSoftware.onGameLaunchSuccess(
+																			lastVersion,
+																			new File("client-" + lastVersion));
+
+																	// Call event for payloads
+																	for (String pl : PayloadManager
+																			.getLoadedPayloadIds()) {
+																		ISentinelPayload p = PayloadManager
+																				.getPayload(pl);
+																		if (p != null)
+																			p.onGameLaunchSuccess(lastVersion,
+																					new File("client-" + lastVersion));
+																	}
+																}, () -> {
+																	// Exit
+																	LauncherUtils.log("Game exited.", true);
+
+																	// Call event
+																	LauncherUtils.emulationSoftware.onGameExit(
+																			lastVersion,
+																			new File("client-" + lastVersion));
+
+																	// Call event for payloads
+																	for (String pl : PayloadManager
+																			.getLoadedPayloadIds()) {
+																		ISentinelPayload p = PayloadManager
+																				.getPayload(pl);
+																		if (p != null)
+																			p.onGameExit(lastVersion,
+																					new File("client-" + lastVersion));
+																	}
+
+																	// Exit
+																	System.exit(0);
+																}, error -> {
+																	// Error
+																	launchGameError(error);
+																});
+													}, error -> {
+														// Error
+														launchGameError(error);
+													});
+										}, error -> {
+											// Error
+											launchGameError(error);
+										});
+							}, error -> {
+								// Error
+								launchGameError(error);
+							});
+				}
 			} catch (Exception e) {
 				try {
 					SwingUtilities.invokeAndWait(() -> {
@@ -1365,6 +1571,73 @@ public class LauncherMain {
 		}, "Launcher Thread");
 		th.setDaemon(true);
 		th.start();
+	}
+
+	private void callPrepareWithStreamingForPayload(String[] payloads, int index, String assetArchiveURL,
+			File assetModifications, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		if (index < payloads.length) {
+			// Call payload
+			ISentinelPayload p = PayloadManager.getPayload(payloads[index]);
+			if (p != null) {
+				p.prepareLaunchWithStreamingAssets(assetArchiveURL, assetModifications, archiveDef, descriptorDef,
+						clientVersion, clientDir, () -> {
+							// Success
+
+							// Call next
+							callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, assetModifications,
+									archiveDef, descriptorDef, clientVersion, clientDir, successCallback,
+									errorCallback);
+						}, error -> {
+							// Error
+							launchGameError(error);
+						});
+			} else {
+				// Call next
+				callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, assetModifications, archiveDef,
+						descriptorDef, clientVersion, clientDir, successCallback, errorCallback);
+			}
+		} else
+			successCallback.run();
+	}
+
+	private void callPrepareWithLocalForPayload(String[] payloads, int index, File assetArchive,
+			File assetModifications, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		if (index < payloads.length) {
+			// Call payload
+			ISentinelPayload p = PayloadManager.getPayload(payloads[index]);
+			if (p != null) {
+				p.prepareLaunchWithLocalAssets(assetArchive, assetModifications, archiveDef, descriptorDef,
+						clientVersion, clientDir, () -> {
+							// Success
+
+							// Call next
+							callPrepareWithLocalForPayload(payloads, index + 1, assetArchive, assetModifications,
+									archiveDef, descriptorDef, clientVersion, clientDir, successCallback,
+									errorCallback);
+						}, error -> {
+							// Error
+							launchGameError(error);
+						});
+			} else {
+				// Call next
+				callPrepareWithLocalForPayload(payloads, index + 1, assetArchive, assetModifications, archiveDef,
+						descriptorDef, clientVersion, clientDir, successCallback, errorCallback);
+			}
+		} else
+			successCallback.run();
+	}
+
+	private void launchGameError(String error) {
+		LauncherUtils.setStatus("Error occurred!");
+		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + error);
+		JOptionPane.showMessageDialog(frmSentinelLauncher, "An error occured while preparing to start the game.\n" //
+				+ "\n" //
+				+ error + "\n" //
+				+ "\n" //
+				+ "Unable to continue, the launcher will now close.", "Launcher Error", JOptionPane.ERROR_MESSAGE);
+		System.exit(1);
 	}
 
 	private void updateArchiveDescriptor(String urlBaseDescriptorFileF, String urlBaseSoftwareFileF,

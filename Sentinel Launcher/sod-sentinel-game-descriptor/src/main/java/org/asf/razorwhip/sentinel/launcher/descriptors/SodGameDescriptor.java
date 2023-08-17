@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.function.Consumer;
 
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
@@ -21,6 +22,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
+
+	// TODO: archive mirror tool
 
 	@Override
 	public void init() {
@@ -83,48 +86,6 @@ public class SodGameDescriptor implements IGameDescriptor {
 		endpoint += "DWADragonsUnity/";
 		replaceData(resourcesData, endpoint, "localhost:5317/DWADragonsUnity/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
-	}
-
-	private byte[] reverse(byte[] data) {
-		int ind = 0;
-		byte[] iRev = new byte[data.length];
-		for (int i = data.length - 1; i >= 0; i--) {
-			iRev[ind++] = data[i];
-		}
-		return iRev;
-	}
-
-	private void replaceData(byte[] assetsData, String source, String target) throws UnsupportedEncodingException {
-		// Locate byte offset
-		while (true) {
-			int offset = findBytes(assetsData, source.getBytes("UTF-8"));
-			if (offset == -1)
-				break;
-
-			// Overwrite the data
-			int length = ByteBuffer.wrap(reverse(Arrays.copyOfRange(assetsData, offset - 4, offset))).getInt();
-			byte[] addr = target.getBytes(StandardCharsets.UTF_8);
-			for (int i = offset; i < offset + length; i++)
-				if (i - offset >= addr.length)
-					assetsData[i] = 0;
-				else
-					assetsData[i] = addr[i - offset];
-		}
-	}
-
-	private int findBytes(byte[] source, byte[] match) {
-		ArrayList<Byte> buffer = new ArrayList<Byte>();
-		for (int i = 0; i < source.length; i++) {
-			int pos = buffer.size();
-			byte b = source[i];
-			if (pos < match.length && b == match[pos])
-				buffer.add(b);
-			else if (pos == match.length)
-				return i - buffer.size();
-			else if (pos != 0)
-				buffer.clear();
-		}
-		return -1;
 	}
 
 	@Override
@@ -333,4 +294,81 @@ public class SodGameDescriptor implements IGameDescriptor {
 		}
 		fO.close();
 	}
+
+	@Override
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback = successCallback;
+		successCallback.run();
+	}
+
+	@Override
+	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback = successCallback;
+		successCallback.run();
+	}
+
+	@Override
+	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Runnable exitCallback, Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback.run();
+	}
+
+	@Override
+	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Runnable exitCallback, Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback.run();
+	}
+
+	private byte[] reverse(byte[] data) {
+		int ind = 0;
+		byte[] iRev = new byte[data.length];
+		for (int i = data.length - 1; i >= 0; i--) {
+			iRev[ind++] = data[i];
+		}
+		return iRev;
+	}
+
+	private void replaceData(byte[] assetsData, String source, String target) throws UnsupportedEncodingException {
+		// Locate byte offset
+		while (true) {
+			int offset = findBytes(assetsData, source.getBytes("UTF-8"));
+			if (offset == -1)
+				break;
+
+			// Overwrite the data
+			int length = ByteBuffer.wrap(reverse(Arrays.copyOfRange(assetsData, offset - 4, offset))).getInt();
+			byte[] addr = target.getBytes(StandardCharsets.UTF_8);
+			for (int i = offset; i < offset + length; i++)
+				if (i - offset >= addr.length)
+					assetsData[i] = 0;
+				else
+					assetsData[i] = addr[i - offset];
+		}
+	}
+
+	private int findBytes(byte[] source, byte[] match) {
+		ArrayList<Byte> buffer = new ArrayList<Byte>();
+		for (int i = 0; i < source.length; i++) {
+			int pos = buffer.size();
+			byte b = source[i];
+			if (pos < match.length && b == match[pos])
+				buffer.add(b);
+			else if (pos == match.length)
+				return i - buffer.size();
+			else if (pos != 0)
+				buffer.clear();
+		}
+		return -1;
+	}
+
 }

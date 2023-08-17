@@ -3,6 +3,7 @@ package org.asf.razorwhip.sentinel.launcher.api;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.function.Consumer;
 
 import com.google.gson.JsonObject;
 
@@ -88,5 +89,77 @@ public interface IGameDescriptor {
 	 */
 	public void downloadAssets(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
 			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException;
+
+	/**
+	 * Called to prepare to start the game
+	 * 
+	 * @param assetArchiveURL    URL to the asset archive
+	 * @param assetModifications Local asset modifications version
+	 * @param archiveDef         Archive definition object
+	 * @param descriptorDef      Descriptor definition object
+	 * @param clientVersion      Client version
+	 * @param clientDir          Client folder
+	 * @param successCallback    Callback for success (must be called for the launch
+	 *                           process to continue)
+	 * @param errorCallback      Callback for errors (call this should an error
+	 *                           occur)
+	 */
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Consumer<String> errorCallback);
+
+	/**
+	 * Called to prepare to start the game
+	 * 
+	 * @param assetArchive       Local asset archive folder
+	 * @param assetModifications Local asset modifications version
+	 * @param archiveDef         Archive definition object
+	 * @param descriptorDef      Descriptor definition object
+	 * @param clientVersion      Client version
+	 * @param clientDir          Client folder
+	 * @param successCallback    Callback for success (must be called for the launch
+	 *                           process to continue)
+	 * @param errorCallback      Callback for errors (call this should an error
+	 *                           occur)
+	 */
+	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Consumer<String> errorCallback);
+
+	/**
+	 * Called to start the game
+	 * 
+	 * @param assetArchiveURL    URL to the asset archive
+	 * @param assetModifications Local asset modifications version
+	 * @param archiveDef         Archive definition object
+	 * @param descriptorDef      Descriptor definition object
+	 * @param clientVersion      Client version
+	 * @param clientDir          Client folder
+	 * @param successCallback    Callback for success (closes the launcher window)
+	 * @param exitCallback       Callback for game exit
+	 * @param errorCallback      Callback for errors (call this should an error
+	 *                           occur)
+	 */
+	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Runnable exitCallback, Consumer<String> errorCallback);
+
+	/**
+	 * Called to start the game
+	 * 
+	 * @param assetArchive       Local asset archive folder
+	 * @param assetModifications Local asset modifications version
+	 * @param archiveDef         Archive definition object
+	 * @param descriptorDef      Descriptor definition object
+	 * @param clientVersion      Client version
+	 * @param clientDir          Client folder
+	 * @param successCallback    Callback for success (closes the launcher window)
+	 * @param exitCallback       Callback for game exit
+	 * @param errorCallback      Callback for errors (call this should an error
+	 *                           occur)
+	 */
+	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
+			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+			Runnable exitCallback, Consumer<String> errorCallback);
 
 }

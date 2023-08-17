@@ -35,6 +35,7 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
@@ -1172,5 +1173,58 @@ public class LauncherUtils {
 
 		// Delete
 		LauncherUtils.deleteDir(new File("gamedescriptortmp"));
+	}
+
+	/**
+	 * Shows the client version selection window
+	 * 
+	 * @return True if a version was selected, false otherwise
+	 * @throws IOException If selecting a client errors
+	 */
+	public static boolean showClientSelector() throws IOException {
+		// Load clients list
+		JsonObject settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
+				.getAsJsonObject();
+		String id = settings.get("id").getAsString();
+		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
+				.getAsJsonObject();
+		JsonObject archiveDef = archiveLst.get(id).getAsJsonObject();
+		JsonArray clientsArr = new JsonArray();
+		File clientListFile = new File("assets/clients.json");
+		if (clientListFile.exists()) {
+			clientsArr = JsonParser.parseString(Files.readString(Path.of("assets/clients.json"))).getAsJsonArray();
+		}
+
+		// Create list
+		ArrayList<String> clients = new ArrayList<String>();
+		for (String clientVersion : archiveDef.get("clients").getAsJsonObject().keySet()) {
+			// Check if present
+			boolean found = false;
+			for (JsonElement ele : clientsArr) {
+				if (ele.getAsString().equals(clientVersion)) {
+					found = true;
+					break;
+				}
+			}
+			if (found) {
+				clients.add(clientVersion);
+			}
+		}
+		String clientToStart = null;
+		if (clients.size() != 1) {
+			// Show popup
+			clientToStart = (String) JOptionPane.showInputDialog(null, "Select a client version to launch...",
+					"Choose version to start", JOptionPane.QUESTION_MESSAGE, null, clients.toArray(t -> new Object[t]),
+					null);
+		} else
+			clientToStart = clients.get(0);
+		if (clientToStart == null)
+			return false;
+
+		// Write
+		JsonObject lastClient = new JsonObject();
+		lastClient.addProperty("version", clientToStart);
+		Files.writeString(Path.of("lastclient.json"), lastClient.toString());
+		return true;
 	}
 }
