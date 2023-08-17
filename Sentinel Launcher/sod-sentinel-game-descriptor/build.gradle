@@ -38,6 +38,12 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 
 shadowJar {
 	from "clientmods/assetfix/build/mod"
+	
+	dependencies {
+	    exclude(project(":sentinel-launcher"))
+		exclude(dependency('com.google.code.gson:gson:2.9.0'))
+		exclude(dependency('org.apache.commons:commons-compress:1.21'))
+	 }
 }
 
 artifacts {

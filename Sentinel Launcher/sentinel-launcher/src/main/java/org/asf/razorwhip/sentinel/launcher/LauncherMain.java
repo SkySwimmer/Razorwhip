@@ -219,22 +219,22 @@ public class LauncherMain {
 			// Check overrides
 			if (new File("newgamedescriptor.sgd").exists()) {
 				// Rename old file
-				new File("gamedescriptor.sgd").renameTo(new File("gamedescriptor.sgd.old"));
-				new File("newgamedescriptor.sgd").renameTo(new File("gamedescriptor.sgd"));
+				new File(gameDescriptorFile.getPath()).renameTo(new File("gamedescriptor.sgd.old"));
+				new File("newgamedescriptor.sgd").renameTo(new File(gameDescriptorFile.getPath()));
 
 				// Update
-				LauncherUtils.extractGameDescriptor(new File("gamedescriptor.sgd"), "overridden version");
+				LauncherUtils.extractGameDescriptor(new File(gameDescriptorFile.getPath()), "overridden version");
 
 				overrodeSGD = true;
 			} else
 				overrodeSGD = false;
 			if (new File("newemulationsoftware.svp").exists()) {
 				// Rename old file
-				new File("emulationsoftware.svp").renameTo(new File("emulationsoftware.svp.old"));
-				new File("newemulationsoftware.svp").renameTo(new File("emulationsoftware.svp"));
+				new File(emulationSoftwareFile.getPath()).renameTo(new File("emulationsoftware.svp.old"));
+				new File("newemulationsoftware.svp").renameTo(new File(emulationSoftwareFile.getPath()));
 
 				// Update
-				LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"), "overridden version");
+				LauncherUtils.extractEmulationSoftware(new File(emulationSoftwareFile.getPath()), "overridden version");
 
 				overrodeSVP = true;
 			} else
@@ -469,13 +469,13 @@ public class LauncherMain {
 									// Check success
 									if (hashSuccess) {
 										// Rename old file
-										new File("gamedescriptor.sgd").renameTo(new File("gamedescriptor.sgd.old"));
-										new File("gamedescriptor.sgd.tmp").renameTo(new File("gamedescriptor.sgd"));
+										new File(gameDescriptorFileF.getPath()).renameTo(new File("gamedescriptor.sgd.old"));
+										new File("gamedescriptor.sgd.tmp").renameTo(new File(gameDescriptorFileF.getPath()));
 										updatedDescriptor = true;
 
 										// Update
 										PayloadManager.discoverPayloads();
-										LauncherUtils.extractGameDescriptor(new File("gamedescriptor.sgd"), latest);
+										LauncherUtils.extractGameDescriptor(new File(gameDescriptorFileF.getPath()), latest);
 										PayloadManager.indexPayloads();
 
 										// Reload
@@ -487,7 +487,7 @@ public class LauncherMain {
 										LauncherUtils.log("Loading game descriptor information...");
 										gameDescriptor.clear();
 										gameDescriptor.putAll(LauncherUtils.parseProperties(
-												getStringFrom(new File("gamedescriptor.sgd"), "descriptorinfo")));
+												getStringFrom(new File(gameDescriptorFileF.getPath()), "descriptorinfo")));
 										descriptorClsName = gameDescriptor.get("Game-Descriptor-Class");
 										LauncherUtils.gameID = gameDescriptor.get("Game-ID");
 										if (descriptorClsName == null)
@@ -503,8 +503,8 @@ public class LauncherMain {
 								if (updatedDescriptor) {
 									// Restore
 									updatedDescriptor = false;
-									new File("gamedescriptor.sgd").delete();
-									new File("gamedescriptor.sgd.old").renameTo(new File("gamedescriptor.sgd"));
+									new File(gameDescriptorFileF.getPath()).delete();
+									new File("gamedescriptor.sgd.old").renameTo(new File(gameDescriptorFileF.getPath()));
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
@@ -627,15 +627,15 @@ public class LauncherMain {
 									// Check success
 									if (hashSuccess) {
 										// Rename old file
-										new File("emulationsoftware.svp")
+										new File(emulationSoftwareFileF.getPath())
 												.renameTo(new File("emulationsoftware.svp.old"));
 										new File("emulationsoftware.svp.tmp")
-												.renameTo(new File("emulationsoftware.svp"));
+												.renameTo(new File(emulationSoftwareFileF.getPath()));
 										updatedSoftware = true;
 
 										// Update
 										PayloadManager.discoverPayloads();
-										LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"),
+										LauncherUtils.extractEmulationSoftware(new File(emulationSoftwareFileF.getPath()),
 												latest);
 										PayloadManager.indexPayloads();
 
@@ -645,7 +645,7 @@ public class LauncherMain {
 										LauncherUtils.resetProgressBar();
 										softwareDescriptor.clear();
 										softwareDescriptor.putAll(LauncherUtils.parseProperties(
-												getStringFrom(new File("emulationsoftware.svp"), "softwareinfo")));
+												getStringFrom(new File(emulationSoftwareFileF.getPath()), "softwareinfo")));
 										if (!softwareDescriptor.containsKey("Game-ID"))
 											throw new IOException(
 													"No game ID defined in emulation software descriptor");
@@ -683,19 +683,19 @@ public class LauncherMain {
 											// Download banner and set image
 											panelLabels.setVisible(false);
 											try {
-												setPanelImageFrom(new File("emulationsoftware.svp"), "banner.png",
+												setPanelImageFrom(new File(emulationSoftwareFileF.getPath()), "banner.png",
 														panel_1);
 											} catch (IOException e) {
 												try {
-													setPanelImageFrom(new File("emulationsoftware.svp"), "banner.jpg",
+													setPanelImageFrom(new File(emulationSoftwareFileF.getPath()), "banner.jpg",
 															panel_1);
 												} catch (IOException e2) {
 													try {
-														setPanelImageFrom(new File("gamedescriptor.sgd"), "banner.png",
+														setPanelImageFrom(new File(gameDescriptorFileF.getPath()), "banner.png",
 																panel_1);
 													} catch (IOException e3) {
 														try {
-															setPanelImageFrom(new File("gamedescriptor.sgd"),
+															setPanelImageFrom(new File(gameDescriptorFileF.getPath()),
 																	"banner.jpg", panel_1);
 														} catch (IOException e4) {
 															panelLabels.setVisible(true);
@@ -713,8 +713,8 @@ public class LauncherMain {
 								if (updatedSoftware) {
 									// Restore
 									updatedSoftware = false;
-									new File("emulationsoftware.svp").delete();
-									new File("emulationsoftware.svp.old").renameTo(new File("emulationsoftware.svp"));
+									new File(emulationSoftwareFileF.getPath()).delete();
+									new File("emulationsoftware.svp.old").renameTo(new File(emulationSoftwareFileF.getPath()));
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
@@ -749,8 +749,7 @@ public class LauncherMain {
 
 					// Update
 					PayloadManager.discoverPayloads();
-					LauncherUtils.extractEmulationSoftware(new File("emulationsoftware.svp"),
-							LauncherUtils.softwareVersion);
+					LauncherUtils.extractEmulationSoftware(emulationSoftwareFileF, LauncherUtils.softwareVersion);
 					PayloadManager.indexPayloads();
 
 					// Reset
@@ -762,8 +761,8 @@ public class LauncherMain {
 				LauncherUtils.resetProgressBar();
 
 				// Add to classpath
-				LauncherUtils.addUrlToComponentClassLoader(new File("gamedescriptor.sgd").toURI().toURL());
-				LauncherUtils.addUrlToComponentClassLoader(new File("emulationsoftware.svp").toURI().toURL());
+				LauncherUtils.addUrlToComponentClassLoader(new File(gameDescriptorFileF.getPath()).toURI().toURL());
+				LauncherUtils.addUrlToComponentClassLoader(emulationSoftwareFileF.toURI().toURL());
 
 				try {
 					// Load object

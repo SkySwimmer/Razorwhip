@@ -53,13 +53,6 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 	exclude "**/extra/**"
 }
 
-shadowJar {
-	exclude "**/org/asf/razorwhip/sentinel/launcher/api/**"
-	exclude "**/org/asf/razorwhip/sentinel/launcher/tools/**"
-	exclude "**/org/asf/razorwhip/sentinel/launcher/windows/**"
-	exclude "**/org/asf/razorwhip/sentinel/launcher/*.class"
-}
-
 artifacts {
 	archives javadocJar
 	archives sourcesJar
