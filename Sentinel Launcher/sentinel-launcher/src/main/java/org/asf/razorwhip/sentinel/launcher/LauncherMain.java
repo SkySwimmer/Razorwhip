@@ -469,13 +469,16 @@ public class LauncherMain {
 									// Check success
 									if (hashSuccess) {
 										// Rename old file
-										new File(gameDescriptorFileF.getPath()).renameTo(new File("gamedescriptor.sgd.old"));
-										new File("gamedescriptor.sgd.tmp").renameTo(new File(gameDescriptorFileF.getPath()));
+										new File(gameDescriptorFileF.getPath())
+												.renameTo(new File("gamedescriptor.sgd.old"));
+										new File("gamedescriptor.sgd.tmp")
+												.renameTo(new File(gameDescriptorFileF.getPath()));
 										updatedDescriptor = true;
 
 										// Update
 										PayloadManager.discoverPayloads();
-										LauncherUtils.extractGameDescriptor(new File(gameDescriptorFileF.getPath()), latest);
+										LauncherUtils.extractGameDescriptor(new File(gameDescriptorFileF.getPath()),
+												latest);
 										PayloadManager.indexPayloads();
 
 										// Reload
@@ -486,8 +489,8 @@ public class LauncherMain {
 										// Read descriptor info
 										LauncherUtils.log("Loading game descriptor information...");
 										gameDescriptor.clear();
-										gameDescriptor.putAll(LauncherUtils.parseProperties(
-												getStringFrom(new File(gameDescriptorFileF.getPath()), "descriptorinfo")));
+										gameDescriptor.putAll(LauncherUtils.parseProperties(getStringFrom(
+												new File(gameDescriptorFileF.getPath()), "descriptorinfo")));
 										descriptorClsName = gameDescriptor.get("Game-Descriptor-Class");
 										LauncherUtils.gameID = gameDescriptor.get("Game-ID");
 										if (descriptorClsName == null)
@@ -504,7 +507,8 @@ public class LauncherMain {
 									// Restore
 									updatedDescriptor = false;
 									new File(gameDescriptorFileF.getPath()).delete();
-									new File("gamedescriptor.sgd.old").renameTo(new File(gameDescriptorFileF.getPath()));
+									new File("gamedescriptor.sgd.old")
+											.renameTo(new File(gameDescriptorFileF.getPath()));
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
@@ -635,8 +639,8 @@ public class LauncherMain {
 
 										// Update
 										PayloadManager.discoverPayloads();
-										LauncherUtils.extractEmulationSoftware(new File(emulationSoftwareFileF.getPath()),
-												latest);
+										LauncherUtils.extractEmulationSoftware(
+												new File(emulationSoftwareFileF.getPath()), latest);
 										PayloadManager.indexPayloads();
 
 										// Reload
@@ -644,8 +648,8 @@ public class LauncherMain {
 										LauncherUtils.hideProgressPanel();
 										LauncherUtils.resetProgressBar();
 										softwareDescriptor.clear();
-										softwareDescriptor.putAll(LauncherUtils.parseProperties(
-												getStringFrom(new File(emulationSoftwareFileF.getPath()), "softwareinfo")));
+										softwareDescriptor.putAll(LauncherUtils.parseProperties(getStringFrom(
+												new File(emulationSoftwareFileF.getPath()), "softwareinfo")));
 										if (!softwareDescriptor.containsKey("Game-ID"))
 											throw new IOException(
 													"No game ID defined in emulation software descriptor");
@@ -683,16 +687,16 @@ public class LauncherMain {
 											// Download banner and set image
 											panelLabels.setVisible(false);
 											try {
-												setPanelImageFrom(new File(emulationSoftwareFileF.getPath()), "banner.png",
-														panel_1);
+												setPanelImageFrom(new File(emulationSoftwareFileF.getPath()),
+														"banner.png", panel_1);
 											} catch (IOException e) {
 												try {
-													setPanelImageFrom(new File(emulationSoftwareFileF.getPath()), "banner.jpg",
-															panel_1);
+													setPanelImageFrom(new File(emulationSoftwareFileF.getPath()),
+															"banner.jpg", panel_1);
 												} catch (IOException e2) {
 													try {
-														setPanelImageFrom(new File(gameDescriptorFileF.getPath()), "banner.png",
-																panel_1);
+														setPanelImageFrom(new File(gameDescriptorFileF.getPath()),
+																"banner.png", panel_1);
 													} catch (IOException e3) {
 														try {
 															setPanelImageFrom(new File(gameDescriptorFileF.getPath()),
@@ -714,7 +718,8 @@ public class LauncherMain {
 									// Restore
 									updatedSoftware = false;
 									new File(emulationSoftwareFileF.getPath()).delete();
-									new File("emulationsoftware.svp.old").renameTo(new File(emulationSoftwareFileF.getPath()));
+									new File("emulationsoftware.svp.old")
+											.renameTo(new File(emulationSoftwareFileF.getPath()));
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
@@ -1340,7 +1345,7 @@ public class LauncherMain {
 				JsonObject lastClient = new JsonObject();
 				if (!new File("lastclient.json").exists()) {
 					// Ask user which client they wish to use
-					if (!LauncherUtils.showClientSelector())
+					if (!LauncherUtils.showClientSelector(true))
 						System.exit(0);
 				}
 				lastClient = JsonParser.parseString(Files.readString(Path.of("lastclient.json"))).getAsJsonObject();

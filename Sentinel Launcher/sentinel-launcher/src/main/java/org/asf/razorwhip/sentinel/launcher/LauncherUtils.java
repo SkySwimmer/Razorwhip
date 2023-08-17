@@ -1260,10 +1260,12 @@ public class LauncherUtils {
 	/**
 	 * Shows the client version selection window
 	 * 
+	 * @param closeIfOnlyOneVersion True to automatically select a version if there
+	 *                              is only one, false otherwise
 	 * @return True if a version was selected, false otherwise
 	 * @throws IOException If selecting a client errors
 	 */
-	public static boolean showClientSelector() throws IOException {
+	public static boolean showClientSelector(boolean closeIfOnlyOneVersion) throws IOException {
 		// Load clients list
 		JsonObject settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
 				.getAsJsonObject();
@@ -1293,7 +1295,7 @@ public class LauncherUtils {
 			}
 		}
 		String clientToStart = null;
-		if (clients.size() != 1) {
+		if (clients.size() != 1 || !closeIfOnlyOneVersion) {
 			// Show popup
 			clientToStart = (String) JOptionPane.showInputDialog(null, "Select a client version to launch...",
 					"Choose version to start", JOptionPane.QUESTION_MESSAGE, null, clients.toArray(t -> new Object[t]),
