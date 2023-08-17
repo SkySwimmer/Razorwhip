@@ -605,11 +605,11 @@ public class PayloadManager {
 	}
 
 	static void postInitPayloads() {
-		LauncherUtils.log("Post-nitializing payloads...");
+		LauncherUtils.log("Post-initializing payloads...");
 		for (String id : payloadLoadOrder) {
 			PayloadEntry payload = payloads.get(id);
 			if (payload.payloadObject != null) {
-				LauncherUtils.log("Initializing: " + payload.id);
+				LauncherUtils.log("Post-initializing: " + payload.id);
 				payload.payloadObject.postInit();
 			}
 		}
