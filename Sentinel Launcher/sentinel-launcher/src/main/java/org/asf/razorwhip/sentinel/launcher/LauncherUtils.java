@@ -827,8 +827,8 @@ public class LauncherUtils {
 	/**
 	 * Extracts the public key of a package file
 	 * 
-	 * @param packageFile   Package file
-	 * @param publicKeyFile Package verification public key target file
+	 * @param packageFile         Package file
+	 * @param publicKeyOutputFile Package verification public key target file
 	 * @throws IOException If extracting fails
 	 */
 	public static void extractPackagePublicKey(File packageFile, File publicKeyOutputFile) throws IOException {
