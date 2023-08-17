@@ -14,6 +14,6 @@
     <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="org.asf.razorwhip.sentinel.launcher.LauncherMain"/>
     <stringAttribute key="org.eclipse.jdt.launching.MODULE_NAME" value="sentinel-launcher"/>
     <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="sod-sentinel-game-descriptor"/>
-    <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-DdebugGameDescriptorHintClass=org.asf.razorwhip.sentinel.launcher.descriptors.SodGameDescriptor -DdebugEmulationSoftwareHintClass=testsodsoftware.SentinelTestEmuSoftware"/>
+    <stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-DdebugGameDescriptorHintClass=org.asf.razorwhip.sentinel.launcher.descriptors.SodGameDescriptor -DdebugEmulationSoftwareHintClass=testsodsoftware.SentinelTestEmuSoftware -DdebugPayloadHintClasses=testpayload.TestPayloadClass"/>
     <stringAttribute key="org.eclipse.jdt.launching.WORKING_DIRECTORY" value="${workspace_loc:sod-sentinel-game-descriptor/run}"/>
 </launchConfiguration>

@@ -333,8 +333,14 @@ public class LauncherMain {
 			}
 		} catch (Exception e) {
 			String stackTrace = "";
-			for (StackTraceElement ele : e.getStackTrace())
-				stackTrace += "\n     At: " + ele;
+			Throwable t = e;
+			while (t != null) {
+				for (StackTraceElement ele : t.getStackTrace())
+					stackTrace += "\n     At: " + ele;
+				t = t.getCause();
+				if (t != null)
+					stackTrace += "\nCaused by: " + t;
+			}
 			System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 			JOptionPane.showMessageDialog(frmSentinelLauncher,
 					"An error occured while running the launcher.\nUnable to continue, the launcher will now close.\n\nError details: "
@@ -503,8 +509,14 @@ public class LauncherMain {
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
-									for (StackTraceElement ele : e.getStackTrace())
-										stackTrace += "\n     At: " + ele;
+									Throwable t = e;
+									while (t != null) {
+										for (StackTraceElement ele : t.getStackTrace())
+											stackTrace += "\n     At: " + ele;
+										t = t.getCause();
+										if (t != null)
+											stackTrace += "\nCaused by: " + t;
+									}
 									System.out.println(
 											"[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 									JOptionPane.showMessageDialog(frmSentinelLauncher,
@@ -707,8 +719,14 @@ public class LauncherMain {
 								}
 								SwingUtilities.invokeAndWait(() -> {
 									String stackTrace = "";
-									for (StackTraceElement ele : e.getStackTrace())
-										stackTrace += "\n     At: " + ele;
+									Throwable t = e;
+									while (t != null) {
+										for (StackTraceElement ele : t.getStackTrace())
+											stackTrace += "\n     At: " + ele;
+										t = t.getCause();
+										if (t != null)
+											stackTrace += "\nCaused by: " + t;
+									}
 									System.out.println(
 											"[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 									JOptionPane.showMessageDialog(frmSentinelLauncher,
@@ -843,8 +861,14 @@ public class LauncherMain {
 				} catch (Exception e) {
 					SwingUtilities.invokeAndWait(() -> {
 						String stackTrace = "";
-						for (StackTraceElement ele : e.getStackTrace())
-							stackTrace += "\n     At: " + ele;
+						Throwable t = e;
+						while (t != null) {
+							for (StackTraceElement ele : t.getStackTrace())
+								stackTrace += "\n     At: " + ele;
+							t = t.getCause();
+							if (t != null)
+								stackTrace += "\nCaused by: " + t;
+						}
 						System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 						JOptionPane.showMessageDialog(frmSentinelLauncher,
 								"An error occured while running the launcher.\n\nError details: " + e + stackTrace,
@@ -1217,7 +1241,14 @@ public class LauncherMain {
 											new File("client-" + clientVersion));
 								}
 
-								// TODO: re-extract payloads
+								// Copy payloads
+								LauncherUtils.log("Copying payload client modifications...", true);
+								LauncherUtils.copyDirWithoutProgress(
+										new File("payloadcache/payloaddata", "clientmodifications"),
+										new File("client-" + clientVersion));
+								LauncherUtils.copyDirWithoutProgress(
+										new File("payloadcache/payloaddata", "clientmodifications"),
+										new File("client-" + clientVersion));
 
 								// Save version
 								localHashList.addProperty(clientVersion, cHash);
@@ -1297,9 +1328,15 @@ public class LauncherMain {
 				// Discover and load payloads
 				LauncherUtils.log("Discovering payloads...");
 				PayloadManager.discoverPayloads();
+				PayloadManager.showPayloadManagementWindowIfNeeded();
 				LauncherUtils.log("Loading payloads...", true);
 				PayloadManager.initPayloads();
-				PayloadManager.showPayloadManagementWindowIfNeeded();
+
+				// Post-init
+				PayloadManager.postInitPayloads();
+
+				// Prepare to start game
+				// TODO
 
 				// Launcher logic
 				// TODO: launcher logic
@@ -1307,8 +1344,14 @@ public class LauncherMain {
 				try {
 					SwingUtilities.invokeAndWait(() -> {
 						String stackTrace = "";
-						for (StackTraceElement ele : e.getStackTrace())
-							stackTrace += "\n     At: " + ele;
+						Throwable t = e;
+						while (t != null) {
+							for (StackTraceElement ele : t.getStackTrace())
+								stackTrace += "\n     At: " + ele;
+							t = t.getCause();
+							if (t != null)
+								stackTrace += "\nCaused by: " + t;
+						}
 						System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] Error occurred: " + e + stackTrace);
 						JOptionPane.showMessageDialog(frmSentinelLauncher,
 								"An error occured while running the launcher.\nUnable to continue, the launcher will now close.\n\nError details: "

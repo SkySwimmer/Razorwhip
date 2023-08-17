@@ -1,0 +1,3 @@
+Type: full
+Payload-ID: testpayload
+Payload-Class: testpayload.TestPayloadClass

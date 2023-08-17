@@ -487,6 +487,8 @@ public class LauncherUtils {
 	 * @throws IOException If copying fails
 	 */
 	public static void copyDirWithoutProgress(File source, File destination) throws IOException {
+		if (!source.exists())
+			return;
 		destination.mkdirs();
 		for (File subDir : source.listFiles(t -> t.isDirectory())) {
 			copyDirWithoutProgress(subDir, new File(destination, subDir.getName()));

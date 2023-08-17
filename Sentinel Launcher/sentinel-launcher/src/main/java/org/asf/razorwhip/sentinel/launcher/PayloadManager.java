@@ -5,7 +5,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -19,6 +21,7 @@ import java.util.zip.ZipFile;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import org.asf.razorwhip.sentinel.launcher.api.ISentinelPayload;
 import org.asf.razorwhip.sentinel.launcher.api.PayloadType;
 import org.asf.razorwhip.sentinel.launcher.windows.PayloadManagerWindow;
 
@@ -36,6 +39,8 @@ import com.google.gson.JsonParser;
  */
 public class PayloadManager {
 	private static boolean discoveredPayloads;
+	private static ArrayList<String> payloadLoadOrder = new ArrayList<String>();
+	private static LinkedHashMap<String, PayloadEntry> payloads = new LinkedHashMap<String, PayloadEntry>();
 
 	public static class PayloadDependency {
 		public String id;
@@ -46,7 +51,8 @@ public class PayloadManager {
 	}
 
 	public static class PayloadEntry {
-		public String file;
+		public File payloadFile;
+		public File payloadExtractedDir;
 
 		public String id;
 		public String name;
@@ -60,8 +66,40 @@ public class PayloadManager {
 		public String[] loadBefore;
 
 		public Map<String, String> descriptor;
+		public ISentinelPayload payloadObject;
 
 		public boolean enabled;
+	}
+
+	/**
+	 * Retrieves payload instances (returns null for resource payloads)
+	 * 
+	 * @param id Payload ID
+	 * @return ISentinelPayload instance or null
+	 */
+	public static ISentinelPayload getPayload(String id) {
+		if (!isPayloadLoaded(id))
+			return null;
+		return payloads.get(id).payloadObject;
+	}
+
+	/**
+	 * Checks if a payload is loaded
+	 * 
+	 * @param id Payload ID
+	 * @return True if loaded, false otherwise
+	 */
+	public static boolean isPayloadLoaded(String id) {
+		return payloads.containsKey(id);
+	}
+
+	/**
+	 * Retrieves loaded payload IDs
+	 * 
+	 * @return Array of payload IDs
+	 */
+	public static String[] getLoadedPayloadIds() {
+		return payloadLoadOrder.toArray(t -> new String[t]);
 	}
 
 	/**
@@ -207,8 +245,6 @@ public class PayloadManager {
 
 		ArrayList<String> updatedPayloadFiles = new ArrayList<String>();
 		ArrayList<String> removedPayloadFiles = new ArrayList<String>();
-		ArrayList<String> payloadLoadOrder = new ArrayList<String>();
-		LinkedHashMap<String, PayloadEntry> payloads = new LinkedHashMap<String, PayloadEntry>();
 		while (true) {
 			// Find updated and removed payloads
 			updatedPayloadFiles.clear();
@@ -325,152 +361,49 @@ public class PayloadManager {
 			for (File spf : new File("payloads").listFiles(t -> t.isFile() && t.getName().endsWith(".spf"))) {
 				boolean enabled = index.has(spf.getName()) && index.get(spf.getName()).getAsBoolean();
 
-				// Load SPF file descriptor
-				Map<String, String> descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
+				// Load payload
+				loadPayloadFile(spf, new File("payloadcache/payloads", spf.getName()), index, enabled);
+			}
 
-				// Create payload object
-				PayloadEntry payload = new PayloadEntry();
-				payload.id = spf.getName();
-				payload.name = spf.getName();
-				payload.version = "default";
-				payload.descriptor = descriptor;
-				payload.file = spf.getName();
-				payload.enabled = enabled;
+			// Load debug payloads
+			if (System.getProperty("debugPayloadFiles") != null
+					|| System.getProperty("debugPayloadHintClasses") != null) {
+				LauncherUtils.log("Loading debug payloads...");
 
-				// Check type
-				String type = "Full";
-				if (descriptor.containsKey("Type"))
-					type = descriptor.get("Type");
-				type = type.toLowerCase();
-
-				// Check
-				if (!type.equals("resource") && !type.equals("full")) {
-					// Incompatible
-					index.remove(spf.getName());
-					continue;
-				}
-
-				// Set type
-				payload.type = type.equals("resource") ? PayloadType.RESOURCE : PayloadType.PAYLOAD;
-
-				// Load settings
-				if (descriptor.containsKey("Payload-ID")) {
-					payload.id = descriptor.get("Payload-ID");
-					payload.name = payload.id;
-				}
-				if (descriptor.containsKey("Payload-Name"))
-					payload.name = descriptor.get("Payload-Name");
-				if (descriptor.containsKey("Payload-Version"))
-					payload.version = descriptor.get("Payload-Version");
-
-				// Check compatibility
-				if (descriptor.containsKey("Game-ID")) {
-					// Check
-					if (!descriptor.get("Game-ID").equalsIgnoreCase(LauncherUtils.getGameID())) {
-						// Incompatible
-						index.remove(spf.getName());
-						continue;
-					}
-				}
-				if (descriptor.containsKey("Software-ID")) {
-					// Check
-					if (!descriptor.get("Software-ID").equalsIgnoreCase(LauncherUtils.getSoftwareID())) {
-						// Incompatible
-						index.remove(spf.getName());
-						continue;
+				// Load debug files
+				if (System.getProperty("debugPayloadFiles") != null) {
+					String[] files = System.getProperty("debugPayloadFiles").split(File.pathSeparator);
+					for (String file : files) {
+						// Load
+						File spfD = new File(file);
+						loadPayloadFile(spfD, spfD, index, true);
 					}
 				}
 
-				// Load dependencies
-				payload.dependencies = new PayloadDependency[0];
-				payload.optionalDependencies = new PayloadDependency[0];
-				payload.loadBefore = new String[0];
-				payload.conflictsWith = new PayloadDependency[0];
-				try {
-					JsonObject depsConfig = JsonParser.parseString(getStringFrom(spf, "dependencies.json"))
-							.getAsJsonObject();
+				// Load debug classes
+				if (System.getProperty("debugPayloadHintClasses") != null) {
+					String[] classes = System.getProperty("debugPayloadHintClasses").split(":");
+					for (String clsN : classes) {
+						LauncherUtils.log("Loading hint class: " + clsN);
+						try {
+							Class<?> cls = Class.forName(clsN);
+							URL loc = cls.getProtectionDomain().getCodeSource().getLocation();
+							File f = new File(loc.toURI());
 
-					// Prepare lists
-					ArrayList<PayloadDependency> deps = new ArrayList<PayloadDependency>();
-					ArrayList<PayloadDependency> optDeps = new ArrayList<PayloadDependency>();
-					ArrayList<String> loadBefore = new ArrayList<String>();
-					ArrayList<PayloadDependency> conflicts = new ArrayList<PayloadDependency>();
-
-					// Read from config
-					if (depsConfig.has("dependencies")) {
-						for (JsonElement ele : depsConfig.get("dependencies").getAsJsonArray()) {
-							JsonObject dep = ele.getAsJsonObject();
-
-							// Add
-							PayloadDependency dependency = new PayloadDependency();
-							dependency.id = dep.get("id").getAsString();
-							if (dep.has("version")) {
-								dependency.version = dep.get("version").getAsString();
-								if (dep.has("versionString"))
-									dependency.versionString = dep.get("versionString").getAsString();
-								else
-									dependency.versionString = dependency.version;
+							// Load payload
+							File fD = f;
+							if (!fD.isDirectory()) {
+								// Extract
+								LauncherUtils.log("Extracting payload " + f.getName() + "...");
+								LauncherUtils.unZip(f, new File("payloadcache/payloadsdebug/" + clsN));
+								fD = new File("payloadcache/payloadsdebug/" + clsN);
 							}
-							if (dep.has("url"))
-								dependency.url = dep.get("url").getAsString();
-							deps.add(dependency);
+							loadPayloadFile(f, fD, index, true);
+						} catch (Exception e) {
+							throw new IOException("Hint class load failure", e);
 						}
 					}
-					if (depsConfig.has("optionalDependencies")) {
-						for (JsonElement ele : depsConfig.get("optionalDependencies").getAsJsonArray()) {
-							JsonObject dep = ele.getAsJsonObject();
-
-							// Add
-							PayloadDependency dependency = new PayloadDependency();
-							dependency.id = dep.get("id").getAsString();
-							if (dep.has("version")) {
-								dependency.version = dep.get("version").getAsString();
-								if (dep.has("versionString"))
-									dependency.versionString = dep.get("versionString").getAsString();
-								else
-									dependency.versionString = dependency.version;
-							}
-							optDeps.add(dependency);
-						}
-					}
-					if (depsConfig.has("conflicts")) {
-						for (JsonElement ele : depsConfig.get("conflicts").getAsJsonArray()) {
-							JsonObject dep = ele.getAsJsonObject();
-
-							// Add
-							PayloadDependency conflict = new PayloadDependency();
-							conflict.id = dep.get("id").getAsString();
-							if (dep.has("version"))
-								conflict.version = dep.get("version").getAsString();
-							conflicts.add(conflict);
-						}
-					}
-					if (depsConfig.has("loadBefore")) {
-						for (JsonElement ele : depsConfig.get("loadBefore").getAsJsonArray()) {
-							loadBefore.add(ele.getAsString());
-						}
-					}
-
-					// Apply
-					payload.dependencies = deps.toArray(t -> new PayloadDependency[t]);
-					payload.loadBefore = loadBefore.toArray(t -> new String[t]);
-					payload.conflictsWith = conflicts.toArray(t -> new PayloadDependency[t]);
-				} catch (IOException e) {
 				}
-
-				// Add
-				if (payloads.containsKey(payload.id)) {
-					// Warn
-					JOptionPane.showMessageDialog(null,
-							"WARNING! Payload conflict detected!\n\nPayload ID: " + payload.id
-									+ "\nTwo or more files provide this payload ID.\n\nFile 1: "
-									+ payloads.get(payload.id).file + "\nFile 2: " + payload.file
-									+ "\n\nThe first file will be used.",
-							"Warning", JOptionPane.WARNING_MESSAGE);
-					index.remove(spf.getName());
-					continue;
-				}
-				payloads.put(payload.id, payload);
 			}
 
 			// Compile load order
@@ -509,7 +442,8 @@ public class PayloadManager {
 			Files.writeString(Path.of("payloadcache/lastactive.json"), index.toString());
 
 		// Re-apply if needed
-		if (new File("payloadcache/requireupdate").exists() || System.getProperty("debugPayloadHints") != null) {
+		if (new File("payloadcache/requireupdate").exists() || System.getProperty("debugPayloadFiles") != null
+				|| System.getProperty("debugPayloadHintClasses") != null) {
 			// Create directory
 			LauncherUtils.deleteDir(new File("payloadcache/payloaddata"));
 			new File("payloadcache/payloaddata").mkdirs();
@@ -522,38 +456,36 @@ public class PayloadManager {
 			// Index
 			int count = 0;
 			for (String id : payloadLoadOrder) {
-				count += indexDir(new File("payloadcache/payloads/" + payloads.get(id).file, "server"));
-				count += indexDir(new File("payloadcache/payloads/" + payloads.get(id).file, "rootdata"));
-				count += indexDir(new File("payloadcache/payloads/" + payloads.get(id).file, "assetmodifications"));
+				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "server"));
+				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "rootdata"));
+				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "assetmodifications"));
 				for (File clientDir : new File(".")
 						.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 					String clientVersion = clientDir.getName().substring("client-".length());
+					count += indexDir(new File(payloads.get(id).payloadExtractedDir, "clientmodifications"));
 					count += indexDir(
-							new File("payloadcache/payloads/" + payloads.get(id).file, "clientmodifications"));
-					count += indexDir(new File("payloadcache/payloads/" + payloads.get(id).file,
-							"clientmodifications-" + clientVersion));
+							new File(payloads.get(id).payloadExtractedDir, "clientmodifications-" + clientVersion));
 				}
 			}
 			LauncherUtils.setProgressMax(count);
 
 			// Copy payloads
 			for (String id : payloadLoadOrder) {
-				File payloadDir = new File("payloadcache/payloads", payloads.get(id).file);
-
 				// Copy
 				LauncherUtils.log("Gathering payload files: " + payloads.get(id).name);
-				copyDirWithProgress(new File(payloadDir, "server"), new File("payloadcache/payloaddata", "server"), "",
-						null, null);
-				copyDirWithProgress(new File("payloadcache/payloads/" + payloads.get(id).file, "rootdata"),
+				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "server"),
+						new File("payloadcache/payloaddata", "server"), "", null, null);
+				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "rootdata"),
 						new File("payloadcache/payloaddata", "rootdata"), "", null, null);
-				copyDirWithProgress(new File(payloadDir, "assetmodifications"),
+				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "assetmodifications"),
 						new File("payloadcache/payloaddata", "assetmodifications"), "", null, null);
 				for (File clientDir : new File(".")
 						.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 					String clientVersion = clientDir.getName().substring("client-".length());
-					copyDirWithProgress(new File(payloadDir, "clientmodifications"),
+					copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "clientmodifications"),
 							new File("payloadcache/payloaddata", "clientmodifications"), "", null, null);
-					copyDirWithProgress(new File(payloadDir, "clientmodifications-" + clientVersion),
+					copyDirWithProgress(
+							new File(payloads.get(id).payloadExtractedDir, "clientmodifications-" + clientVersion),
 							new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion), "", null,
 							null);
 				}
@@ -619,12 +551,220 @@ public class PayloadManager {
 			LauncherUtils.resetProgressBar();
 			LauncherUtils.hideProgressPanel();
 		}
-		LauncherUtils.setStatus("Preparing to load payloads...");
+		if (System.getProperty("debugPayloadFiles") != null || System.getProperty("debugPayloadHintClasses") != null)
+			new File("payloadcache/requireupdate").createNewFile();
 
-		// TODO: debugging
-		// TODO: load payload classes
+		// Load payload classes
+		LauncherUtils.log("Loading payload classes...");
+		LauncherUtils.setStatus("Loading payloads..");
+		for (String id : payloadLoadOrder) {
+			PayloadEntry payload = payloads.get(id);
 
-		discoveredPayloads = discoveredPayloads;
+			// Check type
+			if (payload.type == PayloadType.PAYLOAD) {
+				LauncherUtils.log("Loading payload: " + id);
+				if (!payload.descriptor.containsKey("Payload-Class"))
+					throw new IOException("Payload " + id + " does not have a payload class field in its descriptor!");
+
+				// Add source
+				LauncherUtils.addUrlToComponentClassLoader(payload.payloadFile.toURI().toURL());
+
+				try {
+					// Load class
+					Class<?> payloadCls = LauncherUtils.loader.loadClass(payload.descriptor.get("Payload-Class"));
+					if (!ISentinelPayload.class.isAssignableFrom(payloadCls))
+						throw new IllegalArgumentException(payload.descriptor.get("Payload-Class")
+								+ " does not implement " + ISentinelPayload.class.getTypeName());
+					Constructor<?> pCt = payloadCls.getConstructor();
+					payload.payloadObject = (ISentinelPayload) pCt.newInstance();
+
+					// Init
+					LauncherUtils.log("Pre-initializing: " + payload.id);
+				} catch (Exception e) {
+					if (e instanceof IOException)
+						throw (IOException) e;
+					else
+						throw new IOException("Payload loading error occurred", e);
+				}
+				if (payload.payloadObject != null) {
+					LauncherUtils.log("Pre-initializing: " + payload.id);
+					payload.payloadObject.preInit();
+				}
+			}
+		}
+
+		// Initialize payloads
+		LauncherUtils.log("Initializing payloads...");
+		for (String id : payloadLoadOrder) {
+			PayloadEntry payload = payloads.get(id);
+			if (payload.payloadObject != null) {
+				LauncherUtils.log("Initializing: " + payload.id);
+				payload.payloadObject.init();
+			}
+		}
+	}
+
+	static void postInitPayloads() {
+		LauncherUtils.log("Post-nitializing payloads...");
+		for (String id : payloadLoadOrder) {
+			PayloadEntry payload = payloads.get(id);
+			if (payload.payloadObject != null) {
+				LauncherUtils.log("Initializing: " + payload.id);
+				payload.payloadObject.postInit();
+			}
+		}
+	}
+
+	private static void loadPayloadFile(File spf, File extractedDir, JsonObject index, boolean enabled)
+			throws IOException {
+		LauncherUtils.log("Loading payload file: " + spf.getPath());
+
+		// Load SPF file descriptor
+		Map<String, String> descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
+
+		// Create payload object
+		PayloadEntry payload = new PayloadEntry();
+		payload.id = spf.getName();
+		payload.name = spf.getName();
+		payload.version = "default";
+		payload.descriptor = descriptor;
+		payload.payloadFile = spf;
+		payload.payloadExtractedDir = extractedDir;
+		payload.enabled = enabled;
+
+		// Check type
+		String type = "Full";
+		if (descriptor.containsKey("Type"))
+			type = descriptor.get("Type");
+		type = type.toLowerCase();
+
+		// Check
+		if (!type.equals("resource") && !type.equals("full")) {
+			// Incompatible
+			index.remove(spf.getName());
+			return;
+		}
+
+		// Set type
+		payload.type = type.equals("resource") ? PayloadType.RESOURCE : PayloadType.PAYLOAD;
+
+		// Load settings
+		if (descriptor.containsKey("Payload-ID")) {
+			payload.id = descriptor.get("Payload-ID");
+			payload.name = payload.id;
+		}
+		if (descriptor.containsKey("Payload-Name"))
+			payload.name = descriptor.get("Payload-Name");
+		if (descriptor.containsKey("Payload-Version"))
+			payload.version = descriptor.get("Payload-Version");
+
+		// Check compatibility
+		if (descriptor.containsKey("Game-ID")) {
+			// Check
+			if (!descriptor.get("Game-ID").equalsIgnoreCase(LauncherUtils.getGameID())) {
+				// Incompatible
+				index.remove(spf.getName());
+				return;
+			}
+		}
+		if (descriptor.containsKey("Software-ID")) {
+			// Check
+			if (!descriptor.get("Software-ID").equalsIgnoreCase(LauncherUtils.getSoftwareID())) {
+				// Incompatible
+				index.remove(spf.getName());
+				return;
+			}
+		}
+
+		// Load dependencies
+		payload.dependencies = new PayloadDependency[0];
+		payload.optionalDependencies = new PayloadDependency[0];
+		payload.loadBefore = new String[0];
+		payload.conflictsWith = new PayloadDependency[0];
+		try {
+			JsonObject depsConfig = JsonParser.parseString(getStringFrom(spf, "dependencies.json")).getAsJsonObject();
+
+			// Prepare lists
+			ArrayList<PayloadDependency> deps = new ArrayList<PayloadDependency>();
+			ArrayList<PayloadDependency> optDeps = new ArrayList<PayloadDependency>();
+			ArrayList<String> loadBefore = new ArrayList<String>();
+			ArrayList<PayloadDependency> conflicts = new ArrayList<PayloadDependency>();
+
+			// Read from config
+			if (depsConfig.has("dependencies")) {
+				for (JsonElement ele : depsConfig.get("dependencies").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency dependency = new PayloadDependency();
+					dependency.id = dep.get("id").getAsString();
+					if (dep.has("version")) {
+						dependency.version = dep.get("version").getAsString();
+						if (dep.has("versionString"))
+							dependency.versionString = dep.get("versionString").getAsString();
+						else
+							dependency.versionString = dependency.version;
+					}
+					if (dep.has("url"))
+						dependency.url = dep.get("url").getAsString();
+					deps.add(dependency);
+				}
+			}
+			if (depsConfig.has("optionalDependencies")) {
+				for (JsonElement ele : depsConfig.get("optionalDependencies").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency dependency = new PayloadDependency();
+					dependency.id = dep.get("id").getAsString();
+					if (dep.has("version")) {
+						dependency.version = dep.get("version").getAsString();
+						if (dep.has("versionString"))
+							dependency.versionString = dep.get("versionString").getAsString();
+						else
+							dependency.versionString = dependency.version;
+					}
+					optDeps.add(dependency);
+				}
+			}
+			if (depsConfig.has("conflicts")) {
+				for (JsonElement ele : depsConfig.get("conflicts").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency conflict = new PayloadDependency();
+					conflict.id = dep.get("id").getAsString();
+					if (dep.has("version"))
+						conflict.version = dep.get("version").getAsString();
+					conflicts.add(conflict);
+				}
+			}
+			if (depsConfig.has("loadBefore")) {
+				for (JsonElement ele : depsConfig.get("loadBefore").getAsJsonArray()) {
+					loadBefore.add(ele.getAsString());
+				}
+			}
+
+			// Apply
+			payload.dependencies = deps.toArray(t -> new PayloadDependency[t]);
+			payload.loadBefore = loadBefore.toArray(t -> new String[t]);
+			payload.conflictsWith = conflicts.toArray(t -> new PayloadDependency[t]);
+		} catch (IOException e) {
+		}
+
+		// Add
+		if (payloads.containsKey(payload.id)) {
+			// Warn
+			JOptionPane.showMessageDialog(null,
+					"WARNING! Payload conflict detected!\n\nPayload ID: " + payload.id
+							+ "\nTwo or more files provide this payload ID.\n\nFile 1: "
+							+ payloads.get(payload.id).payloadFile.getName() + "\nFile 2: "
+							+ payload.payloadFile.getName() + "\n\nThe first file will be used.",
+					"Warning", JOptionPane.WARNING_MESSAGE);
+			index.remove(spf.getName());
+			return;
+		}
+		payloads.put(payload.id, payload);
 	}
 
 	private static boolean loadPayload(PayloadEntry payload, ArrayList<String> payloadLoadOrder,
