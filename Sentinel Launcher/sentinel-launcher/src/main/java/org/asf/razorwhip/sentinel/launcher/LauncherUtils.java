@@ -888,7 +888,8 @@ public class LauncherUtils {
 
 			// Transfer
 			strm = zip.getInputStream(keyEntry);
-			publicKeyFile.getParentFile().mkdirs();
+			if (publicKeyFile.getParentFile() != null)
+				publicKeyFile.getParentFile().mkdirs();
 			FileOutputStream fOut = new FileOutputStream(publicKeyFile);
 			strm.transferTo(fOut);
 			fOut.close();
@@ -1231,16 +1232,16 @@ public class LauncherUtils {
 		LauncherUtils.unZip(sourceFile, new File("gamedescriptortmp"));
 
 		// Update data
-		if (new File("emulationsoftwaretmp", "defaultpayloads").exists()) {
+		if (new File("gamedescriptortmp", "defaultpayloads").exists()) {
 			LauncherUtils.log("Updating default payloads to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"),
 					new File("payloads"));
 		}
-		if (new File("emulationsoftwaretmp", "rootdata").exists()) {
+		if (new File("gamedescriptortmp", "rootdata").exists()) {
 			LauncherUtils.log("Updating data to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
 		}
-		if (new File("emulationsoftwaretmp", "assetmodifications").exists()) {
+		if (new File("gamedescriptortmp", "assetmodifications").exists()) {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
 					new File("assetmodifications"));
@@ -1248,8 +1249,8 @@ public class LauncherUtils {
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications"), clientDir);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
+			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "clientmodifications"), clientDir);
+			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "clientmodifications-" + clientVersion),
 					clientDir);
 		}
 

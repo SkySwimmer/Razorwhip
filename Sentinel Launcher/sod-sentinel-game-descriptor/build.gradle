@@ -4,7 +4,7 @@ plugins {
 	id "com.github.johnrengelman.shadow" version "7.0.0"
 }
 
-version = "1.0.0.A1"
+version = "1.0.0.A3"
 group = "org.asf.razorwhip.sentinel.sod"
 
 sourceCompatibility = '1.17'
@@ -39,11 +39,13 @@ task sourcesJar(type: Jar, dependsOn: classes) {
 shadowJar {
 	from "clientmods/assetfix/build/mod"
 	
+	archiveExtension = "sgd"
+	
 	dependencies {
 	    exclude(project(":sentinel-launcher"))
 		exclude(dependency('com.google.code.gson:gson:2.9.0'))
 		exclude(dependency('org.apache.commons:commons-compress:1.21'))
-	 }
+	}
 }
 
 artifacts {

@@ -37,7 +37,8 @@ import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
 
-	public static final String ASSET_SERVER_VERSION = "1.0.0.A1";
+	public static final String ASSET_SERVER_VERSION = "1.0.0.A3";
+	public static final String BEPINEX_MINIMAL_GAME_VERSION = "3.12.0";
 
 	@Override
 	public void init() {
@@ -100,6 +101,15 @@ public class SodGameDescriptor implements IGameDescriptor {
 		endpoint += "DWADragonsUnity/";
 		replaceData(resourcesData, endpoint, "localhost:5317/DWADragonsUnity/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
+
+		// Check version
+		if (LauncherUtils.verifyVersionRequirement(version, ">=" + BEPINEX_MINIMAL_GAME_VERSION)) {
+			// Extract game descriptor file
+			LauncherUtils.log("Adding assetfix and BepInEx to client...", true);
+			LauncherUtils.copyDirWithProgress(new File("assetfixmod"), clientDir);
+			LauncherUtils.hideProgressPanel();
+			LauncherUtils.resetProgressBar();
+		}
 	}
 
 	@Override
@@ -565,7 +575,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 			// Overwrite the data
 			int length = ByteBuffer.wrap(reverse(Arrays.copyOfRange(assetsData, offset - 4, offset))).getInt();
 			byte[] addr = target.getBytes(StandardCharsets.UTF_8);
-			for (int i = offset; i < offset + length; i++)
+			for (int i = offset; i < offset + length && i < assetsData.length; i++)
 				if (i - offset >= addr.length)
 					assetsData[i] = 0;
 				else
