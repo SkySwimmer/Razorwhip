@@ -421,9 +421,16 @@ public class LauncherUpdaterMain {
 									SwingUtilities.invokeAndWait(() -> {
 										if (JOptionPane.showConfirmDialog(frmLauncher,
 												"Are you sure you wish to uninstall the " + projName
-														+ " launcher and client?",
+														+ " launcher and client?\n\nWARNING: This will delete all player data for local servers!",
 												"Uninstall Launcher", JOptionPane.YES_NO_OPTION,
-												JOptionPane.QUESTION_MESSAGE) != JOptionPane.YES_OPTION) {
+												JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+											System.exit(1);
+										}
+										if (JOptionPane.showConfirmDialog(frmLauncher,
+												"Launcher will be uninstalled and all " + projName
+														+ " data will be deleted from your disk.",
+												"Uninstall Launcher", JOptionPane.OK_CANCEL_OPTION,
+												JOptionPane.INFORMATION_MESSAGE) != JOptionPane.OK_OPTION) {
 											System.exit(1);
 										}
 									});
