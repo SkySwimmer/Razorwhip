@@ -37,7 +37,7 @@ import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
 
-	public static final String ASSET_SERVER_VERSION = "1.0.0.A3";
+	public static final String ASSET_SERVER_VERSION = "1.0.0.A4";
 	public static final String BEPINEX_MINIMAL_GAME_VERSION = "3.12.0";
 
 	@Override
