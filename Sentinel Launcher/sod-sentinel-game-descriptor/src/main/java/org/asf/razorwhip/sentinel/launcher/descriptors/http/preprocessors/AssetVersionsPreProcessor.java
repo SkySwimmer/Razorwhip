@@ -76,6 +76,10 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), plat + "/" + version),
 					assetOverrides, dataRootFolder, "", null);
 
+			// Unspecified version, platform and locale, specified quality
+			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), quality), assetOverrides,
+					dataRootFolder, "", null);
+
 			// Unspecified platform and locale, specified version and quality
 			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), version + "/" + quality),
 					assetOverrides, dataRootFolder, "", null);
