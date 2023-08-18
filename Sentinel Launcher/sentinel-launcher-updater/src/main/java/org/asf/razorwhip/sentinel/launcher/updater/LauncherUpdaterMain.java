@@ -1061,7 +1061,17 @@ public class LauncherUpdaterMain {
 					progressBar.setMaximum(100);
 					progressBar.setValue(0);
 				});
-				if (!currentVersion.equals(launcherVersion)) {
+				if (!new File(new File(dir, "launcher"), "startup.json").exists()) {
+					currentVersion = "none";
+					if (launcherVersion == null) {
+						JOptionPane.showMessageDialog(null,
+								"There is a update required, please connect to the internet.", "Launcher Error",
+								JOptionPane.ERROR_MESSAGE);
+						System.exit(1);
+						return;
+					}
+				}
+				if (launcherVersion != null && !currentVersion.equals(launcherVersion)) {
 					if (isNew) {
 						// Prompt
 						SwingUtilities.invokeAndWait(() -> {
@@ -1137,13 +1147,49 @@ public class LauncherUpdaterMain {
 				Process proc = builder.start();
 
 				// Mark done
-				if (!currentVersion.equals(launcherVersion))
+				if (launcherVersion != null && !currentVersion.equals(launcherVersion))
 					Files.writeString(verFile.toPath(), launcherVersion);
 				SwingUtilities.invokeAndWait(() -> {
-					frmLauncher.dispose();
+					frmLauncher.setVisible(false);
 				});
-				proc.waitFor();
-				System.exit(proc.exitValue());
+				int exitCode = proc.waitFor();
+				if (exitCode == 237) {
+					// Load info
+					String projName2 = projName;
+
+					// Read launcher info
+					String url;
+					try {
+						JsonObject conf = JsonParser.parseString(Files.readString(Path.of("launcher.json")))
+								.getAsJsonObject();
+						projName2 = conf.get("projectName").getAsString();
+						url = conf.get("launcherUpdateListUrl").getAsString();
+					} catch (Exception e) {
+						JOptionPane.showMessageDialog(null,
+								"Invalid " + (installerMode ? "installer" : "launcher") + " configuration.",
+								(installerMode ? "Installer" : "Launcher") + " Error", JOptionPane.ERROR_MESSAGE);
+						System.exit(1);
+						return;
+					}
+
+					// Download data
+					String launcherVersion2 = launcherVersion;
+					String launcherURL2 = launcherURL;
+					try {
+						InputStream strm = new URL(url).openStream();
+						String data = new String(strm.readAllBytes(), "UTF-8");
+						strm.close();
+						JsonObject info = JsonParser.parseString(data).getAsJsonObject();
+						launcherVersion2 = info.get("latest").getAsString();
+						launcherURL2 = info.get("versions").getAsJsonObject().get(launcherVersion).getAsJsonObject()
+								.get("url").getAsString();
+					} catch (IOException e) {
+						// Offline
+					}
+					startLauncher(instDir, progressBar, launcherVersion2, projName2, launcherURL2);
+					return;
+				}
+				System.exit(exitCode);
 			} catch (Exception e) {
 				try {
 					SwingUtilities.invokeAndWait(() -> {
