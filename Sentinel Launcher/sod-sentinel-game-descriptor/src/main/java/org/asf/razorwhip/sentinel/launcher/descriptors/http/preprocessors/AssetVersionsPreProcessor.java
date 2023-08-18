@@ -77,16 +77,16 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 					assetOverrides, dataRootFolder, "", null);
 
 			// Unspecified version, platform and locale, specified quality
-			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), quality), assetOverrides,
+			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), quality.toLowerCase()), assetOverrides,
 					dataRootFolder, "", null);
 
 			// Unspecified platform and locale, specified version and quality
-			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), version + "/" + quality),
+			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), version + "/" + quality.toLowerCase()),
 					assetOverrides, dataRootFolder, "", null);
 
 			// Unspecified locale, specified version, platform and quality
 			discoverAssetsIn(
-					new File(new File(assetModifications, "contentoverrides"), plat + "/" + version + "/" + quality),
+					new File(new File(assetModifications, "contentoverrides"), plat + "/" + version + "/" + quality.toLowerCase()),
 					assetOverrides, dataRootFolder, "", null);
 
 			// Find locales
@@ -102,11 +102,11 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 						dir.getName());
 
 				// Unspecified platform, specified version, locale and quality
-				discoverAssetsIn(new File(dir, version + "/" + quality), assetOverrides, dataRootFolder, "",
+				discoverAssetsIn(new File(dir, version + "/" + quality.toLowerCase()), assetOverrides, dataRootFolder, "",
 						dir.getName());
 
 				// Specified version, locale, platform and quality
-				discoverAssetsIn(new File(dir, plat + "/" + version + "/" + quality), assetOverrides, dataRootFolder,
+				discoverAssetsIn(new File(dir, plat + "/" + version + "/" + quality.toLowerCase()), assetOverrides, dataRootFolder,
 						"", dir.getName());
 			}
 
