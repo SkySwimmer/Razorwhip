@@ -1234,16 +1234,15 @@ public class LauncherUtils {
 		// Update data
 		if (new File("gamedescriptortmp", "defaultpayloads").exists()) {
 			LauncherUtils.log("Updating default payloads to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"),
-					new File("payloads"));
+			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "defaultpayloads"), new File("payloads"));
 		}
 		if (new File("gamedescriptortmp", "rootdata").exists()) {
 			LauncherUtils.log("Updating data to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
+			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "rootdata"), new File("."));
 		}
 		if (new File("gamedescriptortmp", "assetmodifications").exists()) {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
+			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "assetmodifications"),
 					new File("assetmodifications"));
 		}
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
