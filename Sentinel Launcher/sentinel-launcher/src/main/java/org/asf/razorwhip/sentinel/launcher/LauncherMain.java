@@ -164,7 +164,7 @@ public class LauncherMain {
 		panel_2.setLayout(null);
 
 		JLabel lblNewLabel = new JLabel("<Project Name>");
-		lblNewLabel.setBounds(12, 85, 576, 33);
+		lblNewLabel.setBounds(12, 79, 576, 33);
 		panel_2.add(lblNewLabel);
 		lblNewLabel.setHorizontalTextPosition(SwingConstants.CENTER);
 		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
