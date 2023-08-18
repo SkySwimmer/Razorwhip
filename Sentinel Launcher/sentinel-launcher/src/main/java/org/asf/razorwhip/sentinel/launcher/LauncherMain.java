@@ -168,7 +168,7 @@ public class LauncherMain {
 		panel_2.add(lblNewLabel);
 		lblNewLabel.setHorizontalTextPosition(SwingConstants.CENTER);
 		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 18));
+		lblNewLabel.setFont(new Font("Dialog", Font.PLAIN, 22));
 		panel_5.setVisible(false);
 
 		// Prepare launcher

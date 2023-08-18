@@ -867,6 +867,7 @@ public class PayloadManager {
 		LauncherUtils.log("Checking for payload updates...", true);
 
 		// Go through .spf files
+		new File("payloads").mkdirs();
 		for (File spf : new File("payloads").listFiles(t -> t.isFile() && t.getName().endsWith(".spf"))) {
 			// Load descriptor
 			Map<String, String> descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
