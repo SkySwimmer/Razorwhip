@@ -804,6 +804,9 @@ public class LauncherUtils {
 				}
 				Files.writeString(localVersions.toPath(), newHashList.toString());
 			}
+
+			// Delete last selected version
+			new File("lastclient.json").delete();
 		}
 
 		return saved;
