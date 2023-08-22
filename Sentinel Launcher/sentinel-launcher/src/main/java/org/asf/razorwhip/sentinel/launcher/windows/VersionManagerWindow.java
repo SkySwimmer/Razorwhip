@@ -401,9 +401,6 @@ public class VersionManagerWindow extends JDialog {
 						try {
 							// Load settings
 							JsonObject archiveDef = lastArchive.entry;
-							JsonObject archiveDescriptor = JsonParser
-									.parseString(Files.readString(Path.of("assets/descriptor/descriptor.json")))
-									.getAsJsonObject();
 
 							// Update descriptor
 							if (updateDescriptor) {
@@ -572,6 +569,11 @@ public class VersionManagerWindow extends JDialog {
 								LauncherUtils.resetProgressBar();
 								updateDescriptor = false;
 							}
+
+							// Load descriptor
+							JsonObject archiveDescriptor = JsonParser
+									.parseString(Files.readString(Path.of("assets/descriptor/descriptor.json")))
+									.getAsJsonObject();
 
 							// Collect changed assets and find size
 							SwingUtilities.invokeAndWait(() -> {
