@@ -87,6 +87,15 @@ public class LauncherUtils {
 	}
 
 	/**
+	 * Checks if asset management is available
+	 * 
+	 * @return True if available, false otherwise
+	 */
+	public static boolean isAssetManagementAvailable() {
+		return assetManagementAvailable;
+	}
+
+	/**
 	 * Adds object tags
 	 * 
 	 * @param name Tag name
