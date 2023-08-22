@@ -743,7 +743,7 @@ public class PayloadManagerWindow extends JDialog {
 					.verifyPackageSignature(new File("payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
 				LauncherUtils.extractPackagePublicKey(new File("payloadcache/payloadverificationkeys", id + ".pem"),
 						spf);
-			} else {
+			} else if (LauncherUtils.isPackageSigned(spf)) {
 				if (throwError)
 					throw new IOException("Incompatible payload");
 				JOptionPane.showMessageDialog(PayloadManagerWindow.this,
