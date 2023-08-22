@@ -74,7 +74,10 @@ public class LauncherUtils {
 	static IGameDescriptor gameDescriptor;
 	static IEmulationSoftwareProvider emulationSoftware;
 
-	static JsonObject sacConfig;
+	public static JsonObject sacConfig;
+	public static String urlBaseSoftwareFile;
+	public static String urlBaseDescriptorFile;
+	public static String assetSourceURL;
 	static boolean assetManagementAvailable = false;
 
 	private static HashMap<String, ObjectTag> tags = new HashMap<String, ObjectTag>();
@@ -775,10 +778,6 @@ public class LauncherUtils {
 
 		// Check changes
 		if (saved) {
-			// Redownload descriptor
-			if (new File("assets/descriptor.hash").exists())
-				new File("assets/descriptor.hash").delete();
-
 			// Delete removed clients
 			File localVersions = new File("clienthashes.json");
 			if (localVersions.exists()) {

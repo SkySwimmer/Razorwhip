@@ -77,6 +77,23 @@ public interface IGameDescriptor {
 			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException;
 
 	/**
+	 * Called to retrieve the download size of the asset update
+	 * 
+	 * @param assetServer    Asset server URL
+	 * @param assetDir       Asset root directory
+	 * @param versions       Client version list
+	 * @param archiveDef     Archive definition object
+	 * @param descriptorDef  Descriptor definition object
+	 * @param assetHashes    Asset hash list
+	 * @param assetFileSizes Asset file size list
+	 * @return Download size in bytes
+	 * @throws IOException If indexing fails
+	 */
+	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
+			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
+			throws IOException;
+
+	/**
 	 * Called to download client assets
 	 * 
 	 * @param assetServer   Asset server URL

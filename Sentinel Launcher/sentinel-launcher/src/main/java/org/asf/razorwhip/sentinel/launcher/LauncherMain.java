@@ -352,6 +352,8 @@ public class LauncherMain {
 		// Run launcher
 		String urlBaseSoftwareFileF = urlBaseSoftwareFile;
 		String urlBaseDescriptorFileF = urlBaseDescriptorFile;
+		LauncherUtils.urlBaseDescriptorFile = urlBaseDescriptorFile;
+		LauncherUtils.urlBaseSoftwareFile = urlBaseSoftwareFile;
 		boolean dirModeDescriptorFileF = dirModeDescriptorFile;
 		boolean dirModeSoftwareFileF = dirModeSoftwareFile;
 		File gameDescriptorFileF = gameDescriptorFile;
@@ -395,8 +397,7 @@ public class LauncherMain {
 								// Check
 								if (!latest.equals(current)) {
 									// Update
-									LauncherUtils.log("Updating game descriptor...", true);
-									LauncherUtils.log("Updating to " + latest + "...");
+									LauncherUtils.log("Updating game descriptor to " + latest + "...", true);
 									JsonObject versionData = list.get("versions").getAsJsonObject().get(latest)
 											.getAsJsonObject();
 									String url = versionData.get("url").getAsString();
@@ -435,6 +436,8 @@ public class LauncherMain {
 
 									// Verify signature
 									if (hashSuccess) {
+										LauncherUtils.resetProgressBar();
+										LauncherUtils.hideProgressPanel();
 										LauncherUtils.log("Verifying signature...", true);
 										if (!LauncherUtils.verifyPackageSignature(new File("gamedescriptor.sgd.tmp"),
 												new File("gamedescriptor-publickey.pem"))) {
@@ -464,6 +467,8 @@ public class LauncherMain {
 												break;
 											}
 										}
+										LauncherUtils.resetProgressBar();
+										LauncherUtils.showProgressPanel();
 									}
 
 									// Check success
@@ -476,6 +481,7 @@ public class LauncherMain {
 										updatedDescriptor = true;
 
 										// Update
+										LauncherUtils.log("Extracting game descriptor...", true);
 										PayloadManager.discoverPayloads();
 										LauncherUtils.extractGameDescriptor(new File(gameDescriptorFileF.getPath()),
 												latest);
@@ -554,8 +560,7 @@ public class LauncherMain {
 								// Check
 								if (!latest.equals(LauncherUtils.softwareVersion)) {
 									// Update
-									LauncherUtils.log("Updating emulation software...", true);
-									LauncherUtils.log("Updating to " + latest + "...");
+									LauncherUtils.log("Updating emulation software to " + latest + "...", true);
 									JsonObject versionData = list.get("versions").getAsJsonObject().get(latest)
 											.getAsJsonObject();
 									String url = versionData.get("url").getAsString();
@@ -595,6 +600,8 @@ public class LauncherMain {
 
 									// Verify signature
 									if (hashSuccess) {
+										LauncherUtils.resetProgressBar();
+										LauncherUtils.hideProgressPanel();
 										LauncherUtils.log("Verifying signature...", true);
 										if (!LauncherUtils.verifyPackageSignature(new File("emulationsoftware.svp.tmp"),
 												new File("emulationsoftware-publickey.pem"))) {
@@ -626,6 +633,8 @@ public class LauncherMain {
 												break;
 											}
 										}
+										LauncherUtils.resetProgressBar();
+										LauncherUtils.showProgressPanel();
 									}
 
 									// Check success
@@ -638,6 +647,7 @@ public class LauncherMain {
 										updatedSoftware = true;
 
 										// Update
+										LauncherUtils.log("Extracting emulation software..", true);
 										PayloadManager.discoverPayloads();
 										LauncherUtils.extractEmulationSoftware(
 												new File(emulationSoftwareFileF.getPath()), latest);
@@ -831,6 +841,7 @@ public class LauncherMain {
 				assetSourceURL = parseURL(assetSourceURL, urlBaseDescriptorFileF, urlBaseSoftwareFileF, null);
 				if (!assetSourceURL.endsWith("/"))
 					assetSourceURL += "/";
+				LauncherUtils.assetSourceURL = assetSourceURL;
 
 				// Download into memory
 				LauncherUtils.log("Downloading asset archive information...");

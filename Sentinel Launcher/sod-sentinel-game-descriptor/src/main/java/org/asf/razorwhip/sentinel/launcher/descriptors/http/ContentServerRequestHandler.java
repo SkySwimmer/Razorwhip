@@ -707,8 +707,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 					// Pull file
 					URL u = new URL(url);
 					URLConnection conn = u.openConnection();
-					InputStream fileStream = conn.getInputStream();
-					fileData = fileStream;
+					fileData = new ContentDownloaderStream(conn);
 					length = conn.getContentLengthLong();
 				} catch (Exception e) {
 					setResponseStatus(404, "Not found");

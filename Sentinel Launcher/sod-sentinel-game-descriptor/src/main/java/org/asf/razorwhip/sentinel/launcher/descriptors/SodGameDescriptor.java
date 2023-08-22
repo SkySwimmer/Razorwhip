@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 import javax.swing.JOptionPane;
 
 import org.asf.connective.ConnectiveHttpServer;
+import org.asf.connective.tasks.AsyncTaskManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.data.LauncherController;
@@ -161,6 +162,62 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Success
 		return true;
+	}
+
+	@Override
+	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
+			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
+			throws IOException {
+		HashMap<String, String> assetHashesLocal = new HashMap<String, String>();
+		indexAssetHashes(assetHashesLocal, new File("assets/localhashes.shl"));
+
+		// Collect assets to download
+		ArrayList<String> assetsToDownload = new ArrayList<String>();
+
+		// Check root files
+		for (String name : assetHashes.keySet()) {
+			if (!name.contains("/")) {
+				// Check
+				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
+					assetsToDownload.add(name);
+			}
+		}
+
+		// Check other files
+		for (String name : assetHashes.keySet()) {
+			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")) {
+				// Check
+				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
+					assetsToDownload.add(name);
+			}
+		}
+
+		// Check content files
+		for (String name : assetHashes.keySet()) {
+			if (name.toLowerCase().startsWith("content/")) {
+				// Check
+				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
+					assetsToDownload.add(name);
+			}
+		}
+
+		// Check asset files
+		for (String version : versions) {
+			for (String name : assetHashes.keySet()) {
+				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")) {
+					// Check
+					if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
+						assetsToDownload.add(name);
+				}
+			}
+		}
+
+		// Retrieve size
+		long size = 0;
+		for (String asset : assetsToDownload) {
+			size += assetFileSizes.get(asset);
+		}
+		return size;
 	}
 
 	private void indexAssetHashes(HashMap<String, String> assetHashes, File hashFile)
@@ -528,7 +585,13 @@ public class SodGameDescriptor implements IGameDescriptor {
 				// Log
 				LauncherUtils.log("Launching client...", true);
 				Process proc = builder.start();
-				proc.onExit().thenAccept(t -> {
+				AsyncTaskManager.runAsync(() -> {
+					// Wait for exit
+					try {
+						proc.waitFor();
+					} catch (InterruptedException e) {
+					}
+
 					// Exited
 					exitCallback.run();
 				});

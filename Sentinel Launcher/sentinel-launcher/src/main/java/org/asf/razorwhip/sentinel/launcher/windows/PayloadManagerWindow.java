@@ -738,6 +738,20 @@ public class PayloadManagerWindow extends JDialog {
 				return false;
 			}
 
+			// Verify signature
+			if (LauncherUtils.isPackageSigned(spf) && LauncherUtils
+					.verifyPackageSignature(new File("payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
+				LauncherUtils.extractPackagePublicKey(new File("payloadcache/payloadverificationkeys", id + ".pem"),
+						spf);
+			} else {
+				if (throwError)
+					throw new IOException("Incompatible payload");
+				JOptionPane.showMessageDialog(PayloadManagerWindow.this,
+						"Payload signature failed to verify! Please verify the authenticity of this payload!", "Error",
+						JOptionPane.ERROR_MESSAGE);
+				return false;
+			}
+
 			// Add
 			String name = (id.endsWith(".spf") ? id : id + ".spf");
 			int i = 1;

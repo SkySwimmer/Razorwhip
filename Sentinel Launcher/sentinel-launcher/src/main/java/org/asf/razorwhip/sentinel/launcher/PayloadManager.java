@@ -117,6 +117,20 @@ public class PayloadManager {
 			// Remove files
 			for (JsonElement ele : payloadsToRemove) {
 				File payloadF = new File("payloads", ele.getAsString());
+
+				// Delete key
+				try {
+					Map<String, String> descriptor = LauncherUtils
+							.parseProperties(getStringFrom(payloadF, "payloadinfo"));
+					String id = payloadF.getName();
+					if (descriptor.containsKey("Payload-ID"))
+						id = descriptor.get("Payload-ID");
+					if (new File("payloadcache/payloadverificationkeys", id + ".pem").exists()) {
+						new File("payloadcache/payloadverificationkeys", id + ".pem").delete();
+					}
+				} catch (Exception e) {
+				}
+				// Delete
 				if (payloadF.exists())
 					payloadF.delete();
 			}
@@ -142,7 +156,20 @@ public class PayloadManager {
 			// Check
 			if (!index.has(spf.getName())) {
 				discoveredPayloads = true;
-				break;
+
+				// Extract key
+				try {
+					Map<String, String> descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
+					String id = spf.getName();
+					if (descriptor.containsKey("Payload-ID"))
+						id = descriptor.get("Payload-ID");
+					if (LauncherUtils.isPackageSigned(spf) && LauncherUtils.verifyPackageSignature(
+							new File("payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
+						LauncherUtils.extractPackagePublicKey(
+								new File("payloadcache/payloadverificationkeys", id + ".pem"), spf);
+					}
+				} catch (Exception e) {
+				}
 			}
 		}
 
@@ -901,8 +928,7 @@ public class PayloadManager {
 						// Check
 						if (!latest.equals(current)) {
 							// Update
-							LauncherUtils.log("Updating " + name + "...", true);
-							LauncherUtils.log("Updating to " + latest + "...");
+							LauncherUtils.log("Updating " + name + " to " + latest + "...", true);
 							JsonObject versionData = list.get("versions").getAsJsonObject().get(latest)
 									.getAsJsonObject();
 							String url = versionData.get("url").getAsString();
@@ -943,6 +969,8 @@ public class PayloadManager {
 							// Verify signature
 							if (hashSuccess) {
 								LauncherUtils.log("Verifying signature...", true);
+								LauncherUtils.resetProgressBar();
+								LauncherUtils.hideProgressPanel();
 								if (!LauncherUtils.verifyPackageSignature(new File("payloads", spf.getName() + ".tmp"),
 										new File("payloadcache/payloadverificationkeys", id + ".pem"))) {
 									// Warn
@@ -972,6 +1000,8 @@ public class PayloadManager {
 										break;
 									}
 								}
+								LauncherUtils.resetProgressBar();
+								LauncherUtils.showProgressPanel();
 							}
 
 							// Check success

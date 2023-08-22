@@ -81,4 +81,12 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 		successCallback.run();
 	}
 
+	@Override
+	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
+			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
+			throws IOException {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

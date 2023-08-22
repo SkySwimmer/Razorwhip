@@ -10,6 +10,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 
 import java.awt.Dimension;
 
@@ -20,9 +21,11 @@ import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.awt.event.ActionEvent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -36,6 +39,8 @@ import javax.swing.ListSelectionModel;
 import javax.swing.JList;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ListSelectionListener;
+
+import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 
 import javax.swing.event.ListSelectionEvent;
 
@@ -52,11 +57,14 @@ public class VersionManagerWindow extends JDialog {
 	private ArrayList<AssetArchiveEntry> archives = new ArrayList<AssetArchiveEntry>();
 	private ArrayList<ClientEntry> clients = new ArrayList<ClientEntry>();
 	private AssetArchiveEntry lastArchive;
+	private boolean downloadFinished;
 
 	private JLabel lblThanks;
 
 	private boolean wasCancelled = true;
 	private boolean warnedArchiveChange = false;
+
+	private boolean updateDescriptor = true;
 
 	private class AssetArchiveEntry {
 		public String id;
@@ -234,6 +242,9 @@ public class VersionManagerWindow extends JDialog {
 			}
 		}
 
+		// Mark as update required
+		updateDescriptor = true;
+
 		// Load client list
 		refreshClientList();
 
@@ -335,6 +346,9 @@ public class VersionManagerWindow extends JDialog {
 								warnedArchiveChange = true;
 							}
 
+							// Update descriptor
+							updateDescriptor = true;
+
 							// Check deprecation
 							if (eA.deprecated) {
 								String message = eA.entry.get("deprecationNotice").getAsString();
@@ -368,6 +382,402 @@ public class VersionManagerWindow extends JDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				// Check
+				if (checkBoxDownload.isEnabled()) {
+					// Disable
+					boolean wasEnabledRemove = btnRemove.isEnabled();
+					btnOk.setEnabled(false);
+					btnCancel.setEnabled(false);
+					btnAdd.setEnabled(false);
+					checkBoxDownload.setEnabled(false);
+					clientListBox.setEnabled(false);
+					btnRemove.setEnabled(false);
+
+					// Set text
+					btnOk.setText("Busy...");
+
+					// Collect assets
+					Thread th = new Thread(() -> {
+						try {
+							// Load settings
+							JsonObject archiveDef = lastArchive.entry;
+							JsonObject archiveDescriptor = JsonParser
+									.parseString(Files.readString(Path.of("assets/descriptor/descriptor.json")))
+									.getAsJsonObject();
+
+							// Update descriptor
+							if (updateDescriptor) {
+								// Download descriptor
+								LauncherUtils.log("Downloading archive descriptor...", true);
+								SwingUtilities.invokeAndWait(() -> {
+									if (!downloadFinished) {
+										lblThanks.setText("Downloading archive descriptor... Please wait... [0%]");
+										lblThanks.setVisible(true);
+									}
+								});
+								downloadFinished = false;
+								Thread th2 = new Thread(() -> {
+									String lastMsg = "";
+									while (!downloadFinished) {
+										try {
+											int percentage = (int) ((100f / (float) (LauncherUtils.getProgressMax()))
+													* (float) LauncherUtils.getProgress());
+											if (!lastMsg.equals("Downloading archive descriptor... Please wait... ["
+													+ percentage + "%]")) {
+												lastMsg = "Downloading archive descriptor... Please wait... ["
+														+ percentage + "%]";
+												SwingUtilities.invokeAndWait(() -> {
+													if (!downloadFinished) {
+														lblThanks.setText(
+																"Downloading archive descriptor... Please wait... ["
+																		+ percentage + "%]");
+													}
+												});
+											}
+											Thread.sleep(100);
+										} catch (InvocationTargetException | InterruptedException e1) {
+											break;
+										}
+									}
+								});
+								th2.setDaemon(true);
+								th2.start();
+								LauncherUtils.resetProgressBar();
+								LauncherUtils.showProgressPanel();
+								String dir = parseURL(LauncherUtils.sacConfig.get("descriptorRoot").getAsString(),
+										LauncherUtils.urlBaseDescriptorFile, LauncherUtils.urlBaseSoftwareFile,
+										LauncherUtils.assetSourceURL);
+								String rHashDescriptor = LauncherUtils
+										.downloadString(dir + archiveDef.get("type").getAsString() + ".hash")
+										.replace("\r", "").replace("\n", "");
+								LauncherUtils.downloadFile(dir + archiveDef.get("type").getAsString() + ".zip",
+										new File("assets/descriptor.zip"));
+								downloadFinished = true;
+
+								// Hide bars
+								LauncherUtils.hideProgressPanel();
+								LauncherUtils.resetProgressBar();
+
+								// Verify signature
+								LauncherUtils.log("Verifying signature... Please wait...", true);
+								SwingUtilities.invokeAndWait(() -> {
+									lblThanks.setText("Verifying signature... Please wait...");
+									lblThanks.setVisible(true);
+								});
+								if (!LauncherUtils.verifyPackageSignature(new File("assets/descriptor.zip"),
+										new File("assets/sac-publickey.pem"))) {
+									// Check if signed
+									if (!LauncherUtils.isPackageSigned(new File("assets/descriptor.zip"))) {
+										// Hide bars
+										LauncherUtils.hideProgressPanel();
+										LauncherUtils.resetProgressBar();
+
+										// Unsigned
+										// Check support
+										LauncherUtils.log("Package is unsigned.");
+										if (!LauncherUtils.sacConfig.get("allowUnsignedArchiveDescriptors")
+												.getAsBoolean()) {
+											LauncherUtils.log("Package is unsigned.");
+											JOptionPane.showMessageDialog(VersionManagerWindow.this,
+													"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
+													"Update error", JOptionPane.ERROR_MESSAGE);
+
+											// Re-enable
+											SwingUtilities.invokeLater(() -> {
+												btnOk.setEnabled(true);
+												btnCancel.setEnabled(true);
+												btnAdd.setEnabled(true);
+												checkBoxDownload.setEnabled(true);
+												clientListBox.setEnabled(true);
+												btnRemove.setEnabled(wasEnabledRemove);
+												btnOk.setText("Ok");
+												lblThanks.setVisible(lastArchive != null);
+												if (lastArchive != null)
+													lblThanks.setText("Assets kindly mirrored by "
+															+ lastArchive.entry.get("thanksTo").getAsString());
+											});
+										}
+									} else {
+										// Hide bars
+										LauncherUtils.hideProgressPanel();
+										LauncherUtils.resetProgressBar();
+
+										LauncherUtils.log("Signature verification failure.");
+										JOptionPane.showMessageDialog(VersionManagerWindow.this,
+												"Failed to verify integrity of archive descriptor file.\n\nPlease report this error to the project's archival team.",
+												"Update error", JOptionPane.ERROR_MESSAGE);
+
+										// Re-enable
+										SwingUtilities.invokeLater(() -> {
+											btnOk.setEnabled(true);
+											btnCancel.setEnabled(true);
+											btnAdd.setEnabled(true);
+											checkBoxDownload.setEnabled(true);
+											clientListBox.setEnabled(true);
+											btnRemove.setEnabled(wasEnabledRemove);
+											btnOk.setText("Ok");
+											lblThanks.setVisible(lastArchive != null);
+											if (lastArchive != null)
+												lblThanks.setText("Assets kindly mirrored by "
+														+ lastArchive.entry.get("thanksTo").getAsString());
+										});
+									}
+								}
+
+								// Extract
+								SwingUtilities.invokeAndWait(() -> {
+									if (!downloadFinished) {
+										lblThanks.setText("Extracting archive information... Please wait... [0%]");
+										lblThanks.setVisible(true);
+									}
+								});
+								downloadFinished = false;
+								th2 = new Thread(() -> {
+									String lastMsg = "";
+									while (!downloadFinished) {
+										try {
+											int percentage = (int) ((100f / (float) (LauncherUtils.getProgressMax()))
+													* (float) LauncherUtils.getProgress());
+											if (!lastMsg.equals("Extracting archive information... Please wait... ["
+													+ percentage + "%]")) {
+												lastMsg = "Extracting archive information... Please wait... ["
+														+ percentage + "%]";
+												SwingUtilities.invokeAndWait(() -> {
+													if (!downloadFinished) {
+														lblThanks.setText(
+																"Extracting archive information... Please wait... ["
+																		+ percentage + "%]");
+													}
+												});
+											}
+											Thread.sleep(100);
+										} catch (InvocationTargetException | InterruptedException e1) {
+											break;
+										}
+									}
+								});
+								th2.setDaemon(true);
+								th2.start();
+								LauncherUtils.log("Extracting archive information...", true);
+								if (new File("assets/descriptor").exists())
+									LauncherUtils.deleteDir(new File("assets/descriptor"));
+								LauncherUtils.unZip(new File("assets/descriptor.zip"), new File("assets/descriptor"));
+								downloadFinished = true;
+
+								// Write hash
+								Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
+
+								// Hide bars
+								LauncherUtils.hideProgressPanel();
+								LauncherUtils.resetProgressBar();
+								updateDescriptor = false;
+							}
+
+							// Collect changed assets and find size
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Indexing assets...");
+								lblThanks.setVisible(true);
+							});
+							LauncherUtils.log("Checking for asset archive updates...");
+							LauncherUtils.log("Indexing assets... Please wait...");
+							HashMap<String, String> assetHashes = new HashMap<String, String>();
+							indexAssetHashes(assetHashes, new File("assets/descriptor/hashes.shl"));
+							File assetRoot = new File("assets/assetarchive");
+							assetRoot.mkdirs();
+
+							// Collect versions
+							ArrayList<String> versions = new ArrayList<String>();
+							for (ClientEntry client : clients) {
+								versions.add(client.version);
+							}
+
+							// Verify
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Verifying clients...");
+								lblThanks.setVisible(true);
+							});
+							for (String clientVersion : versions) {
+								LauncherUtils.log("Verifying asset of " + clientVersion + "...");
+								if (!LauncherUtils.getGameDescriptor().verifyLocalAssets(
+										archiveDef.get("url").getAsString(), assetRoot, clientVersion, archiveDef,
+										archiveDescriptor, assetHashes)) {
+
+									// Index
+									SwingUtilities.invokeAndWait(() -> {
+										lblThanks.setText("Collecting download size...");
+										lblThanks.setVisible(true);
+									});
+									HashMap<String, Long> assetSizes = new HashMap<String, Long>();
+									indexAssetSizes(assetSizes, new File("assets/descriptor/index.sfl"));
+
+									// Find size
+									long size = LauncherUtils.getGameDescriptor().getAssetDownloadSize(
+											archiveDef.get("url").getAsString(), assetRoot,
+											versions.toArray(t -> new String[t]), archiveDef, archiveDescriptor,
+											assetHashes, assetSizes);
+
+									// Pretty-print
+									String sizeStr = size + "b";
+									if (size >= 1024) {
+										size = size / 1024;
+										sizeStr = size + "kb";
+									}
+									if (size >= 1024) {
+										size = size / 1024;
+										sizeStr = size + "mb";
+									}
+									if (size >= 1024) {
+										size = size / 1024;
+										sizeStr = size + "gb";
+									}
+
+									// Update
+									String sizeStrF = sizeStr;
+									SwingUtilities.invokeAndWait(() -> {
+										lblThanks.setText("Need to download " + sizeStrF);
+										lblThanks.setVisible(true);
+									});
+
+									// Notify
+									if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
+											"WARNING! This operation will download " + sizeStr
+													+ " of asset data!\n\nAre you sure you want to continue?",
+											"Warning", JOptionPane.YES_NO_OPTION,
+											JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+
+										// Re-enable
+										SwingUtilities.invokeLater(() -> {
+											btnOk.setEnabled(true);
+											btnCancel.setEnabled(true);
+											btnAdd.setEnabled(true);
+											checkBoxDownload.setEnabled(true);
+											clientListBox.setEnabled(true);
+											btnRemove.setEnabled(wasEnabledRemove);
+											btnOk.setText("Ok");
+											lblThanks.setVisible(lastArchive != null);
+											if (lastArchive != null)
+												lblThanks.setText("Assets kindly mirrored by "
+														+ lastArchive.entry.get("thanksTo").getAsString());
+										});
+
+										return;
+									}
+								}
+							}
+
+							// Save
+							SwingUtilities.invokeLater(() -> {
+								// Re-enable
+								btnOk.setEnabled(true);
+								btnCancel.setEnabled(true);
+								btnAdd.setEnabled(true);
+								checkBoxDownload.setEnabled(true);
+								clientListBox.setEnabled(true);
+								btnRemove.setEnabled(wasEnabledRemove);
+								btnOk.setText("Ok");
+								lblThanks.setVisible(lastArchive != null);
+								if (lastArchive != null)
+									lblThanks.setText("Assets kindly mirrored by "
+											+ lastArchive.entry.get("thanksTo").getAsString());
+								doSave();
+							});
+						} catch (Exception e2) {
+							// Error
+							String stackTrace = "";
+							Throwable t = e2;
+							while (t != null) {
+								for (StackTraceElement ele : t.getStackTrace())
+									stackTrace += "\n     At: " + ele;
+								t = t.getCause();
+								if (t != null)
+									stackTrace += "\nCaused by: " + t;
+							}
+							JOptionPane.showMessageDialog(VersionManagerWindow.this,
+									"An error occurred!\n\nError details: " + e2 + stackTrace, "Launcher error",
+									JOptionPane.ERROR_MESSAGE);
+							downloadFinished = true;
+
+							// Re-enable
+							SwingUtilities.invokeLater(() -> {
+								btnOk.setEnabled(true);
+								btnCancel.setEnabled(true);
+								btnAdd.setEnabled(true);
+								checkBoxDownload.setEnabled(true);
+								clientListBox.setEnabled(true);
+								btnRemove.setEnabled(wasEnabledRemove);
+								btnOk.setText("Ok");
+								lblThanks.setVisible(lastArchive != null);
+								if (lastArchive != null)
+									lblThanks.setText("Assets kindly mirrored by "
+											+ lastArchive.entry.get("thanksTo").getAsString());
+							});
+						}
+					});
+					th.setDaemon(true);
+					th.start();
+					return;
+				}
+
+				// Make sure descriptor gets re-downloaded
+				if (new File("assets/descriptor.hash").exists())
+					new File("assets/descriptor.hash").delete();
+
+				// Close
+				doSave();
+			}
+
+			private String parseURL(String url, String urlBaseDescriptorFileF, String urlBaseSoftwareFileF,
+					String sentinelAssetRoot) {
+				if (url.startsWith("sgd:")) {
+					String source = url.substring(4);
+					while (source.startsWith("/"))
+						source = source.substring(1);
+					url = urlBaseDescriptorFileF + source;
+				} else if (url.startsWith("svp:")) {
+					String source = url.substring(4);
+					while (source.startsWith("/"))
+						source = source.substring(1);
+					url = urlBaseSoftwareFileF + source;
+				} else if (sentinelAssetRoot != null && url.startsWith("sac:")) {
+					String source = url.substring(4);
+					while (source.startsWith("/"))
+						source = source.substring(1);
+					url = sentinelAssetRoot + source;
+				}
+				return url;
+			}
+
+			private void indexAssetHashes(HashMap<String, String> assetHashes, File hashFile)
+					throws JsonSyntaxException, IOException {
+				// Load hashes
+				String[] lines = Files.readString(hashFile.toPath()).split("\n");
+				for (String line : lines) {
+					if (line.isEmpty())
+						continue;
+					// Parse
+					String name = line.substring(0, line.indexOf(": ")).replace(";sp;", " ").replace(";cl;", ":")
+							.replace(";sl;", ";");
+					String hash = line.substring(line.indexOf(": ") + 2);
+					assetHashes.put(name, hash);
+				}
+			}
+
+			private void indexAssetSizes(HashMap<String, Long> assetSizes, File sizeFile)
+					throws JsonSyntaxException, IOException {
+				// Load hashes
+				String[] lines = Files.readString(sizeFile.toPath()).split("\n");
+				for (String line : lines) {
+					if (line.isEmpty())
+						continue;
+					// Parse
+					String name = line.substring(0, line.indexOf(": ")).replace(";sp;", " ").replace(";cl;", ":")
+							.replace(";sl;", ";");
+					String len = line.substring(line.indexOf(": ") + 2);
+					assetSizes.put(name, Long.parseLong(len));
+				}
+			}
+
+			private void doSave() {
 				try {
 					// Write clients
 					JsonArray clientsArr = new JsonArray();

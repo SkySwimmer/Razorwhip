@@ -18,7 +18,9 @@ public class HashArchiveTool {
 			System.exit(1);
 			return;
 		}
-		new File(args[1]).mkdirs();
+		File p = new File(args[1]).getParentFile();
+		if (p != null)
+			p.mkdirs();
 
 		// Index
 		FileOutputStream fO = new FileOutputStream(new File(args[1]));
