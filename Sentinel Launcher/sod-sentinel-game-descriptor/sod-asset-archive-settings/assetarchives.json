@@ -6,7 +6,7 @@
 		"url": "https://assetarchive.projectedge.net/",
 		"type": "projectedge-revised-v2",
 		
-		"allowFullDownload": true,
+		"allowFullDownload": false,
 		"allowStreaming": true,
 		
 		"deprecated": false,
