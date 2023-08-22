@@ -1063,6 +1063,8 @@ public class LauncherMain {
 				if (!archiveDef.get("allowStreaming").getAsBoolean() || (archiveDef.has("deprecated")
 						&& archiveDef.has("deprecationNotice") && archiveDef.get("deprecated").getAsBoolean()))
 					streaming = false;
+				if (!archiveDef.get("allowFullDownload").getAsBoolean())
+					streaming = true;
 				archiveDef = archiveLst.get(id).getAsJsonObject();
 
 				// Check archive descriptor
