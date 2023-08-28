@@ -15,5 +15,5 @@
 	"assetArchiveList": "https://raw.githubusercontent.com/SkySwimmer/Razorwhip/main/Sentinel%20Launcher/sod-sentinel-game-descriptor/sod-asset-archive-settings/assetarchives.json",
 	
 	"fileDescription8": "The following option defines the root path of the archive descriptor folder",
-	"descriptorRoot": "https://sentinel.projectedge.net/asset-archive-descriptors/sod/"
+	"descriptorRoot": "https://aerialworks.ddns.net/edge-temp-host/sentinel.projectedge.net/asset-archive-descriptors/sod/"
 }
