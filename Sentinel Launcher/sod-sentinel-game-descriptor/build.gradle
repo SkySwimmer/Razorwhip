@@ -4,7 +4,7 @@ plugins {
 	id "com.github.johnrengelman.shadow" version "7.0.0"
 }
 
-version = "1.0.0.A8"
+version = "1.0.0.A9"
 group = "org.asf.razorwhip.sentinel.sod"
 
 sourceCompatibility = '1.17'
