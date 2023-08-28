@@ -806,6 +806,7 @@ public class LauncherUtils {
 					}
 					if (!found) {
 						// Delete client
+						LauncherMain.closeClientsIfNeeded();
 						deleteDir(new File("client-" + version));
 					} else
 						newHashList.add(version, localHashList.get(version));
@@ -1222,9 +1223,18 @@ public class LauncherUtils {
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications"), clientDir);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion),
-					clientDir);
+
+			// Check modifications
+			File modsSpecific = new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion);
+			File modsGeneral = new File("emulationsoftwaretmp", "clientmodifications");
+			if (modsSpecific.exists() || modsGeneral.exists()) {
+				// Close clients
+				LauncherMain.closeClientsIfNeeded();
+
+				// Update
+				LauncherUtils.copyDirWithProgress(modsGeneral, clientDir);
+				LauncherUtils.copyDirWithProgress(modsSpecific, clientDir);
+			}
 		}
 		if (new File("emulationsoftwaretmp", "defaultpayloads").exists()) {
 			LauncherUtils.log("Updating default payloads to " + version + "...", true);
@@ -1259,9 +1269,18 @@ public class LauncherUtils {
 		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "clientmodifications"), clientDir);
-			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "clientmodifications-" + clientVersion),
-					clientDir);
+
+			// Check modifications
+			File modsSpecific = new File("gamedescriptortmp", "clientmodifications-" + clientVersion);
+			File modsGeneral = new File("gamedescriptortmp", "clientmodifications");
+			if (modsSpecific.exists() || modsGeneral.exists()) {
+				// Close clients
+				LauncherMain.closeClientsIfNeeded();
+
+				// Update
+				LauncherUtils.copyDirWithProgress(modsGeneral, clientDir);
+				LauncherUtils.copyDirWithProgress(modsSpecific, clientDir);
+			}
 		}
 
 		// Delete

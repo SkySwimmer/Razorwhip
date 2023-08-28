@@ -550,10 +550,18 @@ public class PayloadManager {
 					new File("assetmodifications"), "assetmodifications/", lastFiles, newIndex);
 			for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 				String clientVersion = clientDir.getName().substring("client-".length());
-				copyDirWithProgress(new File("payloadcache/payloaddata", "clientmodifications"), clientDir,
-						clientDir.getName(), lastFiles, newIndex);
-				copyDirWithProgress(new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion),
-						clientDir, "", lastFiles, newIndex);
+
+				// Check modifications
+				File modsGeneral = new File("payloadcache/payloaddata", "clientmodifications");
+				File modsSpecific = new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion);
+				if (modsSpecific.exists() || modsGeneral.exists()) {
+					// Close clients
+					LauncherMain.closeClientsIfNeeded();
+
+					// Update
+					copyDirWithProgress(modsGeneral, clientDir, clientDir.getName(), lastFiles, newIndex);
+					copyDirWithProgress(modsSpecific, clientDir, "", lastFiles, newIndex);
+				}
 			}
 
 			// Apply list

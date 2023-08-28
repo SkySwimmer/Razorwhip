@@ -585,6 +585,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 				// Log
 				LauncherUtils.log("Launching client...", true);
 				Process proc = builder.start();
+				LauncherUtils.addTag("client_process").setValue(Process.class, proc);
 				AsyncTaskManager.runAsync(() -> {
 					// Wait for exit
 					try {

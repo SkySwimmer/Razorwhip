@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -64,11 +65,37 @@ public class LauncherMain {
 	private JLabel lblStatusLabel;
 	private boolean shiftDown;
 
+	private static ArrayList<String> filesToDeleteOnClientUpdate = new ArrayList<String>();
+	private static ArrayList<Long> updateActiveClientProcesses = new ArrayList<Long>();
+
 	/**
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
 		LauncherUtils.args = args;
+
+		// Check
+		if (new File("sentinel.activeprocesses.sjf").exists()) {
+			try {
+				// Load file
+				JsonObject settings = JsonParser.parseString(Files.readString(Path.of("sentinel.activeprocesses.sjf")))
+						.getAsJsonObject();
+				if (settings.has("processes")) {
+					for (JsonElement ele : settings.get("processes").getAsJsonArray())
+						updateActiveClientProcesses.add(ele.getAsLong());
+				}
+				if (settings.has("deleteFilesOnProcessExit")) {
+					for (JsonElement ele : settings.get("deleteFilesOnProcessExit").getAsJsonArray())
+						filesToDeleteOnClientUpdate.add(ele.getAsString());
+				}
+
+				// Delete
+				new File("sentinel.activeprocesses.sjf").delete();
+			} catch (IOException e) {
+			}
+		}
+
+		// Run
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
@@ -87,6 +114,38 @@ public class LauncherMain {
 	 */
 	public LauncherMain() {
 		initialize();
+	}
+
+	static void closeClientsIfNeeded() {
+		if (updateActiveClientProcesses.size() == 0)
+			return;
+		ArrayList<ProcessHandle> handles = new ArrayList<ProcessHandle>();
+		for (long pid : updateActiveClientProcesses) {
+			try {
+				Optional<ProcessHandle> h = ProcessHandle.of(pid);
+				if (h.isPresent() && h.get().isAlive())
+					handles.add(h.get());
+			} catch (Exception e) {
+			}
+		}
+		if (handles.size() != 0) {
+			// Show warning
+			JOptionPane.showMessageDialog(LauncherUtils.launcherWindow.frmSentinelLauncher,
+					"Warning!\n\nSentinel found some running client processes that need to be closed before the update can be completed.\n\nPlease close the clients before proceeding, press OK to terminate all remaining client processes.",
+					"Active client processes detected", JOptionPane.WARNING_MESSAGE);
+
+			// Close processes
+			for (ProcessHandle handle : handles)
+				if (handle.isAlive())
+					handle.destroy();
+
+			// Delete files pending deletion
+			for (String f : filesToDeleteOnClientUpdate)
+				if (new File(f).exists())
+					new File(f).delete();
+		}
+		updateActiveClientProcesses.clear();
+		filesToDeleteOnClientUpdate.clear();
 	}
 
 	/**
@@ -1201,6 +1260,7 @@ public class LauncherMain {
 							if (assetConnection && LauncherUtils.assetManagementAvailable) {
 								// Download client
 								LauncherUtils.log("Updating client " + clientVersion + "...", true);
+								closeClientsIfNeeded();
 								LauncherUtils.gameDescriptor.downloadClient(
 										archiveDef.get("clients").getAsJsonObject().get(clientVersion).getAsString(),
 										clientVersion, new File("client-" + clientVersion), archiveDef,
