@@ -410,6 +410,14 @@ public class LauncherMain {
 					}
 				}
 			}
+			try {
+				setIconFrom(emulationSoftwareFile, "icon.png");
+			} catch (IOException e) {
+				try {
+					setIconFrom(gameDescriptorFile, "icon.png");
+				} catch (IOException e3) {
+				}
+			}
 		} catch (Exception e) {
 			String stackTrace = "";
 			Throwable t = e;
@@ -808,6 +816,14 @@ public class LauncherMain {
 															panelLabels.setVisible(true);
 														}
 													}
+												}
+											}
+											try {
+												setIconFrom(emulationSoftwareFileF, "icon.png");
+											} catch (IOException e) {
+												try {
+													setIconFrom(gameDescriptorFileF, "icon.png");
+												} catch (IOException e3) {
 												}
 											}
 										});
@@ -1936,6 +1952,41 @@ public class LauncherMain {
 			// Read
 			BufferedImage img = ImageIO.read(strm);
 			panel.setImage(img);
+
+			// Close
+			strm.close();
+		} finally {
+			f.close();
+		}
+	}
+
+	private void setIconFrom(File file, String entry) throws IOException {
+		if (file.isDirectory()) {
+			FileInputStream strm = new FileInputStream(new File(file, entry));
+
+			// Read
+			BufferedImage img = ImageIO.read(strm);
+			frmSentinelLauncher.setIconImage(img);
+
+			// Close
+			strm.close();
+			return;
+		}
+
+		// Get zip
+		ZipFile f = new ZipFile(file);
+		try {
+			ZipEntry ent = f.getEntry(entry);
+			if (ent == null) {
+				throw new FileNotFoundException("Entry " + entry + " not found in " + file);
+			}
+
+			// Get stream
+			InputStream strm = f.getInputStream(ent);
+
+			// Read
+			BufferedImage img = ImageIO.read(strm);
+			frmSentinelLauncher.setIconImage(img);
 
 			// Close
 			strm.close();
