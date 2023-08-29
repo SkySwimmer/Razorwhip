@@ -1,6 +1,34 @@
 {
 	"0497c734-db4b-436b-8dc5-b8f15e62aba1": {
-		"archiveName": "Project Edge",
+		"archiveName": "Project Edge (AerialWorks Servers)",
+		"thanksTo": "Nexus Emulation",
+		
+		"url": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/",
+		"type": "projectedge-revised-v2",
+		
+		"allowFullDownload": true,
+		"allowStreaming": true,
+		
+		"deprecated": false,
+		"deprecationNotice": null,
+		
+		"clients": {
+			"3.31.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-3.31.0.zip",
+			"3.12.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-3.12.0.zip",
+			"2.12.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.12.0.zip",
+			"2.11.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.11.0.zip",
+			"2.10.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.10.0.zip",
+			"2.9.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.9.0.zip",
+			"2.8.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.8.0.zip",
+			"2.5.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.5.0.zip",
+			"1.18.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.18.0.zip",
+			"1.17.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.17.0.zip",
+			"1.14.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.14.0.zip",
+			"1.13.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.13.0.zip"
+		}
+	},
+	"58a84da0-44b5-487b-9383-fe20fbdd2bd8": {
+		"archiveName": "Project Edge (New host, presently slow)",
 		"thanksTo": "Nexus Emulation",
 		
 		"url": "https://assetarchive.projectedge.net/",
