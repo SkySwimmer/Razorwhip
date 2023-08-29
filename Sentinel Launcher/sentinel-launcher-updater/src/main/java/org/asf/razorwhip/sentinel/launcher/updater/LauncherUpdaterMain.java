@@ -374,6 +374,7 @@ public class LauncherUpdaterMain {
 				String launcherURLF = launcherURL;
 				Thread th = new Thread(() -> {
 					log("Waiting for user to select installer operation...");
+					frmLauncher.setVisible(true);
 					SwingUtilities.invokeLater(() -> {
 						progressBar.setMaximum(100);
 						progressBar.setValue(0);
