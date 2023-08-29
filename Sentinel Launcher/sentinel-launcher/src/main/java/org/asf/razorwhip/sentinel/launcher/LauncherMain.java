@@ -178,7 +178,7 @@ public class LauncherMain {
 			}
 		});
 		frmSentinelLauncher.setResizable(false);
-		frmSentinelLauncher.setBounds(100, 100, 678, 262);
+		frmSentinelLauncher.setBounds(100, 100, 854, 330);
 		frmSentinelLauncher.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmSentinelLauncher.setLocationRelativeTo(null);
 		try {
@@ -202,7 +202,7 @@ public class LauncherMain {
 		JPanel panel_4 = new JPanel();
 		panel_4.setPreferredSize(new Dimension(10, 30));
 		panel_1.add(panel_4, BorderLayout.SOUTH);
-		panel_4.setBackground(new Color(10, 10, 10, 100));
+		panel_4.setBackground(new Color(10, 10, 10, 120));
 		panel_4.setLayout(new BorderLayout(0, 0));
 
 		lblStatusLabel = new JLabel("New label");
@@ -235,7 +235,7 @@ public class LauncherMain {
 		panel_2.setLayout(null);
 
 		JLabel lblNewLabel = new JLabel("<Project Name>");
-		lblNewLabel.setBounds(12, 79, 576, 33);
+		lblNewLabel.setBounds(12, 119, 576, 33);
 		panel_2.add(lblNewLabel);
 		lblNewLabel.setHorizontalTextPosition(SwingConstants.CENTER);
 		lblNewLabel.setHorizontalAlignment(SwingConstants.CENTER);
