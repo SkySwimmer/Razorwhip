@@ -59,7 +59,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A10";
+	public static final String LAUNCHER_VERSION = "1.0.0.A11";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
@@ -181,6 +181,18 @@ public class LauncherMain {
 		frmSentinelLauncher.setBounds(100, 100, 678, 262);
 		frmSentinelLauncher.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmSentinelLauncher.setLocationRelativeTo(null);
+		try {
+			InputStream strmi = getClass().getClassLoader().getResourceAsStream("icon.png");
+			frmSentinelLauncher.setIconImage(ImageIO.read(strmi));
+			strmi.close();
+		} catch (Exception e1) {
+		}
+		try {
+			InputStream fIN = new FileInputStream(new File("icon.png"));
+			frmSentinelLauncher.setIconImage(ImageIO.read(fIN));
+			fIN.close();
+		} catch (Exception e1) {
+		}
 
 		BackgroundPanel panel_1 = new BackgroundPanel();
 		panel_1.setForeground(Color.WHITE);
@@ -571,6 +583,19 @@ public class LauncherMain {
 											throw new IOException("No descriptor class defined in game descriptor");
 										if (LauncherUtils.gameID == null)
 											throw new IOException("No game ID defined in game descriptor");
+										try {
+											InputStream strmi = getClass().getClassLoader()
+													.getResourceAsStream("icon.png");
+											frmSentinelLauncher.setIconImage(ImageIO.read(strmi));
+											strmi.close();
+										} catch (Exception e1) {
+										}
+										try {
+											InputStream fIN = new FileInputStream(new File("icon.png"));
+											frmSentinelLauncher.setIconImage(ImageIO.read(fIN));
+											fIN.close();
+										} catch (Exception e1) {
+										}
 										LauncherUtils.log("Updated game descriptor to " + latest + "!");
 									}
 								}
@@ -786,6 +811,19 @@ public class LauncherMain {
 												}
 											}
 										});
+										try {
+											InputStream strmi = getClass().getClassLoader()
+													.getResourceAsStream("icon.png");
+											frmSentinelLauncher.setIconImage(ImageIO.read(strmi));
+											strmi.close();
+										} catch (Exception e1) {
+										}
+										try {
+											InputStream fIN = new FileInputStream(new File("icon.png"));
+											frmSentinelLauncher.setIconImage(ImageIO.read(fIN));
+											fIN.close();
+										} catch (Exception e1) {
+										}
 										LauncherUtils.log("Updated emulation software to " + latest + "!");
 									}
 								}
