@@ -1156,7 +1156,7 @@ public class LauncherMain {
 				if (!valid) {
 					// Check status
 					LauncherUtils.log("Verification failure!");
-					if (LauncherUtils.assetManagementAvailable) {
+					if (!LauncherUtils.assetManagementAvailable) {
 						JOptionPane.showMessageDialog(frmSentinelLauncher,
 								"Unable to download critical files, please verify your internet connection.",
 								"Launcher Error", JOptionPane.ERROR_MESSAGE);
