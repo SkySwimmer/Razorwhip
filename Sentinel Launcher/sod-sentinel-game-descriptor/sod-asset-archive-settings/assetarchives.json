@@ -1,5 +1,5 @@
 {
-	"0497c734-db4b-436b-8dc5-b8f15e62aba1": {
+	"d93eba77-9922-4900-b8c0-90e4dbd69575": {
 		"archiveName": "Project Edge",
 		"thanksTo": "Nexus Emulation",
 		
@@ -38,7 +38,7 @@
 		"allowStreaming": true,
 		
 		"deprecated": true,
-		"deprecationNotice": "The AerialWorks servers are deprecated and will be shut down on the 18th of October.",
+		"deprecationNotice": "The AerialWorks servers are deprecated and will be shut down on the 18th of October.\n\nAfter a few months of service, the AerialWorks servers started to be unable to handle the load, as a result we had to do a host switch.\n\nThe AerialWorks servers will be shut down soon since they are no longer supported.",
 		
 		"clients": {
 			"3.31.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-3.31.0.zip",
