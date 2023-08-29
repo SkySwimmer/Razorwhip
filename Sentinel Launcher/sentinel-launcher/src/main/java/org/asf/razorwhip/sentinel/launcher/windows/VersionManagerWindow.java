@@ -383,7 +383,7 @@ public class VersionManagerWindow extends JDialog {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// Check
-				if (checkBoxDownload.isEnabled()) {
+				if (checkBoxDownload.isSelected()) {
 					// Disable
 					boolean wasEnabledRemove = btnRemove.isEnabled();
 					btnOk.setEnabled(false);

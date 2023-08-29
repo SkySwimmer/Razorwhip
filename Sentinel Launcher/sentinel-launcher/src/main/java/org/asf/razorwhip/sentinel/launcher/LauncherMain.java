@@ -59,7 +59,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A9";
+	public static final String LAUNCHER_VERSION = "1.0.0.A10";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
@@ -363,10 +363,19 @@ public class LauncherMain {
 						+ "' is incompatible with the current game.");
 
 			// Set title
-			LauncherUtils.log(LauncherUtils.softwareName + " Launcher v" + LAUNCHER_VERSION);
+			LauncherUtils.log("");
+			LauncherUtils.log("");
+			LauncherUtils.log("---------------------------");
+			LauncherUtils
+					.log("Welcome to the " + LauncherUtils.softwareName + " Launcher! (v" + LAUNCHER_VERSION + ")");
+			LauncherUtils.log("Launcher version: " + LAUNCHER_VERSION);
+			LauncherUtils.log("");
 			LauncherUtils.log("Game ID: " + LauncherUtils.gameID);
 			LauncherUtils.log("Emulation software ID: " + LauncherUtils.softwareID);
 			LauncherUtils.log("Emulation software version: " + LauncherUtils.softwareVersion);
+			LauncherUtils.log("---------------------------");
+			LauncherUtils.log("");
+			LauncherUtils.log("");
 			frmSentinelLauncher.setTitle(LauncherUtils.softwareName + " Launcher");
 			lblNewLabel.setText(LauncherUtils.softwareName);
 
