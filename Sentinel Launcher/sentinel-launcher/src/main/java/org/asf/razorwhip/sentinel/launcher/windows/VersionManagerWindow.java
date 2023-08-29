@@ -603,7 +603,6 @@ public class VersionManagerWindow extends JDialog {
 								if (!LauncherUtils.getGameDescriptor().verifyLocalAssets(
 										archiveDef.get("url").getAsString(), assetRoot, clientVersion, archiveDef,
 										archiveDescriptor, assetHashes)) {
-
 									// Index
 									SwingUtilities.invokeAndWait(() -> {
 										lblThanks.setText("Collecting download size...");
@@ -663,7 +662,8 @@ public class VersionManagerWindow extends JDialog {
 										});
 
 										return;
-									}
+									} else
+										break;
 								}
 							}
 
