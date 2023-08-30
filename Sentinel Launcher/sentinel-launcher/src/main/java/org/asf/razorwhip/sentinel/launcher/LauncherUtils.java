@@ -855,7 +855,8 @@ public class LauncherUtils {
 
 		// Transfer
 		InputStream strm = zip.getInputStream(keyEntry);
-		publicKeyOutputFile.getParentFile().mkdirs();
+		if (publicKeyOutputFile.getParentFile() != null)
+			publicKeyOutputFile.getParentFile().mkdirs();
 		FileOutputStream fOut = new FileOutputStream(publicKeyOutputFile);
 		strm.transferTo(fOut);
 		fOut.close();

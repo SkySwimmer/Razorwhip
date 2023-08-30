@@ -59,7 +59,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A11";
+	public static final String LAUNCHER_VERSION = "1.0.0.A13";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
@@ -296,6 +296,13 @@ public class LauncherMain {
 				// Update
 				LauncherUtils.extractGameDescriptor(new File(gameDescriptorFile.getPath()), "overridden version");
 
+				// Extract key
+				if (LauncherUtils.isPackageSigned(gameDescriptorFile))
+					LauncherUtils.extractPackagePublicKey(gameDescriptorFile, new File("gamedescriptor-publickey.pem"));
+				else if (new File("gamedescriptor-publickey.pem").exists())
+					new File("gamedescriptor-publickey.pem").delete();
+
+				// Mark overridden
 				overrodeSGD = true;
 			} else
 				overrodeSGD = false;
@@ -307,6 +314,14 @@ public class LauncherMain {
 				// Update
 				LauncherUtils.extractEmulationSoftware(new File(emulationSoftwareFile.getPath()), "overridden version");
 
+				// Extract key
+				if (LauncherUtils.isPackageSigned(emulationSoftwareFile))
+					LauncherUtils.extractPackagePublicKey(emulationSoftwareFile,
+							new File("emulationsoftware-publickey.pem"));
+				else if (new File("emulationsoftware-publickey.pem").exists())
+					new File("emulationsoftware-publickey.pem").delete();
+
+				// Mark overridden
 				overrodeSVP = true;
 			} else
 				overrodeSVP = false;
@@ -453,15 +468,10 @@ public class LauncherMain {
 				LauncherUtils.log("Preparing launcher...", true);
 				LauncherUtils.resetProgressBar();
 				PayloadManager.deletePayloadsPendingRemoval();
-
 				boolean updatedSoftware = false;
 				boolean updatedDescriptor = false;
 				String descriptorClsName = descriptorSourceClass;
 				String softwareClsName = softwareSourceClass;
-				if (overrodeSVP)
-					updatedSoftware = true;
-				if (overrodeSGD)
-					updatedDescriptor = true;
 
 				// Check for game descriptor updates
 				if (!dirModeDescriptorFileF) {
@@ -876,6 +886,12 @@ public class LauncherMain {
 						LauncherUtils.setStatus("Preparing launcher...");
 					}
 				}
+
+				// Mark updated if needed
+				if (overrodeSVP)
+					updatedSoftware = true;
+				if (overrodeSGD)
+					updatedDescriptor = true;
 
 				// Re-extract software package if the descriptor updated but not the software
 				if (updatedDescriptor && !updatedSoftware) {
