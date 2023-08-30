@@ -59,7 +59,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A13";
+	public static final String LAUNCHER_VERSION = "1.0.0.A14";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
@@ -287,6 +287,12 @@ public class LauncherMain {
 				LauncherUtils.log("Using emulation software: " + f);
 			}
 
+			// Create folders
+			new File("cache").mkdirs();
+			new File("cache/keys").mkdirs();
+			new File("clients").mkdirs();
+			new File("payloads").mkdirs();
+
 			// Check overrides
 			if (new File("newgamedescriptor.sgd").exists()) {
 				// Rename old file
@@ -298,9 +304,10 @@ public class LauncherMain {
 
 				// Extract key
 				if (LauncherUtils.isPackageSigned(gameDescriptorFile))
-					LauncherUtils.extractPackagePublicKey(gameDescriptorFile, new File("gamedescriptor-publickey.pem"));
-				else if (new File("gamedescriptor-publickey.pem").exists())
-					new File("gamedescriptor-publickey.pem").delete();
+					LauncherUtils.extractPackagePublicKey(gameDescriptorFile,
+							new File("cache/keys/gamedescriptor-publickey.pem"));
+				else if (new File("cache/keys/gamedescriptor-publickey.pem").exists())
+					new File("cache/keys/gamedescriptor-publickey.pem").delete();
 
 				// Mark overridden
 				overrodeSGD = true;
@@ -317,9 +324,9 @@ public class LauncherMain {
 				// Extract key
 				if (LauncherUtils.isPackageSigned(emulationSoftwareFile))
 					LauncherUtils.extractPackagePublicKey(emulationSoftwareFile,
-							new File("emulationsoftware-publickey.pem"));
-				else if (new File("emulationsoftware-publickey.pem").exists())
-					new File("emulationsoftware-publickey.pem").delete();
+							new File("cache/keys/emulationsoftware-publickey.pem"));
+				else if (new File("cache/keys/emulationsoftware-publickey.pem").exists())
+					new File("cache/keys/emulationsoftware-publickey.pem").delete();
 
 				// Mark overridden
 				overrodeSVP = true;
@@ -538,7 +545,7 @@ public class LauncherMain {
 										LauncherUtils.hideProgressPanel();
 										LauncherUtils.log("Verifying signature...", true);
 										if (!LauncherUtils.verifyPackageSignature(new File("gamedescriptor.sgd.tmp"),
-												new File("gamedescriptor-publickey.pem"))) {
+												new File("cache/keys/gamedescriptor-publickey.pem"))) {
 											// Warn
 											while (true) {
 												if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
@@ -715,7 +722,7 @@ public class LauncherMain {
 										LauncherUtils.hideProgressPanel();
 										LauncherUtils.log("Verifying signature...", true);
 										if (!LauncherUtils.verifyPackageSignature(new File("emulationsoftware.svp.tmp"),
-												new File("emulationsoftware-publickey.pem"))) {
+												new File("cache/keys/emulationsoftware-publickey.pem"))) {
 											// Warn
 											while (true) {
 												if (JOptionPane.showConfirmDialog(frmSentinelLauncher,
@@ -1313,7 +1320,7 @@ public class LauncherMain {
 					clientsArr = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
 							.getAsJsonArray();
 				}
-				File localVersions = new File("clienthashes.json");
+				File localVersions = new File("cache/clienthashes.json");
 				if (!localVersions.exists())
 					Files.writeString(localVersions.toPath(), "{}");
 				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
@@ -1334,7 +1341,7 @@ public class LauncherMain {
 						// Load new hash
 						String cHash = archiveDescriptor.get("versionHashes").getAsJsonObject().get(plat)
 								.getAsJsonObject().get(clientVersion).getAsString();
-						if (!oHash.equals(cHash)) {
+						if (!oHash.equals(cHash) || !new File("clients/client-" + clientVersion).exists()) {
 							// Update
 							if (assetConnection && LauncherUtils.assetManagementAvailable) {
 								// Download client
@@ -1342,68 +1349,68 @@ public class LauncherMain {
 								closeClientsIfNeeded();
 								LauncherUtils.gameDescriptor.downloadClient(
 										archiveDef.get("clients").getAsJsonObject().get(clientVersion).getAsString(),
-										clientVersion, new File("client-" + clientVersion), archiveDef,
+										clientVersion, new File("clients/client-" + clientVersion), archiveDef,
 										archiveDescriptor, cHash);
 
 								// Modify client
 								LauncherUtils.log("Modifying client " + clientVersion + "...", true);
-								LauncherUtils.gameDescriptor.modifyClient(new File("client-" + clientVersion),
+								LauncherUtils.gameDescriptor.modifyClient(new File("clients/client-" + clientVersion),
 										clientVersion, archiveDef, archiveDescriptor);
 
 								// Re-extract descriptor
 								if (!new File("tmp-sgdextract").exists()) {
 									LauncherUtils.log("Extracting game descriptor...");
 									if (!dirModeDescriptorFileF)
-										LauncherUtils.unZip(gameDescriptorFileF, new File("tmp-sgdextract"));
+										LauncherUtils.unZip(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
 									else
 										LauncherUtils.copyDirWithProgress(gameDescriptorFileF,
-												new File("tmp-sgdextract"));
+												new File("cache/tmp-sgdextract"));
 								}
-								if (new File("tmp-sgdextract", "clientmodifications").exists()) {
+								if (new File("cache/tmp-sgdextract", "clientmodifications").exists()) {
 									LauncherUtils.log("Copying game descriptor client modifications...");
 									LauncherUtils.copyDirWithoutProgress(
-											new File("tmp-sgdextract", "clientmodifications"),
-											new File("client-" + clientVersion));
+											new File("cache/tmp-sgdextract", "clientmodifications"),
+											new File("clients/client-" + clientVersion));
 								}
-								if (new File("tmp-sgdextract", "clientmodifications-" + clientVersion).exists()) {
+								if (new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion).exists()) {
 									LauncherUtils
 											.log("Copying version-specific game descriptor client modifications...");
 									LauncherUtils.copyDirWithoutProgress(
-											new File("tmp-sgdextract", "clientmodifications-" + clientVersion),
-											new File("client-" + clientVersion));
+											new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion),
+											new File("clients/client-" + clientVersion));
 								}
 
 								// Re-extract software
-								if (!new File("tmp-svpextract").exists()) {
+								if (!new File("cache/tmp-svpextract").exists()) {
 									LauncherUtils.log("Extracting emulation software...");
 									if (!dirModeSoftwareFileF)
-										LauncherUtils.unZip(emulationSoftwareFileF, new File("tmp-svpextract"));
+										LauncherUtils.unZip(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
 									else
 										LauncherUtils.copyDirWithProgress(emulationSoftwareFileF,
-												new File("tmp-svpextract"));
+												new File("cache/tmp-svpextract"));
 								}
-								if (new File("tmp-svpextract", "clientmodifications").exists()) {
+								if (new File("cache/tmp-svpextract", "clientmodifications").exists()) {
 									LauncherUtils.log("Copying emulation software client modifications...");
 									LauncherUtils.copyDirWithoutProgress(
-											new File("tmp-svpextract", "clientmodifications"),
-											new File("client-" + clientVersion));
+											new File("cache/tmp-svpextract", "clientmodifications"),
+											new File("clients/client-" + clientVersion));
 								}
-								if (new File("tmp-svpextract", "clientmodifications-" + clientVersion).exists()) {
+								if (new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion).exists()) {
 									LauncherUtils
 											.log("Copying version-specific emulation software client modifications...");
 									LauncherUtils.copyDirWithoutProgress(
-											new File("tmp-svpextract", "clientmodifications-" + clientVersion),
-											new File("client-" + clientVersion));
+											new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion),
+											new File("clients/client-" + clientVersion));
 								}
 
 								// Copy payloads
 								LauncherUtils.log("Copying payload client modifications...", true);
 								LauncherUtils.copyDirWithoutProgress(
-										new File("payloadcache/payloaddata", "clientmodifications"),
-										new File("client-" + clientVersion));
+										new File("cache/payloadcache/payloaddata", "clientmodifications"),
+										new File("clients/client-" + clientVersion));
 								LauncherUtils.copyDirWithoutProgress(
-										new File("payloadcache/payloaddata", "clientmodifications"),
-										new File("client-" + clientVersion));
+										new File("cache/payloadcache/payloaddata", "clientmodifications"),
+										new File("clients/client-" + clientVersion));
 
 								// Save version
 								localHashList.addProperty(clientVersion, cHash);
@@ -1421,8 +1428,8 @@ public class LauncherMain {
 				}
 
 				// Delete
-				LauncherUtils.deleteDir(new File("tmp-sgdextract"));
-				LauncherUtils.deleteDir(new File("tmp-svpextract"));
+				LauncherUtils.deleteDir(new File("cache/tmp-sgdextract"));
+				LauncherUtils.deleteDir(new File("cache/tmp-svpextract"));
 
 				// Hide bars
 				LauncherUtils.hideProgressPanel();
@@ -1509,13 +1516,13 @@ public class LauncherMain {
 					JsonObject archiveDefF = archiveDef;
 					LauncherUtils.gameDescriptor.prepareLaunchWithStreamingAssets(archiveDef.get("url").getAsString(),
 							new File("assetmodifications"), archiveDef, archiveDescriptor, lastVersion,
-							new File("client-" + lastVersion), () -> {
+							new File("clients/client-" + lastVersion), () -> {
 								// Success
 								// Call emulation software
 								LauncherUtils.emulationSoftware.prepareLaunchWithStreamingAssets(
 										archiveDefF.get("url").getAsString(), new File("assetmodifications"),
-										archiveDefF, archiveDescriptor, lastVersion, new File("client-" + lastVersion),
-										() -> {
+										archiveDefF, archiveDescriptor, lastVersion,
+										new File("clients/client-" + lastVersion), () -> {
 											// Success
 
 											// Call payloads
@@ -1524,7 +1531,7 @@ public class LauncherMain {
 											callPrepareWithStreamingForPayload(payloads, i,
 													archiveDefF.get("url").getAsString(),
 													new File("assetmodifications"), archiveDefF, archiveDescriptor,
-													lastVersion, new File("client-" + lastVersion), () -> {
+													lastVersion, new File("clients/client-" + lastVersion), () -> {
 														// Success
 
 														// Launch
@@ -1532,14 +1539,14 @@ public class LauncherMain {
 
 														// Call event
 														LauncherUtils.emulationSoftware.onGameStarting(lastVersion,
-																new File("client-" + lastVersion));
+																new File("clients/client-" + lastVersion));
 
 														// Call event for payloads
 														for (String pl : PayloadManager.getLoadedPayloadIds()) {
 															ISentinelPayload p = PayloadManager.getPayload(pl);
 															if (p != null)
 																p.onGameStarting(lastVersion,
-																		new File("client-" + lastVersion));
+																		new File("clients/client-" + lastVersion));
 														}
 
 														// Start game
@@ -1547,7 +1554,7 @@ public class LauncherMain {
 																archiveDefF.get("url").getAsString(),
 																new File("assetmodifications"), archiveDefF,
 																archiveDescriptor, lastVersion,
-																new File("client-" + lastVersion), () -> {
+																new File("clients/client-" + lastVersion), () -> {
 																	// Close
 																	LauncherUtils.log("Launch success!", true);
 																	frmSentinelLauncher.setVisible(false);
@@ -1555,7 +1562,7 @@ public class LauncherMain {
 																	// Call event
 																	LauncherUtils.emulationSoftware.onGameLaunchSuccess(
 																			lastVersion,
-																			new File("client-" + lastVersion));
+																			new File("clients/client-" + lastVersion));
 
 																	// Call event for payloads
 																	for (String pl : PayloadManager
@@ -1563,8 +1570,8 @@ public class LauncherMain {
 																		ISentinelPayload p = PayloadManager
 																				.getPayload(pl);
 																		if (p != null)
-																			p.onGameLaunchSuccess(lastVersion,
-																					new File("client-" + lastVersion));
+																			p.onGameLaunchSuccess(lastVersion, new File(
+																					"clients/client-" + lastVersion));
 																	}
 																}, () -> {
 																	// Exit
@@ -1573,7 +1580,7 @@ public class LauncherMain {
 																	// Call event
 																	LauncherUtils.emulationSoftware.onGameExit(
 																			lastVersion,
-																			new File("client-" + lastVersion));
+																			new File("clients/client-" + lastVersion));
 
 																	// Call event for payloads
 																	for (String pl : PayloadManager
@@ -1581,8 +1588,8 @@ public class LauncherMain {
 																		ISentinelPayload p = PayloadManager
 																				.getPayload(pl);
 																		if (p != null)
-																			p.onGameExit(lastVersion,
-																					new File("client-" + lastVersion));
+																			p.onGameExit(lastVersion, new File(
+																					"clients/client-" + lastVersion));
 																	}
 
 																	// Exit
@@ -1607,12 +1614,13 @@ public class LauncherMain {
 					JsonObject archiveDefF = archiveDef;
 					LauncherUtils.gameDescriptor.prepareLaunchWithLocalAssets(new File("assets/assetarchive"),
 							new File("assetmodifications"), archiveDef, archiveDescriptor, lastVersion,
-							new File("client-" + lastVersion), () -> {
+							new File("clients/client-" + lastVersion), () -> {
 								// Success
 								// Call emulation software
 								LauncherUtils.emulationSoftware.prepareLaunchWithLocalAssets(
 										new File("assets/assetarchive"), new File("assetmodifications"), archiveDefF,
-										archiveDescriptor, lastVersion, new File("client-" + lastVersion), () -> {
+										archiveDescriptor, lastVersion, new File("clients/client-" + lastVersion),
+										() -> {
 											// Success
 
 											// Call payloads
@@ -1620,7 +1628,7 @@ public class LauncherMain {
 											String[] payloads = PayloadManager.getLoadedPayloadIds();
 											callPrepareWithLocalForPayload(payloads, i, new File("assets/assetarchive"),
 													new File("assetmodifications"), archiveDefF, archiveDescriptor,
-													lastVersion, new File("client-" + lastVersion), () -> {
+													lastVersion, new File("clients/client-" + lastVersion), () -> {
 														// Success
 
 														// Launch
@@ -1628,14 +1636,14 @@ public class LauncherMain {
 
 														// Call event
 														LauncherUtils.emulationSoftware.onGameStarting(lastVersion,
-																new File("client-" + lastVersion));
+																new File("clients/client-" + lastVersion));
 
 														// Call event for payloads
 														for (String pl : PayloadManager.getLoadedPayloadIds()) {
 															ISentinelPayload p = PayloadManager.getPayload(pl);
 															if (p != null)
 																p.onGameStarting(lastVersion,
-																		new File("client-" + lastVersion));
+																		new File("clients/client-" + lastVersion));
 														}
 
 														// Start game
@@ -1643,7 +1651,7 @@ public class LauncherMain {
 																new File("assets/assetarchive"),
 																new File("assetmodifications"), archiveDefF,
 																archiveDescriptor, lastVersion,
-																new File("client-" + lastVersion), () -> {
+																new File("clients/client-" + lastVersion), () -> {
 																	// Close
 																	LauncherUtils.log("Launch success!", true);
 																	frmSentinelLauncher.setVisible(false);
@@ -1651,7 +1659,7 @@ public class LauncherMain {
 																	// Call event
 																	LauncherUtils.emulationSoftware.onGameLaunchSuccess(
 																			lastVersion,
-																			new File("client-" + lastVersion));
+																			new File("clients/client-" + lastVersion));
 
 																	// Call event for payloads
 																	for (String pl : PayloadManager
@@ -1659,8 +1667,8 @@ public class LauncherMain {
 																		ISentinelPayload p = PayloadManager
 																				.getPayload(pl);
 																		if (p != null)
-																			p.onGameLaunchSuccess(lastVersion,
-																					new File("client-" + lastVersion));
+																			p.onGameLaunchSuccess(lastVersion, new File(
+																					"clients/client-" + lastVersion));
 																	}
 																}, () -> {
 																	// Exit
@@ -1669,7 +1677,7 @@ public class LauncherMain {
 																	// Call event
 																	LauncherUtils.emulationSoftware.onGameExit(
 																			lastVersion,
-																			new File("client-" + lastVersion));
+																			new File("clients/client-" + lastVersion));
 
 																	// Call event for payloads
 																	for (String pl : PayloadManager
@@ -1677,8 +1685,8 @@ public class LauncherMain {
 																		ISentinelPayload p = PayloadManager
 																				.getPayload(pl);
 																		if (p != null)
-																			p.onGameExit(lastVersion,
-																					new File("client-" + lastVersion));
+																			p.onGameExit(lastVersion, new File(
+																					"clients/client-" + lastVersion));
 																	}
 
 																	// Exit

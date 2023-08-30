@@ -38,7 +38,7 @@ import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
 
-	public static final String ASSET_SERVER_VERSION = "1.0.0.A6";
+	public static final String ASSET_SERVER_VERSION = "1.0.0.A11";
 	public static final String BEPINEX_MINIMAL_GAME_VERSION = "3.12.0";
 
 	@Override
@@ -65,18 +65,18 @@ public class SodGameDescriptor implements IGameDescriptor {
 	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
 			JsonObject descriptorDef, String clientHash) throws IOException {
 		// Download zip
-		new File("clientzips").mkdirs();
+		new File("cache/clientzips").mkdirs();
 		LauncherUtils.log("Downloading " + version + " client...", true);
-		LauncherUtils.downloadFile(url, new File("clientzips/" + version + ".zip"));
+		LauncherUtils.downloadFile(url, new File("cache/clientzips/" + version + ".zip"));
 
 		// Verify hash
 		LauncherUtils.log("Verifying integrity...", true);
 		String cHash = LauncherUtils
-				.sha512Hash(Files.readAllBytes(new File("clientzips/" + version + ".zip").toPath()));
+				.sha512Hash(Files.readAllBytes(new File("cache/clientzips/" + version + ".zip").toPath()));
 		if (!cHash.equals(clientHash)) {
 			// Retry
 			LauncherUtils.log("Downloading " + version + " client...", true);
-			LauncherUtils.downloadFile(url, new File("clientzips/" + version + ".zip"));
+			LauncherUtils.downloadFile(url, new File("cache/clientzips/" + version + ".zip"));
 			LauncherUtils.log("Verifying integrity...", true);
 			cHash = LauncherUtils.sha512Hash(Files.readAllBytes(new File("clientzips/" + version + ".zip").toPath()));
 			if (!cHash.equals(clientHash)) {
@@ -86,7 +86,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Extract
 		LauncherUtils.log("Extracting " + version + " client...", true);
-		LauncherUtils.unZip(new File("clientzips", version + ".zip"), clientOutputDir);
+		LauncherUtils.unZip(new File("cache/clientzips", version + ".zip"), clientOutputDir);
 	}
 
 	@Override
@@ -542,19 +542,19 @@ public class SodGameDescriptor implements IGameDescriptor {
 								throw new Exception("Failed to find a DXVK download.");
 							LauncherUtils.resetProgressBar();
 							LauncherUtils.showProgressPanel();
-							LauncherUtils.downloadFile(dxvk, new File("dxvk.tar.gz"));
+							LauncherUtils.downloadFile(dxvk, new File("cache/dxvk.tar.gz"));
 
 							// Extract
 							LauncherUtils.log("Extracting DXVK...", true);
 							LauncherUtils.resetProgressBar();
 							LauncherUtils.showProgressPanel();
-							LauncherUtils.unTarGz(new File("dxvk.tar.gz"), new File("dxvk"));
+							LauncherUtils.unTarGz(new File("cache/dxvk.tar.gz"), new File("cache/dxvk"));
 							LauncherUtils.hideProgressPanel();
 							LauncherUtils.resetProgressBar();
 
 							// Install
 							LauncherUtils.log("Installing DXVK...", true);
-							File dxvkDir = new File("dxvk").listFiles()[0];
+							File dxvkDir = new File("cache/dxvk").listFiles()[0];
 							File wineSys = new File(prefix, "drive_c/windows");
 							wineSys.mkdirs();
 

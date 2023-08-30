@@ -740,8 +740,8 @@ public class PayloadManagerWindow extends JDialog {
 
 			// Verify signature
 			if (LauncherUtils.isPackageSigned(spf) && LauncherUtils
-					.verifyPackageSignature(new File("payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
-				LauncherUtils.extractPackagePublicKey(new File("payloadcache/payloadverificationkeys", id + ".pem"),
+					.verifyPackageSignature(new File("cache/payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
+				LauncherUtils.extractPackagePublicKey(new File("cache/payloadcache/payloadverificationkeys", id + ".pem"),
 						spf);
 			} else if (LauncherUtils.isPackageSigned(spf)) {
 				if (throwError)

@@ -788,7 +788,7 @@ public class LauncherUtils {
 		// Check changes
 		if (saved) {
 			// Delete removed clients
-			File localVersions = new File("clienthashes.json");
+			File localVersions = new File("cache/clienthashes.json");
 			if (localVersions.exists()) {
 				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
 						.getAsJsonObject();
@@ -807,7 +807,7 @@ public class LauncherUtils {
 					if (!found) {
 						// Delete client
 						LauncherMain.closeClientsIfNeeded();
-						deleteDir(new File("client-" + version));
+						deleteDir(new File("clients/client-" + version));
 					} else
 						newHashList.add(version, localHashList.get(version));
 				}
@@ -1200,34 +1200,36 @@ public class LauncherUtils {
 	static void extractEmulationSoftware(File sourceFile, String version) throws IOException {
 		// Extract
 		LauncherUtils.log("Extracting software package...");
-		LauncherUtils.deleteDir(new File("emulationsoftwaretmp"));
-		LauncherUtils.unZip(sourceFile, new File("emulationsoftwaretmp"));
+		LauncherUtils.deleteDir(new File("cache/emulationsoftwaretmp"));
+		LauncherUtils.unZip(sourceFile, new File("cache/emulationsoftwaretmp"));
 
 		// Update data
-		if (new File("emulationsoftwaretmp", "baseserver").exists()) {
+		if (new File("cache/emulationsoftwaretmp", "baseserver").exists()) {
 			LauncherUtils.log("Updating server software to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "baseserver"), new File("server"));
+			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "baseserver"), new File("server"));
 		}
-		if (new File("emulationsoftwaretmp", "expandedserver").exists()) {
+		if (new File("cache/emulationsoftwaretmp", "expandedserver").exists()) {
 			LauncherUtils.log("Updating extra server files to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "expandedserver"), new File("server"));
+			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "expandedserver"),
+					new File("server"));
 		}
-		if (new File("emulationsoftwaretmp", "rootdata").exists()) {
+		if (new File("cache/emulationsoftwaretmp", "rootdata").exists()) {
 			LauncherUtils.log("Updating data to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "rootdata"), new File("."));
+			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "rootdata"), new File("."));
 		}
 		if (new File("emulationsoftwaretmp", "assetmodifications").exists()) {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "assetmodifications"),
+			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "assetmodifications"),
 					new File("assetmodifications"));
 		}
-		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+		for (File clientDir : new File("clients")
+				.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
 
 			// Check modifications
-			File modsSpecific = new File("emulationsoftwaretmp", "clientmodifications-" + clientVersion);
-			File modsGeneral = new File("emulationsoftwaretmp", "clientmodifications");
+			File modsSpecific = new File("cache/emulationsoftwaretmp", "clientmodifications-" + clientVersion);
+			File modsGeneral = new File("cache/emulationsoftwaretmp", "clientmodifications");
 			if (modsSpecific.exists() || modsGeneral.exists()) {
 				// Close clients
 				LauncherMain.closeClientsIfNeeded();
@@ -1237,43 +1239,45 @@ public class LauncherUtils {
 				LauncherUtils.copyDirWithProgress(modsSpecific, clientDir);
 			}
 		}
-		if (new File("emulationsoftwaretmp", "defaultpayloads").exists()) {
+		if (new File("cache/emulationsoftwaretmp", "defaultpayloads").exists()) {
 			LauncherUtils.log("Updating default payloads to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("emulationsoftwaretmp", "defaultpayloads"),
+			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "defaultpayloads"),
 					new File("payloads"));
 		}
 
 		// Delete
-		LauncherUtils.deleteDir(new File("emulationsoftwaretmp"));
+		LauncherUtils.deleteDir(new File("cache/emulationsoftwaretmp"));
 	}
 
 	static void extractGameDescriptor(File sourceFile, String version) throws IOException {
 		// Extract
 		LauncherUtils.log("Extracting game descriptor package...");
-		LauncherUtils.deleteDir(new File("gamedescriptortmp"));
-		LauncherUtils.unZip(sourceFile, new File("gamedescriptortmp"));
+		LauncherUtils.deleteDir(new File("cache/gamedescriptortmp"));
+		LauncherUtils.unZip(sourceFile, new File("cache/gamedescriptortmp"));
 
 		// Update data
-		if (new File("gamedescriptortmp", "defaultpayloads").exists()) {
+		if (new File("cache/gamedescriptortmp", "defaultpayloads").exists()) {
 			LauncherUtils.log("Updating default payloads to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "defaultpayloads"), new File("payloads"));
+			LauncherUtils.copyDirWithProgress(new File("cache/gamedescriptortmp", "defaultpayloads"),
+					new File("payloads"));
 		}
-		if (new File("gamedescriptortmp", "rootdata").exists()) {
+		if (new File("cache/gamedescriptortmp", "rootdata").exists()) {
 			LauncherUtils.log("Updating data to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "rootdata"), new File("."));
+			LauncherUtils.copyDirWithProgress(new File("cache/gamedescriptortmp", "rootdata"), new File("."));
 		}
-		if (new File("gamedescriptortmp", "assetmodifications").exists()) {
+		if (new File("cache/gamedescriptortmp", "assetmodifications").exists()) {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
-			LauncherUtils.copyDirWithProgress(new File("gamedescriptortmp", "assetmodifications"),
+			LauncherUtils.copyDirWithProgress(new File("cache/gamedescriptortmp", "assetmodifications"),
 					new File("assetmodifications"));
 		}
-		for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+		for (File clientDir : new File("clients")
+				.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 			String clientVersion = clientDir.getName().substring("client-".length());
 			LauncherUtils.log("Updating " + clientVersion + " client modifications to " + version + "...", true);
 
 			// Check modifications
-			File modsSpecific = new File("gamedescriptortmp", "clientmodifications-" + clientVersion);
-			File modsGeneral = new File("gamedescriptortmp", "clientmodifications");
+			File modsSpecific = new File("cache/gamedescriptortmp", "clientmodifications-" + clientVersion);
+			File modsGeneral = new File("cache/gamedescriptortmp", "clientmodifications");
 			if (modsSpecific.exists() || modsGeneral.exists()) {
 				// Close clients
 				LauncherMain.closeClientsIfNeeded();
@@ -1285,7 +1289,7 @@ public class LauncherUtils {
 		}
 
 		// Delete
-		LauncherUtils.deleteDir(new File("gamedescriptortmp"));
+		LauncherUtils.deleteDir(new File("cache/gamedescriptortmp"));
 	}
 
 	/**

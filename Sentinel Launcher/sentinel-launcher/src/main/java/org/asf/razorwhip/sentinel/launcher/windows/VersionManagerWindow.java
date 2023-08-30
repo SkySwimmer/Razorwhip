@@ -389,6 +389,7 @@ public class VersionManagerWindow extends JDialog {
 					btnOk.setEnabled(false);
 					btnCancel.setEnabled(false);
 					btnAdd.setEnabled(false);
+					boolean chBoxWasEnabled = checkBoxDownload.isEnabled();
 					checkBoxDownload.setEnabled(false);
 					clientListBox.setEnabled(false);
 					btnRemove.setEnabled(false);
@@ -484,7 +485,7 @@ public class VersionManagerWindow extends JDialog {
 												btnOk.setEnabled(true);
 												btnCancel.setEnabled(true);
 												btnAdd.setEnabled(true);
-												checkBoxDownload.setEnabled(true);
+												checkBoxDownload.setEnabled(chBoxWasEnabled);
 												clientListBox.setEnabled(true);
 												btnRemove.setEnabled(wasEnabledRemove);
 												btnOk.setText("Ok");
@@ -509,7 +510,7 @@ public class VersionManagerWindow extends JDialog {
 											btnOk.setEnabled(true);
 											btnCancel.setEnabled(true);
 											btnAdd.setEnabled(true);
-											checkBoxDownload.setEnabled(true);
+											checkBoxDownload.setEnabled(chBoxWasEnabled);
 											clientListBox.setEnabled(true);
 											btnRemove.setEnabled(wasEnabledRemove);
 											btnOk.setText("Ok");
@@ -651,7 +652,7 @@ public class VersionManagerWindow extends JDialog {
 											btnOk.setEnabled(true);
 											btnCancel.setEnabled(true);
 											btnAdd.setEnabled(true);
-											checkBoxDownload.setEnabled(true);
+											checkBoxDownload.setEnabled(chBoxWasEnabled);
 											clientListBox.setEnabled(true);
 											btnRemove.setEnabled(wasEnabledRemove);
 											btnOk.setText("Ok");
@@ -673,7 +674,7 @@ public class VersionManagerWindow extends JDialog {
 								btnOk.setEnabled(true);
 								btnCancel.setEnabled(true);
 								btnAdd.setEnabled(true);
-								checkBoxDownload.setEnabled(true);
+								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								clientListBox.setEnabled(true);
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
@@ -704,7 +705,7 @@ public class VersionManagerWindow extends JDialog {
 								btnOk.setEnabled(true);
 								btnCancel.setEnabled(true);
 								btnAdd.setEnabled(true);
-								checkBoxDownload.setEnabled(true);
+								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								clientListBox.setEnabled(true);
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");

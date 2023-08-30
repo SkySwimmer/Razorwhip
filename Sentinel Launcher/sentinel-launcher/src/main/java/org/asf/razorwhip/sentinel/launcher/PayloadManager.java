@@ -125,8 +125,8 @@ public class PayloadManager {
 					String id = payloadF.getName();
 					if (descriptor.containsKey("Payload-ID"))
 						id = descriptor.get("Payload-ID");
-					if (new File("payloadcache/payloadverificationkeys", id + ".pem").exists()) {
-						new File("payloadcache/payloadverificationkeys", id + ".pem").delete();
+					if (new File("cache/payloadcache/payloadverificationkeys", id + ".pem").exists()) {
+						new File("cache/payloadcache/payloadverificationkeys", id + ".pem").delete();
 					}
 				} catch (Exception e) {
 				}
@@ -164,9 +164,9 @@ public class PayloadManager {
 					if (descriptor.containsKey("Payload-ID"))
 						id = descriptor.get("Payload-ID");
 					if (LauncherUtils.isPackageSigned(spf) && LauncherUtils.verifyPackageSignature(
-							new File("payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
+							new File("cache/payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
 						LauncherUtils.extractPackagePublicKey(
-								new File("payloadcache/payloadverificationkeys", id + ".pem"), spf);
+								new File("cache/payloadcache/payloadverificationkeys", id + ".pem"), spf);
 					}
 				} catch (Exception e) {
 				}
@@ -261,12 +261,12 @@ public class PayloadManager {
 		JsonObject index = indexPayloads();
 
 		// Prepare
-		new File("payloadcache/payloadverificationkeys").mkdirs();
+		new File("cache/payloadcache/payloadverificationkeys").mkdirs();
 
 		// Load payload hash list
 		JsonObject payloadHashes = new JsonObject();
-		if (new File("payloadcache", "payloadhashes.json").exists()) {
-			payloadHashes = JsonParser.parseString(Files.readString(Path.of("payloadcache/payloadhashes.json")))
+		if (new File("cache/payloadcache", "payloadhashes.json").exists()) {
+			payloadHashes = JsonParser.parseString(Files.readString(Path.of("cache/payloadcache/payloadhashes.json")))
 					.getAsJsonObject();
 		}
 
@@ -324,7 +324,7 @@ public class PayloadManager {
 
 				// Check signature
 				if (!LauncherUtils.verifyPackageSignature(spf,
-						new File("payloadcache/payloadverificationkeys", id + ".pem"))) {
+						new File("cache/payloadcache/payloadverificationkeys", id + ".pem"))) {
 					// Error
 					JOptionPane.showMessageDialog(null, "ERROR! Failed to verify package signature!\n" //
 							+ "\n" //
@@ -345,7 +345,7 @@ public class PayloadManager {
 			LauncherUtils.log("Removing deleted payloads...", true);
 			for (String file : removedPayloadFiles) {
 				// Delete
-				LauncherUtils.deleteDir(new File("payloadcache/payloads/" + file));
+				LauncherUtils.deleteDir(new File("cache/payloadcache/payloads/" + file));
 			}
 
 			// Extract updated payloads
@@ -353,18 +353,17 @@ public class PayloadManager {
 			for (String file : updatedPayloadFiles) {
 				// Delete
 				LauncherUtils.log("Extracting payload " + file + "...");
-				LauncherUtils.unZip(new File("payloads", file), new File("payloadcache/payloads/" + file));
+				LauncherUtils.unZip(new File("payloads", file), new File("cache/payloadcache/payloads/" + file));
 
 				// Check
-				File payloadDataFolder = new File("payloadcache/payloads/" + file, "payloaddata");
+				File payloadDataFolder = new File("cache/payloadcache/payloads/" + file, "payloaddata");
 				if (payloadDataFolder.exists()) {
 					// Read descriptor
-					Map<String, String> descriptor = LauncherUtils
-							.parseProperties(getStringFrom(new File("payloadcache/payloads/" + file), "payloadinfo"));
+					Map<String, String> descriptor = LauncherUtils.parseProperties(
+							getStringFrom(new File("cache/payloadcache/payloads/" + file), "payloadinfo"));
 					if (descriptor.containsKey("Resource-Target") && descriptor.containsKey("Resource-Target-Path")) {
-						File target = new File(
-								new File(new File("payloadcache/payloads/" + file), descriptor.get("Resource-Target")),
-								descriptor.get("Resource-Target-Path"));
+						File target = new File(new File(new File("cache/payloadcache/payloads/" + file),
+								descriptor.get("Resource-Target")), descriptor.get("Resource-Target-Path"));
 
 						// Create
 						target.getParentFile().mkdirs();
@@ -379,8 +378,8 @@ public class PayloadManager {
 
 			// Save hash list
 			if (removedPayloadFiles.size() != 0 || updatedPayloadFiles.size() != 0)
-				new File("payloadcache/requireupdate").createNewFile();
-			Files.writeString(Path.of("payloadcache/payloadhashes.json"), payloadHashes.toString());
+				new File("cache/payloadcache/requireupdate").createNewFile();
+			Files.writeString(Path.of("cache/payloadcache/payloadhashes.json"), payloadHashes.toString());
 
 			// Find all payloads
 			LauncherUtils.log("Preparing to load payloads...", true);
@@ -389,7 +388,7 @@ public class PayloadManager {
 				boolean enabled = index.has(spf.getName()) && index.get(spf.getName()).getAsBoolean();
 
 				// Load payload
-				loadPayloadFile(spf, new File("payloadcache/payloads", spf.getName()), index, enabled);
+				loadPayloadFile(spf, new File("cache/payloadcache/payloads", spf.getName()), index, enabled);
 			}
 
 			// Load debug payloads
@@ -422,8 +421,8 @@ public class PayloadManager {
 							if (!fD.isDirectory()) {
 								// Extract
 								LauncherUtils.log("Extracting payload " + f.getName() + "...");
-								LauncherUtils.unZip(f, new File("payloadcache/payloadsdebug/" + clsN));
-								fD = new File("payloadcache/payloadsdebug/" + clsN);
+								LauncherUtils.unZip(f, new File("cache/payloadcache/payloadsdebug/" + clsN));
+								fD = new File("cache/payloadcache/payloadsdebug/" + clsN);
 							}
 							loadPayloadFile(f, fD, index, true);
 						} catch (Exception e) {
@@ -454,26 +453,26 @@ public class PayloadManager {
 
 		// Check index change
 		boolean indexChange = false;
-		if (!new File("payloadcache/lastactive.json").exists()) {
+		if (!new File("cache/payloadcache/lastactive.json").exists()) {
 			indexChange = true;
 		} else {
 			// Verify
-			if (!Files.readString(new File("payloadcache/lastactive.json").toPath()).equals(index.toString()))
+			if (!Files.readString(new File("cache/payloadcache/lastactive.json").toPath()).equals(index.toString()))
 				indexChange = true;
 		}
-		if (!new File("payloadcache/requireupdate").exists()) {
+		if (!new File("cache/payloadcache/requireupdate").exists()) {
 			if (indexChange)
-				new File("payloadcache/requireupdate").createNewFile();
+				new File("cache/payloadcache/requireupdate").createNewFile();
 		}
 		if (indexChange)
-			Files.writeString(Path.of("payloadcache/lastactive.json"), index.toString());
+			Files.writeString(Path.of("cache/payloadcache/lastactive.json"), index.toString());
 
 		// Re-apply if needed
-		if (new File("payloadcache/requireupdate").exists() || System.getProperty("debugPayloadFiles") != null
+		if (new File("cache/payloadcache/requireupdate").exists() || System.getProperty("debugPayloadFiles") != null
 				|| System.getProperty("debugPayloadHintClasses") != null) {
 			// Create directory
-			LauncherUtils.deleteDir(new File("payloadcache/payloaddata"));
-			new File("payloadcache/payloaddata").mkdirs();
+			LauncherUtils.deleteDir(new File("cache/payloadcache/payloaddata"));
+			new File("cache/payloadcache/payloaddata").mkdirs();
 
 			// Prepare
 			LauncherUtils.resetProgressBar();
@@ -486,7 +485,7 @@ public class PayloadManager {
 				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "server"));
 				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "rootdata"));
 				count += indexDir(new File(payloads.get(id).payloadExtractedDir, "assetmodifications"));
-				for (File clientDir : new File(".")
+				for (File clientDir : new File("clients")
 						.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 					String clientVersion = clientDir.getName().substring("client-".length());
 					count += indexDir(new File(payloads.get(id).payloadExtractedDir, "clientmodifications"));
@@ -501,20 +500,20 @@ public class PayloadManager {
 				// Copy
 				LauncherUtils.log("Gathering payload files: " + payloads.get(id).name);
 				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "server"),
-						new File("payloadcache/payloaddata", "server"), "", null, null);
+						new File("cache/payloadcache/payloaddata", "server"), "", null, null);
 				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "rootdata"),
-						new File("payloadcache/payloaddata", "rootdata"), "", null, null);
+						new File("cache/payloadcache/payloaddata", "rootdata"), "", null, null);
 				copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "assetmodifications"),
-						new File("payloadcache/payloaddata", "assetmodifications"), "", null, null);
-				for (File clientDir : new File(".")
+						new File("cache/payloadcache/payloaddata", "assetmodifications"), "", null, null);
+				for (File clientDir : new File("clients")
 						.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 					String clientVersion = clientDir.getName().substring("client-".length());
 					copyDirWithProgress(new File(payloads.get(id).payloadExtractedDir, "clientmodifications"),
-							new File("payloadcache/payloaddata", "clientmodifications"), "", null, null);
+							new File("cache/payloadcache/payloaddata", "clientmodifications"), "", null, null);
 					copyDirWithProgress(
 							new File(payloads.get(id).payloadExtractedDir, "clientmodifications-" + clientVersion),
-							new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion), "", null,
-							null);
+							new File("cache/payloadcache/payloaddata", "clientmodifications-" + clientVersion), "",
+							null, null);
 				}
 			}
 
@@ -522,7 +521,7 @@ public class PayloadManager {
 			LauncherUtils.log("Loading previous payload file list...", true);
 			ArrayList<String> lastFiles = new ArrayList<String>();
 			ArrayList<String> newIndex = new ArrayList<String>();
-			File payloadIndexFile = new File("payloadcache/index.sfl");
+			File payloadIndexFile = new File("cache/payloadcache/index.sfl");
 			if (payloadIndexFile.exists()) {
 				for (String line : Files.readAllLines(payloadIndexFile.toPath())) {
 					lastFiles.add(line);
@@ -532,28 +531,29 @@ public class PayloadManager {
 			// Apply
 			LauncherUtils.log("Applying payloads...", true);
 			count = 0;
-			count += indexDir(new File("payloadcache/payloaddata", "server"));
-			count += indexDir(new File("payloadcache/payloaddata", "rootdata"));
-			count += indexDir(new File("payloadcache/payloaddata", "assetmodifications"));
-			for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+			count += indexDir(new File("cache/payloadcache/payloaddata", "server"));
+			count += indexDir(new File("cache/payloadcache/payloaddata", "rootdata"));
+			count += indexDir(new File("cache/payloadcache/payloaddata", "assetmodifications"));
+			for (File clientDir : new File("clients")
+					.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 				String clientVersion = clientDir.getName().substring("client-".length());
-				count += indexDir(new File("payloadcache/payloaddata", "clientmodifications"));
-				count += indexDir(new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion));
+				count += indexDir(new File("cache/payloadcache/payloaddata", "clientmodifications"));
+				count += indexDir(new File("cache/payloadcache/payloaddata", "clientmodifications-" + clientVersion));
 			}
 			LauncherUtils.resetProgressBar();
 			LauncherUtils.setProgressMax(count);
-			copyDirWithProgress(new File("payloadcache/payloaddata", "server"), new File("server"), "server/",
+			copyDirWithProgress(new File("cache/payloadcache/payloaddata", "server"), new File("server"), "server/",
 					lastFiles, newIndex);
-			copyDirWithProgress(new File("payloadcache/payloaddata", "rootdata"), new File("."), "", lastFiles,
+			copyDirWithProgress(new File("cache/payloadcache/payloaddata", "rootdata"), new File("."), "", lastFiles,
 					newIndex);
-			copyDirWithProgress(new File("payloadcache/payloaddata", "assetmodifications"),
+			copyDirWithProgress(new File("cache/payloadcache/payloaddata", "assetmodifications"),
 					new File("assetmodifications"), "assetmodifications/", lastFiles, newIndex);
-			for (File clientDir : new File(".").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+			for (File clientDir : new File("clients").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 				String clientVersion = clientDir.getName().substring("client-".length());
 
 				// Check modifications
-				File modsGeneral = new File("payloadcache/payloaddata", "clientmodifications");
-				File modsSpecific = new File("payloadcache/payloaddata", "clientmodifications-" + clientVersion);
+				File modsGeneral = new File("cache/payloadcache/payloaddata", "clientmodifications");
+				File modsSpecific = new File("cache/payloadcache/payloaddata", "clientmodifications-" + clientVersion);
 				if (modsSpecific.exists() || modsGeneral.exists()) {
 					// Close clients
 					LauncherMain.closeClientsIfNeeded();
@@ -581,13 +581,13 @@ public class PayloadManager {
 			}
 
 			// Delete marker
-			if (new File("payloadcache/requireupdate").exists())
-				new File("payloadcache/requireupdate").delete();
+			if (new File("cache/payloadcache/requireupdate").exists())
+				new File("cache/payloadcache/requireupdate").delete();
 			LauncherUtils.resetProgressBar();
 			LauncherUtils.hideProgressPanel();
 		}
 		if (System.getProperty("debugPayloadFiles") != null || System.getProperty("debugPayloadHintClasses") != null)
-			new File("payloadcache/requireupdate").createNewFile();
+			new File("cache/payloadcache/requireupdate").createNewFile();
 
 		// Load payload classes
 		LauncherUtils.log("Loading payload classes...");
@@ -980,7 +980,7 @@ public class PayloadManager {
 								LauncherUtils.resetProgressBar();
 								LauncherUtils.hideProgressPanel();
 								if (!LauncherUtils.verifyPackageSignature(new File("payloads", spf.getName() + ".tmp"),
-										new File("payloadcache/payloadverificationkeys", id + ".pem"))) {
+										new File("cache/payloadcache/payloadverificationkeys", id + ".pem"))) {
 									// Warn
 									while (true) {
 										if (JOptionPane.showConfirmDialog(null,
