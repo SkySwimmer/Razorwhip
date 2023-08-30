@@ -1217,7 +1217,7 @@ public class LauncherUtils {
 			LauncherUtils.log("Updating data to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "rootdata"), new File("."));
 		}
-		if (new File("emulationsoftwaretmp", "assetmodifications").exists()) {
+		if (new File("cache/emulationsoftwaretmp", "assetmodifications").exists()) {
 			LauncherUtils.log("Updating asset modifications to " + version + "...", true);
 			LauncherUtils.copyDirWithProgress(new File("cache/emulationsoftwaretmp", "assetmodifications"),
 					new File("assetmodifications"));
