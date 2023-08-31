@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 public class ArchiveInformation {
 
 	public String archiveID;
+	public String archiveName;
 	public String descriptorType;
 
 	public ArchiveMode mode;
@@ -28,4 +29,12 @@ public class ArchiveInformation {
 
 	public boolean connectionAvailable;
 
+	@Override
+	public String toString() {
+		String str = "";
+		if (isDeprecated)
+			str += "[Deprecated] ";
+		str += archiveName;
+		return str;
+	}
 }

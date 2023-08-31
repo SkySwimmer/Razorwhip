@@ -55,7 +55,7 @@ public class AssetManager {
 	private static File emulationSoftwareFileF;
 
 	private static ActiveArchiveInformation activeArchive;
-	private static HashMap<String, ArchiveInformation> archiveList = new HashMap<String, ArchiveInformation>();
+	private static HashMap<String, ArchiveInformation> archiveList = new LinkedHashMap<String, ArchiveInformation>();
 
 	private static AssetInformation[] collectedAssets;
 	private static String[] collectedClients;
@@ -126,6 +126,15 @@ public class AssetManager {
 	 * @throws IOException If an error occurs loading the window
 	 */
 	public static boolean showVersionManager(boolean firstTime) throws IOException {
+		// Check
+		if (archiveList.size() == 0) {
+			// Load archives into memory
+			JsonObject archiveLst = JsonParser
+					.parseString(Files.readString(new File("assets/assetarchives.json").toPath())).getAsJsonObject();
+			loadArchives(archiveLst);
+		}
+
+		// Create window
 		VersionManagerWindow window = new VersionManagerWindow(launcherWindow.frmSentinelLauncher, firstTime);
 		boolean saved = window.showDialog();
 
@@ -375,13 +384,8 @@ public class AssetManager {
 
 	/**
 	 * Initializes archive data
-	 * 
-	 * @param softwareDescriptor Software descriptor data
-	 * @param gameDescriptor     Game descriptor data
-	 * @throws Exception if loading fails
 	 */
-	static void initArchiveData(Map<String, String> softwareDescriptor, Map<String, String> gameDescriptor)
-			throws Exception {
+	static void initArchiveData() throws Exception {
 		// Load archives
 		LauncherUtils.log("Loading archive settings...");
 
@@ -529,6 +533,7 @@ public class AssetManager {
 						}
 					}
 				} else {
+					// No connection
 					JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
 							"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
 							"No connection to server", JOptionPane.ERROR_MESSAGE);
@@ -586,80 +591,96 @@ public class AssetManager {
 				String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
 						.getAsJsonObject().get(clientVersion).getAsString();
 				if (!oHash.equals(cHash) || !clientFolder.exists()) {
-					// Update
-					if (activeArchive.connectionAvailable && assetManagementAvailable) {
-						// Download client
+					// Download client
+					if (activeArchive.mode == ArchiveMode.REMOTE)
 						LauncherUtils.log("Updating client " + clientVersion + "...", true);
-						LauncherMain.closeClientsIfNeeded();
-						LauncherUtils.gameDescriptor.downloadClient(
-								activeArchive.archiveClientLst.get(clientVersion).getAsString(), clientVersion,
-								clientFolder, activeArchive.archiveDef, activeArchive.descriptorDef, cHash);
-
-						// Modify client
-						LauncherUtils.log("Modifying client " + clientVersion + "...", true);
-						LauncherUtils.gameDescriptor.modifyClient(clientFolder, clientVersion, activeArchive.archiveDef,
-								activeArchive.descriptorDef);
-
-						// Re-extract descriptor
-						if (!new File("tmp-sgdextract").exists()) {
-							LauncherUtils.log("Extracting game descriptor...");
-							if (!dirModeDescriptorFileF)
-								LauncherUtils.unZip(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
-							else
-								LauncherUtils.copyDirWithProgress(gameDescriptorFileF,
-										new File("cache/tmp-sgdextract"));
+					else
+						LauncherUtils.log("Extracting client " + clientVersion + "...", true);
+					LauncherMain.closeClientsIfNeeded();
+					if (activeArchive.mode == ArchiveMode.REMOTE) {
+						// Check connection
+						if (activeArchive.connectionAvailable) {
+							// Download
+							LauncherUtils.gameDescriptor.downloadClient(
+									activeArchive.archiveClientLst.get(clientVersion).getAsString(), clientVersion,
+									clientFolder, activeArchive.archiveDef, activeArchive.descriptorDef, cHash);
+						} else {
+							// Error
+							LauncherUtils.log("Skipped client update as there is no asset server connection.");
+							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
+									"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
+									"No connection to server", JOptionPane.ERROR_MESSAGE);
+							System.exit(1);
 						}
-						if (new File("cache/tmp-sgdextract", "clientmodifications").exists()) {
-							LauncherUtils.log("Copying game descriptor client modifications...");
-							LauncherUtils.copyDirWithoutProgress(
-									new File("cache/tmp-sgdextract", "clientmodifications"), clientFolder);
-						}
-						if (new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion).exists()) {
-							LauncherUtils.log("Copying version-specific game descriptor client modifications...");
-							LauncherUtils.copyDirWithoutProgress(
-									new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion),
-									clientFolder);
-						}
-
-						// Re-extract software
-						if (!new File("cache/tmp-svpextract").exists()) {
-							LauncherUtils.log("Extracting emulation software...");
-							if (!dirModeSoftwareFileF)
-								LauncherUtils.unZip(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
-							else
-								LauncherUtils.copyDirWithProgress(emulationSoftwareFileF,
-										new File("cache/tmp-svpextract"));
-						}
-						if (new File("cache/tmp-svpextract", "clientmodifications").exists()) {
-							LauncherUtils.log("Copying emulation software client modifications...");
-							LauncherUtils.copyDirWithoutProgress(
-									new File("cache/tmp-svpextract", "clientmodifications"), clientFolder);
-						}
-						if (new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion).exists()) {
-							LauncherUtils.log("Copying version-specific emulation software client modifications...");
-							LauncherUtils.copyDirWithoutProgress(
-									new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion),
-									clientFolder);
-						}
-
-						// Copy payloads
-						LauncherUtils.log("Copying payload client modifications...", true);
-						LauncherUtils.copyDirWithoutProgress(
-								new File("cache/payloadcache/payloaddata", "clientmodifications"), clientFolder);
-						LauncherUtils.copyDirWithoutProgress(
-								new File("cache/payloadcache/payloaddata", "clientmodifications"), clientFolder);
-
-						// Save version
-						localHashList.addProperty(clientVersion, cHash);
-						Files.writeString(localVersions.toPath(), localHashList.toString());
 					} else {
-						// Error
-						LauncherUtils.log("Skipped client update as there is no asset server connection.");
-						JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
-								"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
-								"No connection to server", JOptionPane.ERROR_MESSAGE);
-						System.exit(1);
+						// Check source
+						if (!new File(activeArchive.source).exists()) {
+							// Error
+							LauncherUtils.log("Skipped client update as the source file is missing.");
+							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
+									"Failed to copy client data from asset source file!\n\nPlease make sure the following file exists: "
+											+ activeArchive.source,
+									"Client source file missing", JOptionPane.ERROR_MESSAGE);
+							System.exit(1);
+						}
+
+						// Extract client
+						// TODO: local asset support
 					}
+
+					// Modify client
+					LauncherUtils.log("Modifying client " + clientVersion + "...", true);
+					LauncherUtils.gameDescriptor.modifyClient(clientFolder, clientVersion, activeArchive.archiveDef,
+							activeArchive.descriptorDef);
+
+					// Re-extract descriptor
+					if (!new File("tmp-sgdextract").exists()) {
+						LauncherUtils.log("Extracting game descriptor...");
+						if (!dirModeDescriptorFileF)
+							LauncherUtils.unZip(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
+						else
+							LauncherUtils.copyDirWithProgress(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
+					}
+					if (new File("cache/tmp-sgdextract", "clientmodifications").exists()) {
+						LauncherUtils.log("Copying game descriptor client modifications...");
+						LauncherUtils.copyDirWithoutProgress(new File("cache/tmp-sgdextract", "clientmodifications"),
+								clientFolder);
+					}
+					if (new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion).exists()) {
+						LauncherUtils.log("Copying version-specific game descriptor client modifications...");
+						LauncherUtils.copyDirWithoutProgress(
+								new File("cache/tmp-sgdextract", "clientmodifications-" + clientVersion), clientFolder);
+					}
+
+					// Re-extract software
+					if (!new File("cache/tmp-svpextract").exists()) {
+						LauncherUtils.log("Extracting emulation software...");
+						if (!dirModeSoftwareFileF)
+							LauncherUtils.unZip(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
+						else
+							LauncherUtils.copyDirWithProgress(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
+					}
+					if (new File("cache/tmp-svpextract", "clientmodifications").exists()) {
+						LauncherUtils.log("Copying emulation software client modifications...");
+						LauncherUtils.copyDirWithoutProgress(new File("cache/tmp-svpextract", "clientmodifications"),
+								clientFolder);
+					}
+					if (new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion).exists()) {
+						LauncherUtils.log("Copying version-specific emulation software client modifications...");
+						LauncherUtils.copyDirWithoutProgress(
+								new File("cache/tmp-svpextract", "clientmodifications-" + clientVersion), clientFolder);
+					}
+
+					// Copy payloads
+					LauncherUtils.log("Copying payload client modifications...", true);
+					LauncherUtils.copyDirWithoutProgress(
+							new File("cache/payloadcache/payloaddata", "clientmodifications"), clientFolder);
+					LauncherUtils.copyDirWithoutProgress(
+							new File("cache/payloadcache/payloaddata", "clientmodifications"), clientFolder);
+
+					// Save version
+					localHashList.addProperty(clientVersion, cHash);
+					Files.writeString(localVersions.toPath(), localHashList.toString());
 				}
 			}
 		}
@@ -672,6 +693,7 @@ public class AssetManager {
 		LauncherUtils.hideProgressPanel();
 		LauncherUtils.resetProgressBar();
 		LauncherUtils.setStatus("Checking for updates...");
+
 	}
 
 	/**
@@ -989,10 +1011,11 @@ public class AssetManager {
 		ActiveArchiveInformation info = new ActiveArchiveInformation();
 		info.archiveID = archiveID;
 		info.archiveDef = archiveDef;
+		info.archiveName = archiveDef.get("archiveName").getAsString();
 
 		// Load settings
-		info.supportsDownloads = archiveDef.get("allowStreaming").getAsBoolean();
-		info.supportsStreaming = archiveDef.get("allowFullDownload").getAsBoolean();
+		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
+		info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
 		info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
 
 		// Load deprecation status
@@ -1031,7 +1054,7 @@ public class AssetManager {
 
 		// Load archive assets
 		LauncherUtils.log("Indexing assets... Please wait...", true);
-		HashMap<String, String> assetHashes = new HashMap<String, String>();
+		HashMap<String, String> assetHashes = new LinkedHashMap<String, String>();
 		indexAssetHashes(assetHashes, new File("assets/descriptor/hashes.shl"));
 		for (String path : assetHashes.keySet()) {
 			AssetInformation asset = new AssetInformation();
@@ -1062,10 +1085,11 @@ public class AssetManager {
 		ArchiveInformation info = new ArchiveInformation();
 		info.archiveID = archiveID;
 		info.archiveDef = archiveDef;
+		info.archiveName = archiveDef.get("archiveName").getAsString();
 
 		// Load settings
-		info.supportsDownloads = archiveDef.get("allowStreaming").getAsBoolean();
-		info.supportsStreaming = archiveDef.get("allowFullDownload").getAsBoolean();
+		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
+		info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
 		info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
 
 		// Load descriptor

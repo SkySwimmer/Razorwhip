@@ -999,7 +999,7 @@ public class LauncherMain {
 
 				// Load archive information
 				LauncherUtils.setStatus("Loading archive data...");
-				AssetManager.initArchiveData(softwareDescriptor, gameDescriptor);
+				AssetManager.initArchiveData();
 
 				// Check if shift is down, if so, open option menu
 				LauncherUtils.setStatus("Press shift for options... (5)");

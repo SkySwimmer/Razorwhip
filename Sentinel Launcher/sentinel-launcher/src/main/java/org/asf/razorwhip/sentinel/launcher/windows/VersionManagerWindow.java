@@ -48,6 +48,7 @@ import javax.swing.event.ListSelectionListener;
 
 import org.asf.razorwhip.sentinel.launcher.AssetManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
+import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 
 import javax.swing.event.ListSelectionEvent;
@@ -59,17 +60,16 @@ public class VersionManagerWindow extends JDialog {
 	private static final long serialVersionUID = 1l;
 	private boolean firstTime = false;
 
-	private JComboBox<AssetArchiveEntry> archiveSelector;
 	private JCheckBox checkBoxDownload;
 	private JList<ClientEntry> clientListBox;
+	private JComboBox<ArchiveInformation> archiveSelector;
 	private JComboBox<QualityLevelEntry> qualityLevelBox;
 	private JLabel lblQualityLevels;
 	private JButton btnOk;
 
 	private ArrayList<QualityLevelEntry> qualityLevelElements = new ArrayList<QualityLevelEntry>();
-	private ArrayList<AssetArchiveEntry> archives = new ArrayList<AssetArchiveEntry>();
 	private ArrayList<ClientEntry> clients = new ArrayList<ClientEntry>();
-	private AssetArchiveEntry lastArchive;
+	private ArchiveInformation lastArchive;
 
 	private boolean downloadFinished;
 
@@ -80,8 +80,6 @@ public class VersionManagerWindow extends JDialog {
 
 	private boolean updateDescriptor = true;
 
-	// TODO: rewrite to use new asset manager class
-
 	private class QualityLevelEntry {
 		public String level;
 		public boolean enabled = true;
@@ -90,23 +88,6 @@ public class VersionManagerWindow extends JDialog {
 		@Override
 		public String toString() {
 			return level;
-		}
-	}
-
-	private class AssetArchiveEntry {
-		public String id;
-		public String name;
-		public boolean deprecated;
-
-		public JsonObject entry;
-
-		@Override
-		public String toString() {
-			String str = "";
-			if (deprecated)
-				str += "[Deprecated] ";
-			str += name;
-			return str;
 		}
 	}
 
@@ -129,40 +110,12 @@ public class VersionManagerWindow extends JDialog {
 	public VersionManagerWindow(JFrame parent, boolean firstTime) {
 		super(parent);
 		this.firstTime = firstTime;
-		firstTime = firstTime;
 		initialize();
 	}
 
 	public boolean showDialog() throws IOException {
 		clients.clear();
-		archives.clear();
 		lastArchive = null;
-
-		// Load archive list
-		JsonObject archiveLst = JsonParser.parseString(Files.readString(Path.of("assets/assetarchives.json")))
-				.getAsJsonObject();
-		for (String id : archiveLst.keySet()) {
-			JsonObject archiveDef = archiveLst.get(id).getAsJsonObject();
-
-			// Verify
-			//
-			// Deprecated archives may only be used if they can be downloaded, they should
-			// not be streamed from after deprecation
-			if ((!archiveDef.get("allowFullDownload").getAsBoolean()
-					&& !archiveDef.get("allowStreaming").getAsBoolean())
-					|| (!archiveDef.get("allowFullDownload").getAsBoolean() && archiveDef.has("deprecated")
-							&& archiveDef.has("deprecationNotice") && archiveDef.get("deprecated").getAsBoolean()))
-				continue;
-
-			// Add
-			AssetArchiveEntry entry = new AssetArchiveEntry();
-			entry.id = id;
-			entry.entry = archiveDef;
-			entry.name = archiveDef.get("archiveName").getAsString();
-			entry.deprecated = archiveDef.has("deprecated") && archiveDef.has("deprecationNotice")
-					&& archiveDef.get("deprecated").getAsBoolean();
-			archives.add(entry);
-		}
 
 		// Load last archive ID from disk
 		File localArchiveSettings = new File("assets/localdata.json");
@@ -172,45 +125,44 @@ public class VersionManagerWindow extends JDialog {
 					.getAsJsonObject();
 			String id = settings.get("id").getAsString();
 			boolean streaming = settings.get("stream").getAsBoolean();
-			for (AssetArchiveEntry entry : archives) {
-				if (entry.id.equals(id)) {
+			for (ArchiveInformation entry : AssetManager.getArchives()) {
+				if (entry.archiveID.equals(id)) {
 					lastArchive = entry;
 					archiveSelector.setSelectedItem(entry);
-					checkBoxDownload.setEnabled(!entry.deprecated && entry.entry.get("allowFullDownload").getAsBoolean()
-							&& entry.entry.get("allowStreaming").getAsBoolean());
+					checkBoxDownload
+							.setEnabled(!entry.isDeprecated && entry.supportsDownloads && entry.supportsStreaming);
 					lblQualityLevels.setVisible(checkBoxDownload.isSelected());
 					qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 					break;
 				}
 			}
 			checkBoxDownload.setSelected(!streaming);
-		} else if (archives.size() > 0) {
-			lastArchive = archives.get(0);
-			checkBoxDownload
-					.setEnabled(!lastArchive.deprecated && lastArchive.entry.get("allowFullDownload").getAsBoolean()
-							&& lastArchive.entry.get("allowStreaming").getAsBoolean());
-			checkBoxDownload.setSelected(!lastArchive.entry.get("allowStreaming").getAsBoolean());
+		} else if (AssetManager.getArchives().length > 0) {
+			lastArchive = AssetManager.getArchives()[0];
+			checkBoxDownload.setEnabled(
+					!lastArchive.isDeprecated && lastArchive.supportsDownloads && lastArchive.supportsStreaming);
+			checkBoxDownload.setSelected(!lastArchive.supportsStreaming);
 			lblQualityLevels.setVisible(checkBoxDownload.isSelected());
 			qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 		}
 
 		// Set model
-		archiveSelector.setModel(new ComboBoxModel<AssetArchiveEntry>() {
-			private AssetArchiveEntry selected;
+		archiveSelector.setModel(new ComboBoxModel<ArchiveInformation>() {
+			private ArchiveInformation selected;
 
 			@Override
 			public int getSize() {
-				return archives.size();
+				return AssetManager.getArchives().length;
 			}
 
 			@Override
-			public AssetArchiveEntry getElementAt(int index) {
-				return archives.get(index);
+			public ArchiveInformation getElementAt(int index) {
+				return AssetManager.getArchives()[index];
 			}
 
 			@Override
 			public void setSelectedItem(Object anItem) {
-				selected = (AssetArchiveEntry) anItem;
+				selected = (ArchiveInformation) anItem;
 			}
 
 			@Override
@@ -242,9 +194,9 @@ public class VersionManagerWindow extends JDialog {
 		}
 
 		// Check
-		if (archives.size() == 1 && lastArchive != null && firstTime) {
+		if (AssetManager.getArchives().length == 1 && lastArchive != null && firstTime) {
 			// Check clients
-			JsonObject clients = lastArchive.entry.get("clients").getAsJsonObject();
+			JsonObject clients = lastArchive.archiveClientLst;
 			if (clients.size() == 1) {
 				// Set
 				String client = clients.keySet().toArray(t -> new String[t])[0];
@@ -265,7 +217,7 @@ public class VersionManagerWindow extends JDialog {
 
 				// Write settings
 				JsonObject settings = new JsonObject();
-				settings.addProperty("id", lastArchive.id);
+				settings.addProperty("id", lastArchive.archiveID);
 				settings.addProperty("stream", !checkBoxDownload.isSelected());
 				Files.writeString(localArchiveSettings.toPath(), settings.toString());
 
@@ -316,7 +268,7 @@ public class VersionManagerWindow extends JDialog {
 		lblAssetArchive.setBounds(12, 12, 566, 17);
 		panel.add(lblAssetArchive);
 
-		archiveSelector = new JComboBox<AssetArchiveEntry>();
+		archiveSelector = new JComboBox<ArchiveInformation>();
 		archiveSelector.setBounds(12, 34, 566, 26);
 		panel.add(archiveSelector);
 
@@ -394,10 +346,10 @@ public class VersionManagerWindow extends JDialog {
 						lblQualityLevels.setVisible(false);
 						qualityLevelBox.setVisible(false);
 					} else {
-						AssetArchiveEntry eA = (AssetArchiveEntry) archiveSelector.getSelectedItem();
-						if (lastArchive == null || !eA.id.equals(lastArchive.id)) {
+						ArchiveInformation eA = (ArchiveInformation) archiveSelector.getSelectedItem();
+						if (lastArchive == null || !eA.archiveID.equals(lastArchive.archiveID)) {
 							// Warn about change
-							if (!warnedArchiveChange && !firstTime) {
+							if (lastArchive != null && !warnedArchiveChange && !firstTime) {
 								// Warn
 								if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
 										"WARNING! Changing the asset archive will very likely trigger a full re-download!\n\nAre you sure you want to continue?",
@@ -413,8 +365,8 @@ public class VersionManagerWindow extends JDialog {
 							updateDescriptor = true;
 
 							// Check deprecation
-							if (eA.deprecated) {
-								String message = eA.entry.get("deprecationNotice").getAsString();
+							if (eA.isDeprecated) {
+								String message = eA.deprecationNotice;
 								JOptionPane.showMessageDialog(VersionManagerWindow.this,
 										"Warning! The archive you selected has been deprecated and may be removed!\n\n"
 												+ message,
@@ -422,11 +374,9 @@ public class VersionManagerWindow extends JDialog {
 							}
 
 							// Change archive
-							if (eA.deprecated || !eA.entry.get("allowFullDownload").getAsBoolean()
-									|| !eA.entry.get("allowStreaming").getAsBoolean()) {
+							if (eA.isDeprecated || !eA.supportsDownloads || !eA.supportsStreaming) {
 								checkBoxDownload.setEnabled(false);
-								checkBoxDownload
-										.setSelected(eA.deprecated || !eA.entry.get("allowStreaming").getAsBoolean());
+								checkBoxDownload.setSelected(eA.isDeprecated || !eA.supportsStreaming);
 								lblQualityLevels.setVisible(checkBoxDownload.isSelected());
 								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 							} else {
@@ -469,9 +419,6 @@ public class VersionManagerWindow extends JDialog {
 					// Collect assets
 					Thread th = new Thread(() -> {
 						try {
-							// Load settings
-							JsonObject archiveDef = lastArchive.entry;
-
 							// Update descriptor
 							if (updateDescriptor) {
 								// Download descriptor
@@ -517,9 +464,9 @@ public class VersionManagerWindow extends JDialog {
 										LauncherUtils.urlBaseDescriptorFile, LauncherUtils.urlBaseSoftwareFile,
 										AssetManager.getAssetInformationRootURL());
 								String rHashDescriptor = LauncherUtils
-										.downloadString(dir + archiveDef.get("type").getAsString() + ".hash")
-										.replace("\r", "").replace("\n", "");
-								LauncherUtils.downloadFile(dir + archiveDef.get("type").getAsString() + ".zip",
+										.downloadString(dir + lastArchive.descriptorType + ".hash").replace("\r", "")
+										.replace("\n", "");
+								LauncherUtils.downloadFile(dir + lastArchive.descriptorType + ".zip",
 										new File("assets/descriptor.zip"));
 								downloadFinished = true;
 
@@ -564,7 +511,7 @@ public class VersionManagerWindow extends JDialog {
 												lblThanks.setVisible(lastArchive != null);
 												if (lastArchive != null)
 													lblThanks.setText("Assets kindly mirrored by "
-															+ lastArchive.entry.get("thanksTo").getAsString());
+															+ lastArchive.archiveDef.get("thanksTo").getAsString());
 											});
 										}
 									} else {
@@ -590,7 +537,7 @@ public class VersionManagerWindow extends JDialog {
 											lblThanks.setVisible(lastArchive != null);
 											if (lastArchive != null)
 												lblThanks.setText("Assets kindly mirrored by "
-														+ lastArchive.entry.get("thanksTo").getAsString());
+														+ lastArchive.archiveDef.get("thanksTo").getAsString());
 										});
 									}
 								}
@@ -693,9 +640,8 @@ public class VersionManagerWindow extends JDialog {
 								LauncherUtils.log("Collecting assets of " + clientVersion + "...");
 								AssetInformation[] collectedAssets = LauncherUtils.getGameDescriptor()
 										.collectVersionAssets(assetsList.values().toArray(t -> new AssetInformation[t]),
-												lvls.toArray(t -> new String[t]), clientVersion,
-												AssetManager.getArchive(lastArchive.id), archiveDef, archiveDescriptor,
-												assetHashes);
+												lvls.toArray(t -> new String[t]), clientVersion, lastArchive,
+												lastArchive.archiveDef, archiveDescriptor, assetHashes);
 								for (AssetInformation asset : collectedAssets) {
 									// Check if present
 									if (!assets.containsKey(asset.assetHash.toLowerCase())) {
@@ -780,7 +726,7 @@ public class VersionManagerWindow extends JDialog {
 										lblThanks.setVisible(lastArchive != null);
 										if (lastArchive != null)
 											lblThanks.setText("Assets kindly mirrored by "
-													+ lastArchive.entry.get("thanksTo").getAsString());
+													+ lastArchive.archiveDef.get("thanksTo").getAsString());
 									});
 
 									return;
@@ -801,7 +747,7 @@ public class VersionManagerWindow extends JDialog {
 								lblThanks.setVisible(lastArchive != null);
 								if (lastArchive != null)
 									lblThanks.setText("Assets kindly mirrored by "
-											+ lastArchive.entry.get("thanksTo").getAsString());
+											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 								doSave();
 							});
 						} catch (Exception e2) {
@@ -833,7 +779,7 @@ public class VersionManagerWindow extends JDialog {
 								lblThanks.setVisible(lastArchive != null);
 								if (lastArchive != null)
 									lblThanks.setText("Assets kindly mirrored by "
-											+ lastArchive.entry.get("thanksTo").getAsString());
+											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 							});
 						}
 					});
@@ -912,7 +858,7 @@ public class VersionManagerWindow extends JDialog {
 					// Write archive
 					File localArchiveSettings = new File("assets/localdata.json");
 					JsonObject settings = new JsonObject();
-					settings.addProperty("id", lastArchive.id);
+					settings.addProperty("id", lastArchive.archiveID);
 					settings.addProperty("stream", !checkBoxDownload.isSelected());
 					Files.writeString(localArchiveSettings.toPath(), settings.toString());
 
@@ -944,7 +890,7 @@ public class VersionManagerWindow extends JDialog {
 		btnAdd.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				// Create selection list
-				JsonObject clientLst = lastArchive.entry.get("clients").getAsJsonObject();
+				JsonObject clientLst = lastArchive.archiveClientLst;
 				ArrayList<String> versions = new ArrayList<String>();
 				for (String version : clientLst.keySet()) {
 					if (!clients.stream().anyMatch(t -> t.version.equals(version))) {
@@ -1068,7 +1014,7 @@ public class VersionManagerWindow extends JDialog {
 			if (ent != null) {
 				ent.enabled = !ent.enabled;
 				qualityLevelBox.setPopupVisible(true);
-				qualityLevelBox.setSelectedItem(mask);
+				qualityLevelBox.setSelectedItem(null);
 				qualityLevelBox.repaint();
 			}
 		});
@@ -1114,7 +1060,7 @@ public class VersionManagerWindow extends JDialog {
 		ArrayList<ClientEntry> filteredData = new ArrayList<ClientEntry>();
 		if (lastArchive == null)
 			return new ClientEntry[0];
-		JsonObject clientLst = lastArchive.entry.get("clients").getAsJsonObject();
+		JsonObject clientLst = lastArchive.archiveClientLst;
 		for (ClientEntry entry : clients) {
 			// Check
 			if (lastArchive != null) {
@@ -1151,6 +1097,6 @@ public class VersionManagerWindow extends JDialog {
 		btnOk.setEnabled(lastArchive != null && filteredData.length != 0);
 		lblThanks.setVisible(lastArchive != null);
 		if (lastArchive != null)
-			lblThanks.setText("Assets kindly mirrored by " + lastArchive.entry.get("thanksTo").getAsString());
+			lblThanks.setText("Assets kindly mirrored by " + lastArchive.archiveDef.get("thanksTo").getAsString());
 	}
 }
