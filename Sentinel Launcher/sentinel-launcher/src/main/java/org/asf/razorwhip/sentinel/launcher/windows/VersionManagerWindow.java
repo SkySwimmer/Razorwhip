@@ -49,6 +49,7 @@ import javax.swing.event.ListSelectionListener;
 import org.asf.razorwhip.sentinel.launcher.AssetManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.ArchiveMode;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 
 import javax.swing.event.ListSelectionEvent;
@@ -421,81 +422,111 @@ public class VersionManagerWindow extends JDialog {
 						try {
 							// Update descriptor
 							if (updateDescriptor) {
-								// Download descriptor
-								LauncherUtils.log("Downloading archive descriptor...", true);
-								SwingUtilities.invokeAndWait(() -> {
-									if (!downloadFinished) {
-										lblThanks.setText("Downloading archive descriptor... Please wait... [0%]");
-										lblThanks.setVisible(true);
-									}
-								});
-								downloadFinished = false;
-								Thread th2 = new Thread(() -> {
-									String lastMsg = "";
-									while (!downloadFinished) {
-										try {
-											int percentage = (int) ((100f / (float) (LauncherUtils.getProgressMax()))
-													* (float) LauncherUtils.getProgress());
-											if (!lastMsg.equals("Downloading archive descriptor... Please wait... ["
-													+ percentage + "%]")) {
-												lastMsg = "Downloading archive descriptor... Please wait... ["
-														+ percentage + "%]";
-												SwingUtilities.invokeAndWait(() -> {
-													if (!downloadFinished) {
-														lblThanks.setText(
-																"Downloading archive descriptor... Please wait... ["
-																		+ percentage + "%]");
-													}
-												});
-											}
-											Thread.sleep(100);
-										} catch (InvocationTargetException | InterruptedException e1) {
-											break;
+								if (lastArchive.mode == ArchiveMode.REMOTE) {
+									// Download descriptor
+									LauncherUtils.log("Downloading archive descriptor...", true);
+									SwingUtilities.invokeAndWait(() -> {
+										if (!downloadFinished) {
+											lblThanks.setText("Downloading archive descriptor... Please wait... [0%]");
+											lblThanks.setVisible(true);
 										}
-									}
-								});
-								th2.setDaemon(true);
-								th2.start();
-								LauncherUtils.resetProgressBar();
-								LauncherUtils.showProgressPanel();
-								String dir = parseURL(
-										AssetManager.getSentinelAssetControllerConfig().get("descriptorRoot")
-												.getAsString(),
-										LauncherUtils.urlBaseDescriptorFile, LauncherUtils.urlBaseSoftwareFile,
-										AssetManager.getAssetInformationRootURL());
-								String rHashDescriptor = LauncherUtils
-										.downloadString(dir + lastArchive.descriptorType + ".hash").replace("\r", "")
-										.replace("\n", "");
-								LauncherUtils.downloadFile(dir + lastArchive.descriptorType + ".zip",
-										new File("assets/descriptor.zip"));
-								downloadFinished = true;
+									});
+									downloadFinished = false;
+									Thread th2 = new Thread(() -> {
+										String lastMsg = "";
+										while (!downloadFinished) {
+											try {
+												int percentage = (int) ((100f
+														/ (float) (LauncherUtils.getProgressMax()))
+														* (float) LauncherUtils.getProgress());
+												if (!lastMsg.equals("Downloading archive descriptor... Please wait... ["
+														+ percentage + "%]")) {
+													lastMsg = "Downloading archive descriptor... Please wait... ["
+															+ percentage + "%]";
+													SwingUtilities.invokeAndWait(() -> {
+														if (!downloadFinished) {
+															lblThanks.setText(
+																	"Downloading archive descriptor... Please wait... ["
+																			+ percentage + "%]");
+														}
+													});
+												}
+												Thread.sleep(100);
+											} catch (InvocationTargetException | InterruptedException e1) {
+												break;
+											}
+										}
+									});
+									th2.setDaemon(true);
+									th2.start();
+									LauncherUtils.resetProgressBar();
+									LauncherUtils.showProgressPanel();
+									String dir = parseURL(
+											AssetManager.getSentinelAssetControllerConfig().get("descriptorRoot")
+													.getAsString(),
+											LauncherUtils.urlBaseDescriptorFile, LauncherUtils.urlBaseSoftwareFile,
+											AssetManager.getAssetInformationRootURL());
+									String rHashDescriptor = LauncherUtils
+											.downloadString(dir + lastArchive.descriptorType + ".hash")
+											.replace("\r", "").replace("\n", "");
+									LauncherUtils.downloadFile(dir + lastArchive.descriptorType + ".zip",
+											new File("assets/descriptor.zip"));
+									downloadFinished = true;
 
-								// Hide bars
-								LauncherUtils.hideProgressPanel();
-								LauncherUtils.resetProgressBar();
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
 
-								// Verify signature
-								LauncherUtils.log("Verifying signature... Please wait...", true);
-								SwingUtilities.invokeAndWait(() -> {
-									lblThanks.setText("Verifying signature... Please wait...");
-									lblThanks.setVisible(true);
-								});
-								if (!LauncherUtils.verifyPackageSignature(new File("assets/descriptor.zip"),
-										new File("assets/sac-publickey.pem"))) {
-									// Check if signed
-									if (!LauncherUtils.isPackageSigned(new File("assets/descriptor.zip"))) {
-										// Hide bars
-										LauncherUtils.hideProgressPanel();
-										LauncherUtils.resetProgressBar();
+									// Verify signature
+									LauncherUtils.log("Verifying signature... Please wait...", true);
+									SwingUtilities.invokeAndWait(() -> {
+										lblThanks.setText("Verifying signature... Please wait...");
+										lblThanks.setVisible(true);
+									});
+									if (!LauncherUtils.verifyPackageSignature(new File("assets/descriptor.zip"),
+											new File("assets/sac-publickey.pem"))) {
+										// Check if signed
+										if (!LauncherUtils.isPackageSigned(new File("assets/descriptor.zip"))) {
+											// Hide bars
+											LauncherUtils.hideProgressPanel();
+											LauncherUtils.resetProgressBar();
 
-										// Unsigned
-										// Check support
-										LauncherUtils.log("Package is unsigned.");
-										if (!AssetManager.getSentinelAssetControllerConfig()
-												.get("allowUnsignedArchiveDescriptors").getAsBoolean()) {
+											// Unsigned
+											// Check support
 											LauncherUtils.log("Package is unsigned.");
+											if (!AssetManager.getSentinelAssetControllerConfig()
+													.get("allowUnsignedArchiveDescriptors").getAsBoolean()) {
+												LauncherUtils.log("Package is unsigned.");
+												JOptionPane.showMessageDialog(VersionManagerWindow.this,
+														"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
+														"Update error", JOptionPane.ERROR_MESSAGE);
+
+												// Re-enable
+												SwingUtilities.invokeLater(() -> {
+													btnOk.setEnabled(true);
+													btnCancel.setEnabled(true);
+													btnAdd.setEnabled(true);
+													checkBoxDownload.setEnabled(chBoxWasEnabled);
+													qualityLevelBox.setEnabled(true);
+													clientListBox.setEnabled(true);
+													btnRemove.setEnabled(wasEnabledRemove);
+													btnOk.setText("Ok");
+													lblThanks.setVisible(lastArchive != null
+															&& lastArchive.archiveDef.has("thanksTo"));
+													if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+														lblThanks.setText("Assets kindly mirrored by "
+																+ lastArchive.archiveDef.get("thanksTo").getAsString());
+												});
+												return;
+											}
+										} else {
+											// Hide bars
+											LauncherUtils.hideProgressPanel();
+											LauncherUtils.resetProgressBar();
+
+											LauncherUtils.log("Signature verification failure.");
 											JOptionPane.showMessageDialog(VersionManagerWindow.this,
-													"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
+													"Failed to verify integrity of archive descriptor file.\n\nPlease report this error to the project's archival team.",
 													"Update error", JOptionPane.ERROR_MESSAGE);
 
 											// Re-enable
@@ -508,87 +539,114 @@ public class VersionManagerWindow extends JDialog {
 												clientListBox.setEnabled(true);
 												btnRemove.setEnabled(wasEnabledRemove);
 												btnOk.setText("Ok");
-												lblThanks.setVisible(lastArchive != null);
-												if (lastArchive != null)
+												lblThanks.setVisible(
+														lastArchive != null && lastArchive.archiveDef.has("thanksTo"));
+												if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 													lblThanks.setText("Assets kindly mirrored by "
 															+ lastArchive.archiveDef.get("thanksTo").getAsString());
 											});
+											return;
 										}
-									} else {
-										// Hide bars
-										LauncherUtils.hideProgressPanel();
-										LauncherUtils.resetProgressBar();
-
-										LauncherUtils.log("Signature verification failure.");
-										JOptionPane.showMessageDialog(VersionManagerWindow.this,
-												"Failed to verify integrity of archive descriptor file.\n\nPlease report this error to the project's archival team.",
-												"Update error", JOptionPane.ERROR_MESSAGE);
-
-										// Re-enable
-										SwingUtilities.invokeLater(() -> {
-											btnOk.setEnabled(true);
-											btnCancel.setEnabled(true);
-											btnAdd.setEnabled(true);
-											checkBoxDownload.setEnabled(chBoxWasEnabled);
-											qualityLevelBox.setEnabled(true);
-											clientListBox.setEnabled(true);
-											btnRemove.setEnabled(wasEnabledRemove);
-											btnOk.setText("Ok");
-											lblThanks.setVisible(lastArchive != null);
-											if (lastArchive != null)
-												lblThanks.setText("Assets kindly mirrored by "
-														+ lastArchive.archiveDef.get("thanksTo").getAsString());
-										});
 									}
-								}
 
-								// Extract
-								SwingUtilities.invokeAndWait(() -> {
-									if (!downloadFinished) {
-										lblThanks.setText("Extracting archive information... Please wait... [0%]");
-										lblThanks.setVisible(true);
-									}
-								});
-								downloadFinished = false;
-								th2 = new Thread(() -> {
-									String lastMsg = "";
-									while (!downloadFinished) {
-										try {
-											int percentage = (int) ((100f / (float) (LauncherUtils.getProgressMax()))
-													* (float) LauncherUtils.getProgress());
-											if (!lastMsg.equals("Extracting archive information... Please wait... ["
-													+ percentage + "%]")) {
-												lastMsg = "Extracting archive information... Please wait... ["
-														+ percentage + "%]";
-												SwingUtilities.invokeAndWait(() -> {
-													if (!downloadFinished) {
-														lblThanks.setText(
-																"Extracting archive information... Please wait... ["
-																		+ percentage + "%]");
-													}
-												});
+									// Extract
+									SwingUtilities.invokeAndWait(() -> {
+										if (!downloadFinished) {
+											lblThanks.setText("Extracting archive information... Please wait... [0%]");
+											lblThanks.setVisible(true);
+										}
+									});
+									downloadFinished = false;
+									th2 = new Thread(() -> {
+										String lastMsg = "";
+										while (!downloadFinished) {
+											try {
+												int percentage = (int) ((100f
+														/ (float) (LauncherUtils.getProgressMax()))
+														* (float) LauncherUtils.getProgress());
+												if (!lastMsg.equals("Extracting archive information... Please wait... ["
+														+ percentage + "%]")) {
+													lastMsg = "Extracting archive information... Please wait... ["
+															+ percentage + "%]";
+													SwingUtilities.invokeAndWait(() -> {
+														if (!downloadFinished) {
+															lblThanks.setText(
+																	"Extracting archive information... Please wait... ["
+																			+ percentage + "%]");
+														}
+													});
+												}
+												Thread.sleep(100);
+											} catch (InvocationTargetException | InterruptedException e1) {
+												break;
 											}
-											Thread.sleep(100);
-										} catch (InvocationTargetException | InterruptedException e1) {
-											break;
 										}
-									}
-								});
-								th2.setDaemon(true);
-								th2.start();
-								LauncherUtils.log("Extracting archive information...", true);
-								if (new File("assets/descriptor").exists())
-									LauncherUtils.deleteDir(new File("assets/descriptor"));
-								LauncherUtils.unZip(new File("assets/descriptor.zip"), new File("assets/descriptor"));
-								downloadFinished = true;
+									});
+									th2.setDaemon(true);
+									th2.start();
+									LauncherUtils.log("Extracting archive information...", true);
+									if (new File("assets/descriptor").exists())
+										LauncherUtils.deleteDir(new File("assets/descriptor"));
+									LauncherUtils.unZip(new File("assets/descriptor.zip"),
+											new File("assets/descriptor"));
+									downloadFinished = true;
 
-								// Write hash
-								Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
+									// Write hash
+									Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
 
-								// Hide bars
-								LauncherUtils.hideProgressPanel();
-								LauncherUtils.resetProgressBar();
-								updateDescriptor = false;
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
+									updateDescriptor = false;
+								} else {
+									// Re-extract descriptor
+									LauncherUtils.log("Re-extracting archive descriptor...", true);
+									SwingUtilities.invokeAndWait(() -> {
+										if (!downloadFinished) {
+											lblThanks
+													.setText("Re-extracting archive descriptor... Please wait... [0%]");
+											lblThanks.setVisible(true);
+										}
+									});
+
+									// TODO: support
+
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
+
+									// Show error
+									LauncherUtils.log("Presently unsupported!");
+									JOptionPane.showMessageDialog(VersionManagerWindow.this,
+											"Failed to extract asset archive descriptor data as the system has not been implemented yet",
+											"Load error", JOptionPane.ERROR_MESSAGE);
+
+									// Re-enable
+									SwingUtilities.invokeLater(() -> {
+										btnOk.setEnabled(true);
+										btnCancel.setEnabled(true);
+										btnAdd.setEnabled(true);
+										checkBoxDownload.setEnabled(chBoxWasEnabled);
+										qualityLevelBox.setEnabled(true);
+										clientListBox.setEnabled(true);
+										btnRemove.setEnabled(wasEnabledRemove);
+										btnOk.setText("Ok");
+										lblThanks.setVisible(
+												lastArchive != null && lastArchive.archiveDef.has("thanksTo"));
+										if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+											lblThanks.setText("Assets kindly mirrored by "
+													+ lastArchive.archiveDef.get("thanksTo").getAsString());
+									});
+									return;
+
+//									// Write hash
+//									Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
+
+//									// Hide bars
+//									LauncherUtils.hideProgressPanel();
+//									LauncherUtils.resetProgressBar();
+//									updateDescriptor = false;
+								}
 							}
 
 							// Load descriptor
@@ -672,7 +730,7 @@ public class VersionManagerWindow extends JDialog {
 							if (assetsNeedingDownloads.size() != 0) {
 								// Index
 								SwingUtilities.invokeAndWait(() -> {
-									lblThanks.setText("Collecting download size...");
+									lblThanks.setText("Collecting asset size...");
 									lblThanks.setVisible(true);
 								});
 								HashMap<String, Long> assetSizes = new HashMap<String, Long>();
@@ -702,14 +760,20 @@ public class VersionManagerWindow extends JDialog {
 								// Update
 								String sizeStrF = sizeStr;
 								SwingUtilities.invokeAndWait(() -> {
-									lblThanks.setText("Need to download " + sizeStrF);
+									if (lastArchive.mode == ArchiveMode.REMOTE)
+										lblThanks.setText("Need to download " + sizeStrF);
+									else
+										lblThanks.setText("Need to extract " + sizeStrF);
 									lblThanks.setVisible(true);
 								});
 
 								// Notify
 								if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
-										"WARNING! This operation will download " + sizeStr
-												+ " of asset data!\n\nAre you sure you want to continue?",
+										(lastArchive.mode == ArchiveMode.REMOTE
+												? ("WARNING! This operation will download " + sizeStr
+														+ " of asset data!\n\nAre you sure you want to continue?")
+												: ("WARNING! This operation will extract " + sizeStr
+														+ " of asset data!\n\nAre you sure you want to continue?")),
 										"Warning", JOptionPane.YES_NO_OPTION,
 										JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
 
@@ -1095,8 +1159,8 @@ public class VersionManagerWindow extends JDialog {
 
 		});
 		btnOk.setEnabled(lastArchive != null && filteredData.length != 0);
-		lblThanks.setVisible(lastArchive != null);
-		if (lastArchive != null)
+		lblThanks.setVisible(lastArchive != null && lastArchive.archiveDef.has("thanksTo"));
+		if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 			lblThanks.setText("Assets kindly mirrored by " + lastArchive.archiveDef.get("thanksTo").getAsString());
 	}
 }
