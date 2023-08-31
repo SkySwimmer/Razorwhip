@@ -33,13 +33,13 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 
 	@Override
 	public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-			HttpResponse response) {
+			HttpResponse response, File sourceFile) {
 		return path.toLowerCase().endsWith("/assetversionsdo.xml");
 	}
 
 	@Override
 	public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-			HttpRequest request, HttpResponse response, InputStream source) throws IOException {
+			HttpRequest request, HttpResponse response, InputStream source, File sourceFile) throws IOException {
 		// Read manifest
 		byte[] manifestB = source.readAllBytes();
 		source.close();

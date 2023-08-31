@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 
 import org.asf.connective.RemoteClient;
 import org.asf.connective.impl.http_1_1.RemoteClientHttp_1_1;
@@ -26,13 +27,13 @@ public class XmlPreProcessor implements IPreProcessor {
 
 	@Override
 	public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-			HttpResponse response) {
+			HttpResponse response, File sourceFile) {
 		return path.toLowerCase().endsWith(".xml");
 	}
 
 	@Override
 	public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-			HttpRequest request, HttpResponse response, InputStream source) throws IOException {
+			HttpRequest request, HttpResponse response, InputStream source, File sourceFile) throws IOException {
 		// Read manifest
 		byte[] xmlB = source.readAllBytes();
 		source.close();

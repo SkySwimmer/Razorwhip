@@ -1056,7 +1056,11 @@ public class AssetManager {
 		LauncherUtils.log("Indexing assets... Please wait...", true);
 		HashMap<String, String> assetHashes = new LinkedHashMap<String, String>();
 		indexAssetHashes(assetHashes, new File("assets/descriptor/hashes.shl"));
-		for (String path : assetHashes.keySet()) {
+		HashMap<String, Long> index = new LinkedHashMap<String, Long>();
+		indexAssets(index, new File("assets/descriptor/index.sfl"));
+		for (String path : index.keySet()) {
+			if (!assetHashes.containsKey(path))
+				continue;
 			AssetInformation asset = new AssetInformation();
 			asset.assetPath = sanitizePath(path);
 			asset.assetHash = assetHashes.get(path);
@@ -1114,6 +1118,21 @@ public class AssetManager {
 
 		// Assign
 		return info;
+	}
+
+	private static void indexAssets(HashMap<String, Long> assets, File sizeFile)
+			throws JsonSyntaxException, IOException {
+		// Load hashes
+		String[] lines = Files.readString(sizeFile.toPath()).split("\n");
+		for (String line : lines) {
+			if (line.isEmpty())
+				continue;
+			// Parse
+			String name = line.substring(0, line.indexOf(": ")).replace(";sp;", " ").replace(";cl;", ":")
+					.replace(";sl;", ";");
+			String len = line.substring(line.indexOf(": ") + 2);
+			assets.put(name, Long.parseLong(len));
+		}
 	}
 
 	private static void indexAssetHashes(HashMap<String, String> assetHashes, File hashFile)

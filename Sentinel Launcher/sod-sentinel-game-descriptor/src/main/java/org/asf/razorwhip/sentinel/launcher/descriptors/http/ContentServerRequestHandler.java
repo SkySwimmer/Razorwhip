@@ -84,10 +84,10 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 
 	public interface IPreProcessor {
 		public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-				HttpResponse response);
+				HttpResponse response, File sourceFile);
 
 		public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-				HttpRequest request, HttpResponse response, InputStream source) throws IOException;
+				HttpRequest request, HttpResponse response, InputStream source, File sourceFile) throws IOException;
 	}
 
 	public ContentServerRequestHandler(JsonObject archiveDef, JsonObject descriptorDef,
@@ -359,6 +359,64 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 			long length = -1;
 			InputStream fileData = null;
 			File requestedFile = loadAsset(path);
+
+			// Check result
+			if (requestedFile == null && assets != null) {
+				// Find another quality level if possible
+				if (path.toLowerCase().startsWith("/dwadragonsunity/")) {
+					String[] pathParts = path.split("/");
+					if (pathParts.length >= 4) {
+						// 1: [0] = <empty>
+						// 2: [1] = dwadragonsunity
+						// 3: [2] = <platform>
+						// 4: [3] = <version>
+						// 5: [4+] = asset
+						String plat = pathParts[2];
+						String version = pathParts[3];
+						if (path.toLowerCase().startsWith("/dwadragonsunity/" + plat + "/" + version + "/")) {
+							// Check quality
+							if (pathParts.length >= 5) {
+								String requestedAsset = path
+										.substring(("/dwadragonsunity/" + plat + "/" + version + "/").length());
+								String[] assetParts = requestedAsset.split("/");
+
+								// Check asset
+								// 1: [0] = Quality
+								// 2: [1+] = Asset
+
+								// Parse URL further
+								String quality = assetParts[0];
+								if (assetParts.length >= 2) {
+									requestedAsset = path.substring(
+											("/dwadragonsunity/" + plat + "/" + version + "/" + quality + "/")
+													.length());
+
+									// Try medium quality first
+									if (requestedFile == null && !quality.equalsIgnoreCase("mid")) {
+										String pth = "/dwadragonsunity/" + plat + "/" + version + "/Mid/"
+												+ requestedAsset;
+										requestedFile = loadAsset(pth);
+									}
+
+									// Try low quality next
+									if (requestedFile == null && !quality.equalsIgnoreCase("low")) {
+										String pth = "/dwadragonsunity/" + plat + "/" + version + "/Low/"
+												+ requestedAsset;
+										requestedFile = loadAsset(pth);
+									}
+
+									// Finally try high quality
+									if (requestedFile == null && !quality.equalsIgnoreCase("high")) {
+										String pth = "/dwadragonsunity/" + plat + "/" + version + "/High/"
+												+ requestedAsset;
+										requestedFile = loadAsset(pth);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 			// TODO: support for fallback quality levels
 
 			// Check modifications
@@ -801,10 +859,10 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 			// Find preprocessor
 			boolean processed = false;
 			for (IPreProcessor processor : preProcessors) {
-				if (processor.match(path, method, client, contentType, getRequest(), getResponse())) {
+				if (processor.match(path, method, client, contentType, getRequest(), getResponse(), requestedFile)) {
 					// Run preprocessor
 					fileData = processor.preProcess(path, method, client, contentType, getRequest(), getResponse(),
-							fileData);
+							fileData, requestedFile);
 					processed = true;
 				}
 			}
