@@ -2,8 +2,12 @@ package org.asf.razorwhip.sentinel.launcher.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
+
+import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 
 import com.google.gson.JsonObject;
 
@@ -36,6 +40,13 @@ public interface IGameDescriptor {
 	public boolean verifyAssetConnection(String assetURL);
 
 	/**
+	 * Defines known asset quality levels
+	 * 
+	 * @return Array of quality level strings
+	 */
+	public String[] knownAssetQualityLevels();
+
+	/**
 	 * Downloads and extracts clients
 	 * 
 	 * @param url             Client download URL
@@ -62,56 +73,46 @@ public interface IGameDescriptor {
 			throws IOException;
 
 	/**
-	 * Called to verify assets of a client
+	 * Collects assets for a specific game version
 	 * 
-	 * @param assetServer   Asset server URL
-	 * @param assetDir      Asset root directory
+	 * @param assets        Array of all known assets
+	 * @param qualityLevels Enabled quality levels
 	 * @param version       Client version
+	 * @param archive       Archive instance
 	 * @param archiveDef    Archive definition object
 	 * @param descriptorDef Descriptor definition object
 	 * @param assetHashes   Asset hash list
-	 * @return True if verified, false if assets need updating or redownloading
-	 * @throws IOException If verifying fails
+	 * @return Array of AssetInformation instances
 	 */
-	public boolean verifyLocalAssets(String assetServer, File assetDir, String version, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException;
-
-	/**
-	 * Called to retrieve the download size of the asset update
-	 * 
-	 * @param assetServer    Asset server URL
-	 * @param assetDir       Asset root directory
-	 * @param versions       Client version list
-	 * @param archiveDef     Archive definition object
-	 * @param descriptorDef  Descriptor definition object
-	 * @param assetHashes    Asset hash list
-	 * @param assetFileSizes Asset file size list
-	 * @return Download size in bytes
-	 * @throws IOException If indexing fails
-	 */
-	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
-			throws IOException;
+	public AssetInformation[] collectVersionAssets(AssetInformation[] assets, String[] qualityLevels, String version,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			Map<String, String> assetHashes);
 
 	/**
 	 * Called to download client assets
 	 * 
-	 * @param assetServer   Asset server URL
-	 * @param assetDir      Asset root directory
-	 * @param versions      Client version array
-	 * @param archiveDef    Archive definition object
-	 * @param descriptorDef Descriptor definition object
-	 * @param assetHashes   Asset hash list
+	 * @param assetServer          Asset server URL
+	 * @param versions             Client version array
+	 * @param assetsNeedingUpdates Array of client assets needing updates
+	 * @param collectedAssets      Array of all collected client assets that are
+	 *                             needed for the game to work
+	 * @param allAssets            Array of all assets known in the archive
+	 * @param archive              Archive instance
+	 * @param archiveDef           Archive definition object
+	 * @param descriptorDef        Descriptor definition object
+	 * @param assetHashes          Asset hash list
 	 * @throws IOException If downloading fails
 	 */
-	public void downloadAssets(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException;
+	public void downloadAssets(String assetServer, String[] versions, AssetInformation[] assetsNeedingUpdates,
+			AssetInformation[] collectedAssets, AssetInformation[] allAssets, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, Map<String, String> assetHashes) throws IOException;
 
 	/**
 	 * Called to prepare to start the game
 	 * 
 	 * @param assetArchiveURL    URL to the asset archive
-	 * @param assetModifications Local asset modifications version
+	 * @param assetModifications Local asset modifications folder
+	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
 	 * @param descriptorDef      Descriptor definition object
 	 * @param clientVersion      Client version
@@ -121,15 +122,18 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Consumer<String> errorCallback);
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback);
 
 	/**
 	 * Called to prepare to start the game
 	 * 
-	 * @param assetArchive       Local asset archive folder
-	 * @param assetModifications Local asset modifications version
+	 * @param collectedAssets    Array of all collected client assets that are
+	 *                           needed for the game to work
+	 * @param allAssets          Array of all assets known in the archive
+	 * @param assetModifications Local asset modifications folder
+	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
 	 * @param descriptorDef      Descriptor definition object
 	 * @param clientVersion      Client version
@@ -139,15 +143,16 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Consumer<String> errorCallback);
+	public void prepareLaunchWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Consumer<String> errorCallback);
 
 	/**
 	 * Called to start the game
 	 * 
 	 * @param assetArchiveURL    URL to the asset archive
-	 * @param assetModifications Local asset modifications version
+	 * @param assetModifications Local asset modifications folder
+	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
 	 * @param descriptorDef      Descriptor definition object
 	 * @param clientVersion      Client version
@@ -157,15 +162,18 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback);
+	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback);
 
 	/**
 	 * Called to start the game
 	 * 
-	 * @param assetArchive       Local asset archive folder
-	 * @param assetModifications Local asset modifications version
+	 * @param collectedAssets    Array of all collected client assets that are
+	 *                           needed for the game to work
+	 * @param allAssets          Array of all assets known in the archive
+	 * @param assetModifications Local asset modifications folder
+	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
 	 * @param descriptorDef      Descriptor definition object
 	 * @param clientVersion      Client version
@@ -175,8 +183,9 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback);
+	public void startGameWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
+			Consumer<String> errorCallback);
 
 }

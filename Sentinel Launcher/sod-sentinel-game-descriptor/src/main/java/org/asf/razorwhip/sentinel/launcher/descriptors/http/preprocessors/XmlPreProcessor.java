@@ -6,7 +6,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 
 import org.asf.connective.RemoteClient;
 import org.asf.connective.impl.http_1_1.RemoteClientHttp_1_1;
@@ -27,13 +26,13 @@ public class XmlPreProcessor implements IPreProcessor {
 
 	@Override
 	public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-			HttpResponse response, File sourceDir) {
+			HttpResponse response) {
 		return path.toLowerCase().endsWith(".xml");
 	}
 
 	@Override
 	public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-			HttpRequest request, HttpResponse response, InputStream source, File sourceDir) throws IOException {
+			HttpRequest request, HttpResponse response, InputStream source) throws IOException {
 		// Read manifest
 		byte[] xmlB = source.readAllBytes();
 		source.close();
@@ -64,7 +63,7 @@ public class XmlPreProcessor implements IPreProcessor {
 			mediaURL += "/";
 
 		// Replace
-		xml = xml.replace(mediaURL, "http://" + host + ":5317/sentinelproxy.com/");
+		xml = xml.replace(mediaURL, "http://" + host + ":5326/sentinelproxy.com/");
 
 		// Return
 		return new ByteArrayInputStream(xml.getBytes("UTF-8"));

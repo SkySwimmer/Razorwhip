@@ -12,7 +12,6 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 import java.security.InvalidKeyException;
@@ -36,7 +35,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
@@ -46,13 +44,14 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.asf.razorwhip.sentinel.launcher.api.IEmulationSoftwareProvider;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.api.ObjectTag;
-import org.asf.razorwhip.sentinel.launcher.windows.VersionManagerWindow;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
+/**
+ * 
+ * Launcher Utility Class
+ * 
+ * @author Sky Swimmer
+ * 
+ */
 public class LauncherUtils {
 
 	static String[] args;
@@ -74,25 +73,13 @@ public class LauncherUtils {
 	static IGameDescriptor gameDescriptor;
 	static IEmulationSoftwareProvider emulationSoftware;
 
-	public static JsonObject sacConfig;
 	public static String urlBaseSoftwareFile;
 	public static String urlBaseDescriptorFile;
-	public static String assetSourceURL;
-	static boolean assetManagementAvailable = false;
 
 	private static HashMap<String, ObjectTag> tags = new HashMap<String, ObjectTag>();
 
 	static void addUrlToComponentClassLoader(URL url) {
 		loader.addUrl(url);
-	}
-
-	/**
-	 * Checks if asset management is available
-	 * 
-	 * @return True if available, false otherwise
-	 */
-	public static boolean isAssetManagementAvailable() {
-		return assetManagementAvailable;
 	}
 
 	/**
@@ -773,55 +760,6 @@ public class LauncherUtils {
 	}
 
 	/**
-	 * Shows the client version manager
-	 * 
-	 * @param firstTime True if this is the first time the window is displayed,
-	 *                  false otherwise, should be false unless called internally by
-	 *                  the launcher itself
-	 * @return True if saved, false if cancelled
-	 * @throws IOException If an error occurs loading the window
-	 */
-	public static boolean showVersionManager(boolean firstTime) throws IOException {
-		VersionManagerWindow window = new VersionManagerWindow(launcherWindow.frmSentinelLauncher, firstTime);
-		boolean saved = window.showDialog();
-
-		// Check changes
-		if (saved) {
-			// Delete removed clients
-			File localVersions = new File("cache/clienthashes.json");
-			if (localVersions.exists()) {
-				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
-						.getAsJsonObject();
-				JsonArray clientList = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
-						.getAsJsonArray();
-				JsonObject newHashList = new JsonObject();
-				for (String version : localHashList.keySet()) {
-					// Check if present
-					boolean found = false;
-					for (JsonElement ele : clientList) {
-						if (ele.getAsString().equals(version)) {
-							found = true;
-							break;
-						}
-					}
-					if (!found) {
-						// Delete client
-						LauncherMain.closeClientsIfNeeded();
-						deleteDir(new File("clients/client-" + version));
-					} else
-						newHashList.add(version, localHashList.get(version));
-				}
-				Files.writeString(localVersions.toPath(), newHashList.toString());
-			}
-
-			// Delete last selected version
-			new File("lastclient.json").delete();
-		}
-
-		return saved;
-	}
-
-	/**
 	 * Checks if a package is signed
 	 * 
 	 * @param packageFile Package file
@@ -1171,7 +1109,7 @@ public class LauncherUtils {
 	}
 
 	// PEM parser
-	private static byte[] pemDecode(String pem) {
+	static byte[] pemDecode(String pem) {
 		String base64 = pem.replace("\r", "");
 
 		// Strip header
@@ -1292,58 +1230,4 @@ public class LauncherUtils {
 		LauncherUtils.deleteDir(new File("cache/gamedescriptortmp"));
 	}
 
-	/**
-	 * Shows the client version selection window
-	 * 
-	 * @param closeIfOnlyOneVersion True to automatically select a version if there
-	 *                              is only one, false otherwise
-	 * @return True if a version was selected, false otherwise
-	 * @throws IOException If selecting a client errors
-	 */
-	public static boolean showClientSelector(boolean closeIfOnlyOneVersion) throws IOException {
-		// Load clients list
-		JsonObject settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
-				.getAsJsonObject();
-		String id = settings.get("id").getAsString();
-		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
-				.getAsJsonObject();
-		JsonObject archiveDef = archiveLst.get(id).getAsJsonObject();
-		JsonArray clientsArr = new JsonArray();
-		File clientListFile = new File("assets/clients.json");
-		if (clientListFile.exists()) {
-			clientsArr = JsonParser.parseString(Files.readString(Path.of("assets/clients.json"))).getAsJsonArray();
-		}
-
-		// Create list
-		ArrayList<String> clients = new ArrayList<String>();
-		for (String clientVersion : archiveDef.get("clients").getAsJsonObject().keySet()) {
-			// Check if present
-			boolean found = false;
-			for (JsonElement ele : clientsArr) {
-				if (ele.getAsString().equals(clientVersion)) {
-					found = true;
-					break;
-				}
-			}
-			if (found) {
-				clients.add(clientVersion);
-			}
-		}
-		String clientToStart = null;
-		if (clients.size() != 1 || !closeIfOnlyOneVersion) {
-			// Show popup
-			clientToStart = (String) JOptionPane.showInputDialog(null, "Select a client version to launch...",
-					"Choose version to start", JOptionPane.QUESTION_MESSAGE, null, clients.toArray(t -> new Object[t]),
-					null);
-		} else
-			clientToStart = clients.get(0);
-		if (clientToStart == null)
-			return false;
-
-		// Write
-		JsonObject lastClient = new JsonObject();
-		lastClient.addProperty("version", clientToStart);
-		Files.writeString(Path.of("lastclient.json"), lastClient.toString());
-		return true;
-	}
 }

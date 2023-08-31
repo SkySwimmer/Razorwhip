@@ -13,7 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -23,6 +23,9 @@ import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.tasks.AsyncTaskManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 import org.asf.razorwhip.sentinel.launcher.descriptors.data.LauncherController;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler.IPreProcessor;
@@ -34,7 +37,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 
 public class SodGameDescriptor implements IGameDescriptor {
 
@@ -43,6 +45,19 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 	@Override
 	public void init() {
+	}
+
+	@Override
+	public String[] knownAssetQualityLevels() {
+		return new String[] {
+
+				"High",
+
+				"Mid",
+
+				"Low"
+
+		};
 	}
 
 	@Override
@@ -100,7 +115,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
 		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "localhost:5317/DWADragonsUnity/");
+		replaceData(resourcesData, endpoint, "localhost:5326/DWADragonsUnity/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 
 		// Check version
@@ -114,216 +129,91 @@ public class SodGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public boolean verifyLocalAssets(String assetServer, File assetDir, String version, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException {
-		// Check ServerDown
-		if (!new File(assetDir, "ServerDown.xml").exists())
-			return false;
-
-		// Load local hashes
-		HashMap<String, String> assetHashesLocal = new HashMap<String, String>();
-		indexAssetHashes(assetHashesLocal, new File("assets/localhashes.shl"));
+	public AssetInformation[] collectVersionAssets(AssetInformation[] assets, String[] qualityLevels, String version,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			Map<String, String> assetHashes) {
+		ArrayList<AssetInformation> collected = new ArrayList<AssetInformation>();
 
 		// Check root files
-		for (String name : assetHashes.keySet()) {
-			if (!name.contains("/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					return false;
+		for (AssetInformation asset : assets) {
+			if (!asset.assetPath.contains("/")) {
+				// Add
+				collected.add(asset);
 			}
 		}
 
 		// Check other files
-		for (String name : assetHashes.keySet()) {
+		for (AssetInformation asset : assets) {
+			String name = asset.assetPath;
 			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					return false;
+				// Add
+				collected.add(asset);
 			}
 		}
 
 		// Check content files
-		for (String name : assetHashes.keySet()) {
+		for (AssetInformation asset : assets) {
+			String name = asset.assetPath;
 			if (name.toLowerCase().startsWith("content/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					return false;
+				// Add
+				collected.add(asset);
 			}
 		}
 
-		// Check asset files
-		for (String name : assetHashes.keySet()) {
-			if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					return false;
+		// Check root asset files
+		for (AssetInformation asset : assets) {
+			String name = asset.assetPath;
+			if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")
+					&& !name.substring(("dwadragonsunity/win/" + version + "/").length()).contains("/")) {
+				// Add
+				collected.add(asset);
 			}
 		}
 
-		// Success
-		return true;
-	}
-
-	@Override
-	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
-			throws IOException {
-		HashMap<String, String> assetHashesLocal = new HashMap<String, String>();
-		indexAssetHashes(assetHashesLocal, new File("assets/localhashes.shl"));
-
-		// Collect assets to download
-		ArrayList<String> assetsToDownload = new ArrayList<String>();
-
-		// Check root files
-		for (String name : assetHashes.keySet()) {
-			if (!name.contains("/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check other files
-		for (String name : assetHashes.keySet()) {
-			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check content files
-		for (String name : assetHashes.keySet()) {
-			if (name.toLowerCase().startsWith("content/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check asset files
-		for (String version : versions) {
-			for (String name : assetHashes.keySet()) {
-				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")) {
-					// Check
-					if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-						assetsToDownload.add(name);
+		// Check by quality
+		for (String level : qualityLevels) {
+			for (AssetInformation asset : assets) {
+				String name = asset.assetPath;
+				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/")) {
+					// Add
+					collected.add(asset);
 				}
 			}
 		}
 
-		// Retrieve size
-		long size = 0;
-		for (String asset : assetsToDownload) {
-			size += assetFileSizes.get(asset);
-		}
-		return size;
-	}
-
-	private void indexAssetHashes(HashMap<String, String> assetHashes, File hashFile)
-			throws JsonSyntaxException, IOException {
-		// Check file
-		if (!hashFile.exists())
-			return;
-
-		// Load hashes
-		String[] lines = Files.readString(hashFile.toPath()).split("\n");
-		for (String line : lines) {
-			if (line.isEmpty())
-				continue;
-			// Parse
-			String name = line.substring(0, line.indexOf(": ")).replace(";sp;", " ").replace(";cl;", ":")
-					.replace(";sl;", ";");
-			String hash = line.substring(line.indexOf(": ") + 2);
-			assetHashes.put(name, hash);
-		}
-	}
-
-	private boolean checkAsset(String name, HashMap<String, String> assetHashes,
-			HashMap<String, String> assetHashesLocal, File assetDir) throws IOException {
-		// Check
-		LauncherUtils.log("Verifying asset: " + name);
-		File asset = new File(assetDir, name);
-		if (!asset.exists())
-			return false;
-
-		// Check hash
-		String hashC = assetHashesLocal.get(name);
-		if (hashC == null)
-			return false;
-		String hashR = assetHashes.get(name);
-		return hashC.equals(hashR);
+		return collected.toArray(t -> new AssetInformation[t]);
 	}
 
 	@Override
-	public void downloadAssets(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException {
-		// Load local hashes
-		LauncherUtils.log("Collecting assets...", true);
-		HashMap<String, String> assetHashesLocal = new HashMap<String, String>();
-		indexAssetHashes(assetHashesLocal, new File("assets/localhashes.shl"));
-
-		// Collect assets to download
-		ArrayList<String> assetsToDownload = new ArrayList<String>();
-
-		// Check root files
-		for (String name : assetHashes.keySet()) {
-			if (!name.contains("/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check other files
-		for (String name : assetHashes.keySet()) {
-			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check content files
-		for (String name : assetHashes.keySet()) {
-			if (name.toLowerCase().startsWith("content/")) {
-				// Check
-				if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-					assetsToDownload.add(name);
-			}
-		}
-
-		// Check asset files
-		for (String version : versions) {
-			for (String name : assetHashes.keySet()) {
-				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")) {
-					// Check
-					if (!checkAsset(name, assetHashes, assetHashesLocal, assetDir))
-						assetsToDownload.add(name);
-				}
-			}
-		}
-
+	public void downloadAssets(String assetServer, String[] versions, AssetInformation[] assetsNeedingUpdates,
+			AssetInformation[] collectedAssets, AssetInformation[] allAssets, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, Map<String, String> assetHashes) throws IOException {
 		// Prepare to download
 		LauncherUtils.resetProgressBar();
 		LauncherUtils.showProgressPanel();
-		LauncherUtils.setProgress(0, assetsToDownload.size());
+		LauncherUtils.setProgress(0, assetsNeedingUpdates.length);
 
 		// Download
 		int i = 0;
-		int i2 = 0;
-		for (String asset : assetsToDownload) {
+		for (AssetInformation asset : assetsNeedingUpdates) {
 			// Log
 			LauncherUtils.log("Downloading asset: " + asset);
-			LauncherUtils.setStatus("Downloading " + (i + 1) + "/" + assetsToDownload.size() + " assets...");
+			LauncherUtils.setStatus("Downloading " + (i + 1) + "/" + assetsNeedingUpdates.length + " assets...");
 
 			// Prepare download
 			String url = assetServer;
 			if (!url.endsWith("/"))
 				url += "/";
-			url += asset;
+
+			// Check mode
+			if (!archiveDef.has("useHashedArchive") || !archiveDef.get("useHashedArchive").getAsBoolean())
+				url += asset.assetPath;
+			else
+				url += asset.assetHash + ".sa";
+
+			// Create connection
 			URLConnection urlConnection = new URL(url).openConnection();
-			File assetF = new File(assetDir, asset);
+			File assetF = new File(asset.localAssetFile.getPath() + ".tmp");
 			assetF.getParentFile().mkdirs();
 
 			// Download
@@ -334,29 +224,16 @@ public class SodGameDescriptor implements IGameDescriptor {
 			out.close();
 
 			// Verify hash
-			String rHash = assetHashes.get(asset);
+			String rHash = asset.assetHash;
 			String cHash = LauncherUtils.sha512Hash(Files.readAllBytes(assetF.toPath()));
 			if (!rHash.equals(cHash)) {
 				// Failed
 				assetF.delete();
 				throw new IOException("Integrity check failure");
 			}
-			assetHashesLocal.put(asset, rHash);
 
-			// Check if the list should be saved
-			i2++;
-			if (i2 >= 75) {
-				i2 = 0;
-
-				// Save hash list
-				FileOutputStream fO = new FileOutputStream(new File("assets/localhashes.shl"));
-				for (String name : assetHashesLocal.keySet()) {
-					String hash = assetHashesLocal.get(name);
-					name = name.replace(";", ";sl;").replace(":", ";cl;").replace(" ", ";sp;");
-					fO.write((name + ": " + hash + "\n").getBytes("UTF-8"));
-				}
-				fO.close();
-			}
+			// Save
+			assetF.renameTo(asset.localAssetFile);
 
 			// Increase
 			LauncherUtils.increaseProgress();
@@ -365,18 +242,10 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Done
 		LauncherUtils.setProgress(LauncherUtils.getProgressMax());
-
-		// Save hash list
-		FileOutputStream fO = new FileOutputStream(new File("assets/localhashes.shl"));
-		for (String name : assetHashesLocal.keySet()) {
-			String hash = assetHashesLocal.get(name);
-			name = name.replace(";", ";sl;").replace(":", ";cl;").replace(" ", ";sp;");
-			fO.write((name + ": " + hash + "\n").getBytes("UTF-8"));
-		}
-		fO.close();
 	}
 
-	public void prepareLaunch(String streamingAssetsURL, File localAssetsDir, File assetModifications,
+	public void prepareLaunch(String streamingAssetsURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
 			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
 			Runnable successCallback, Consumer<String> errorCallback) {
 		// Log
@@ -384,9 +253,29 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Create server
 		ConnectiveHttpServer server = ConnectiveHttpServer.create("HTTP/1.1",
-				Map.of("Address", "0.0.0.0", "Port", "5317"));
+				Map.of("Address", "0.0.0.0", "Port", "5326"));
 		try {
-			server.registerProcessor(new ContentServerRequestHandler(archiveDef, descriptorDef, localAssetsDir, "/",
+			// Discover assets
+			Map<String, AssetInformation> assets = new LinkedHashMap<String, AssetInformation>();
+			for (AssetInformation asset : collectedAssets) {
+				String path = asset.assetPath;
+
+				// Sanitize
+				if (path.contains("\\"))
+					path = path.replace("\\", "/");
+				while (path.startsWith("/"))
+					path = path.substring(1);
+				while (path.endsWith("/"))
+					path = path.substring(0, path.length() - 1);
+				while (path.contains("//"))
+					path = path.replace("//", "/");
+
+				// Add
+				assets.put(path.toLowerCase(), asset);
+			}
+
+			// Register
+			server.registerProcessor(new ContentServerRequestHandler(archiveDef, descriptorDef, assets, "/",
 					new IPreProcessor[] {
 
 							new ApplicationManifestPreProcessor(descriptorDef),
@@ -406,13 +295,13 @@ public class SodGameDescriptor implements IGameDescriptor {
 		} catch (IOException e) {
 			// Check if its the right server
 			try {
-				InputStream strm = new URL("http://localhost:5317/sentineltest/sod/testrunning").openStream();
+				InputStream strm = new URL("http://localhost:5326/sentineltest/sod/testrunning").openStream();
 				byte[] data = strm.readAllBytes();
 				strm.close();
 				if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
 					throw new IOException();
 			} catch (Exception e2) {
-				errorCallback.accept("Port 5317 is in use and not in use by a compatible Sentinel asset archive!");
+				errorCallback.accept("Port 5326 is in use and not in use by a compatible Sentinel asset archive!");
 				return;
 			}
 		}
@@ -422,32 +311,33 @@ public class SodGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Consumer<String> errorCallback) {
-		prepareLaunch(assetArchiveURL, null, assetModifications, archiveDef, descriptorDef, clientVersion, clientDir,
-				successCallback, errorCallback);
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		prepareLaunch(assetArchiveURL, null, null, assetModifications, archive, archiveDef, descriptorDef,
+				clientVersion, clientDir, successCallback, errorCallback);
 	}
 
 	@Override
-	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Consumer<String> errorCallback) {
-		prepareLaunch(null, assetArchive, assetModifications, archiveDef, descriptorDef, clientVersion, clientDir,
-				successCallback, errorCallback);
+	public void prepareLaunchWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		prepareLaunch(null, collectedAssets, allAssets, assetModifications, archive, archiveDef, descriptorDef,
+				clientVersion, clientDir, successCallback, errorCallback);
 	}
 
 	@Override
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback) {
+	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
 		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
 	}
 
 	@Override
-	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback) {
+	public void startGameWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
+			Consumer<String> errorCallback) {
 		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
 	}
 

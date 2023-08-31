@@ -1,6 +1,7 @@
 package org.asf.razorwhip.sentinel.launcher.windows;
 
 import java.awt.FlowLayout;
+
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.border.BevelBorder;
@@ -12,11 +13,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
+import java.awt.Component;
 import java.awt.Dimension;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.ComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -26,6 +29,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Stream;
 import java.awt.event.ActionEvent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -40,9 +46,13 @@ import javax.swing.JList;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ListSelectionListener;
 
+import org.asf.razorwhip.sentinel.launcher.AssetManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 
 import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 
 public class VersionManagerWindow extends JDialog {
 
@@ -52,11 +62,15 @@ public class VersionManagerWindow extends JDialog {
 	private JComboBox<AssetArchiveEntry> archiveSelector;
 	private JCheckBox checkBoxDownload;
 	private JList<ClientEntry> clientListBox;
+	private JComboBox<QualityLevelEntry> qualityLevelBox;
+	private JLabel lblQualityLevels;
 	private JButton btnOk;
 
+	private ArrayList<QualityLevelEntry> qualityLevelElements = new ArrayList<QualityLevelEntry>();
 	private ArrayList<AssetArchiveEntry> archives = new ArrayList<AssetArchiveEntry>();
 	private ArrayList<ClientEntry> clients = new ArrayList<ClientEntry>();
 	private AssetArchiveEntry lastArchive;
+
 	private boolean downloadFinished;
 
 	private JLabel lblThanks;
@@ -65,6 +79,19 @@ public class VersionManagerWindow extends JDialog {
 	private boolean warnedArchiveChange = false;
 
 	private boolean updateDescriptor = true;
+
+	// TODO: rewrite to use new asset manager class
+
+	private class QualityLevelEntry {
+		public String level;
+		public boolean enabled = true;
+		public JCheckBox checkBox;
+
+		@Override
+		public String toString() {
+			return level;
+		}
+	}
 
 	private class AssetArchiveEntry {
 		public String id;
@@ -102,6 +129,7 @@ public class VersionManagerWindow extends JDialog {
 	public VersionManagerWindow(JFrame parent, boolean firstTime) {
 		super(parent);
 		this.firstTime = firstTime;
+		firstTime = firstTime;
 		initialize();
 	}
 
@@ -150,6 +178,8 @@ public class VersionManagerWindow extends JDialog {
 					archiveSelector.setSelectedItem(entry);
 					checkBoxDownload.setEnabled(!entry.deprecated && entry.entry.get("allowFullDownload").getAsBoolean()
 							&& entry.entry.get("allowStreaming").getAsBoolean());
+					lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+					qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 					break;
 				}
 			}
@@ -160,6 +190,8 @@ public class VersionManagerWindow extends JDialog {
 					.setEnabled(!lastArchive.deprecated && lastArchive.entry.get("allowFullDownload").getAsBoolean()
 							&& lastArchive.entry.get("allowStreaming").getAsBoolean());
 			checkBoxDownload.setSelected(!lastArchive.entry.get("allowStreaming").getAsBoolean());
+			lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+			qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 		}
 
 		// Set model
@@ -308,6 +340,35 @@ public class VersionManagerWindow extends JDialog {
 		lblNewLabel.setBounds(12, 119, 566, 17);
 		panel.add(lblNewLabel);
 
+		lblQualityLevels = new JLabel("Quality levels to download");
+		lblQualityLevels.setBounds(356, 554, 222, 17);
+		panel.add(lblQualityLevels);
+
+		qualityLevelBox = new JComboBox<QualityLevelEntry>() {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void setPopupVisible(boolean visible) {
+				if (visible) {
+					super.setPopupVisible(visible);
+				}
+			}
+		};
+		qualityLevelBox.setBounds(356, 577, 222, 27);
+		panel.add(qualityLevelBox);
+
+		lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+		qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+		checkBoxDownload.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+				qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+			}
+		});
+
+		String[] levels = LauncherUtils.getGameDescriptor().knownAssetQualityLevels();
+		loadQualityLevelBox(qualityLevelBox, levels);
+
 		JButton btnAdd = new JButton("Add client...");
 		btnAdd.setBounds(473, 497, 105, 27);
 		panel.add(btnAdd);
@@ -330,6 +391,8 @@ public class VersionManagerWindow extends JDialog {
 				SwingUtilities.invokeLater(() -> {
 					if (archiveSelector.getSelectedItem() == null) {
 						checkBoxDownload.setEnabled(false);
+						lblQualityLevels.setVisible(false);
+						qualityLevelBox.setVisible(false);
 					} else {
 						AssetArchiveEntry eA = (AssetArchiveEntry) archiveSelector.getSelectedItem();
 						if (lastArchive == null || !eA.id.equals(lastArchive.id)) {
@@ -364,8 +427,13 @@ public class VersionManagerWindow extends JDialog {
 								checkBoxDownload.setEnabled(false);
 								checkBoxDownload
 										.setSelected(eA.deprecated || !eA.entry.get("allowStreaming").getAsBoolean());
-							} else
+								lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+							} else {
 								checkBoxDownload.setEnabled(true);
+								lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+							}
 							lastArchive = eA;
 							refreshClientList();
 						}
@@ -387,6 +455,7 @@ public class VersionManagerWindow extends JDialog {
 					// Disable
 					boolean wasEnabledRemove = btnRemove.isEnabled();
 					btnOk.setEnabled(false);
+					qualityLevelBox.setEnabled(false);
 					btnCancel.setEnabled(false);
 					btnAdd.setEnabled(false);
 					boolean chBoxWasEnabled = checkBoxDownload.isEnabled();
@@ -442,9 +511,11 @@ public class VersionManagerWindow extends JDialog {
 								th2.start();
 								LauncherUtils.resetProgressBar();
 								LauncherUtils.showProgressPanel();
-								String dir = parseURL(LauncherUtils.sacConfig.get("descriptorRoot").getAsString(),
+								String dir = parseURL(
+										AssetManager.getSentinelAssetControllerConfig().get("descriptorRoot")
+												.getAsString(),
 										LauncherUtils.urlBaseDescriptorFile, LauncherUtils.urlBaseSoftwareFile,
-										LauncherUtils.assetSourceURL);
+										AssetManager.getAssetInformationRootURL());
 								String rHashDescriptor = LauncherUtils
 										.downloadString(dir + archiveDef.get("type").getAsString() + ".hash")
 										.replace("\r", "").replace("\n", "");
@@ -473,8 +544,8 @@ public class VersionManagerWindow extends JDialog {
 										// Unsigned
 										// Check support
 										LauncherUtils.log("Package is unsigned.");
-										if (!LauncherUtils.sacConfig.get("allowUnsignedArchiveDescriptors")
-												.getAsBoolean()) {
+										if (!AssetManager.getSentinelAssetControllerConfig()
+												.get("allowUnsignedArchiveDescriptors").getAsBoolean()) {
 											LauncherUtils.log("Package is unsigned.");
 											JOptionPane.showMessageDialog(VersionManagerWindow.this,
 													"The archive descriptor is unsigned and this game descriptor does not support unsigned archive descriptors.\n\nPlease report this error to the project's archival team.",
@@ -486,6 +557,7 @@ public class VersionManagerWindow extends JDialog {
 												btnCancel.setEnabled(true);
 												btnAdd.setEnabled(true);
 												checkBoxDownload.setEnabled(chBoxWasEnabled);
+												qualityLevelBox.setEnabled(true);
 												clientListBox.setEnabled(true);
 												btnRemove.setEnabled(wasEnabledRemove);
 												btnOk.setText("Ok");
@@ -511,6 +583,7 @@ public class VersionManagerWindow extends JDialog {
 											btnCancel.setEnabled(true);
 											btnAdd.setEnabled(true);
 											checkBoxDownload.setEnabled(chBoxWasEnabled);
+											qualityLevelBox.setEnabled(true);
 											clientListBox.setEnabled(true);
 											btnRemove.setEnabled(wasEnabledRemove);
 											btnOk.setText("Ok");
@@ -581,90 +654,136 @@ public class VersionManagerWindow extends JDialog {
 								lblThanks.setText("Indexing assets...");
 								lblThanks.setVisible(true);
 							});
-							LauncherUtils.log("Checking for asset archive updates...");
-							LauncherUtils.log("Indexing assets... Please wait...");
+							LauncherUtils.log("Indexing assets... Please wait...", true);
 							HashMap<String, String> assetHashes = new HashMap<String, String>();
+							HashMap<String, AssetInformation> assetsList = new LinkedHashMap<String, AssetInformation>();
 							indexAssetHashes(assetHashes, new File("assets/descriptor/hashes.shl"));
-							File assetRoot = new File("assets/assetarchive");
-							assetRoot.mkdirs();
+							for (String path : assetHashes.keySet()) {
+								AssetInformation asset = new AssetInformation();
+								asset.assetPath = path;
+								asset.assetHash = assetHashes.get(path);
+								asset.localAssetFile = new File("assets/assetarchive/assets", asset.assetHash + ".sa");
+								assetsList.put(asset.assetPath.toLowerCase(), asset);
+							}
 
 							// Collect versions
+							LauncherUtils.log("Collecting game clients...");
 							ArrayList<String> versions = new ArrayList<String>();
 							for (ClientEntry client : clients) {
 								versions.add(client.version);
 							}
 
-							// Verify
+							// Collect assets
 							SwingUtilities.invokeAndWait(() -> {
-								lblThanks.setText("Verifying clients...");
+								lblThanks.setText("Collecting assets...");
 								lblThanks.setVisible(true);
 							});
+							LauncherUtils.log("Collecting assets...", true);
+							Map<String, AssetInformation> assets = new LinkedHashMap<String, AssetInformation>();
 							for (String clientVersion : versions) {
-								LauncherUtils.log("Verifying asset of " + clientVersion + "...");
-								if (!LauncherUtils.getGameDescriptor().verifyLocalAssets(
-										archiveDef.get("url").getAsString(), assetRoot, clientVersion, archiveDef,
-										archiveDescriptor, assetHashes)) {
-									// Index
-									SwingUtilities.invokeAndWait(() -> {
-										lblThanks.setText("Collecting download size...");
-										lblThanks.setVisible(true);
+								SwingUtilities.invokeAndWait(() -> {
+									lblThanks.setText("Collecting assets of " + clientVersion + "...");
+									lblThanks.setVisible(true);
+								});
+								ArrayList<String> lvls = new ArrayList<String>();
+								for (QualityLevelEntry lv : qualityLevelElements) {
+									if (lv.enabled)
+										lvls.add(lv.level);
+								}
+								LauncherUtils.log("Collecting assets of " + clientVersion + "...");
+								AssetInformation[] collectedAssets = LauncherUtils.getGameDescriptor()
+										.collectVersionAssets(assetsList.values().toArray(t -> new AssetInformation[t]),
+												lvls.toArray(t -> new String[t]), clientVersion,
+												AssetManager.getArchive(lastArchive.id), archiveDef, archiveDescriptor,
+												assetHashes);
+								for (AssetInformation asset : collectedAssets) {
+									// Check if present
+									if (!assets.containsKey(asset.assetHash.toLowerCase())) {
+										AssetInformation as = new AssetInformation();
+										as.assetHash = asset.assetHash;
+										as.assetPath = asset.assetPath;
+										as.localAssetFile = asset.localAssetFile;
+										assets.put(asset.assetHash.toLowerCase(), as);
+									}
+								}
+							}
+
+							// Verify
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Collecting updated assets...");
+								lblThanks.setVisible(true);
+							});
+							LauncherUtils.log("Collecting updated assets...", true);
+							Map<String, AssetInformation> assetsNeedingDownloads = new LinkedHashMap<String, AssetInformation>();
+							for (AssetInformation asset : assets.values()) {
+								if (!asset.isUpToDate()) {
+									// Add asset
+									if (!assetsNeedingDownloads.containsKey(asset.assetHash))
+										assetsNeedingDownloads.put(asset.assetHash, asset);
+								}
+							}
+							LauncherUtils.log("Collected " + assetsNeedingDownloads.size() + " updated asset(s)", true);
+							if (assetsNeedingDownloads.size() != 0) {
+								// Index
+								SwingUtilities.invokeAndWait(() -> {
+									lblThanks.setText("Collecting download size...");
+									lblThanks.setVisible(true);
+								});
+								HashMap<String, Long> assetSizes = new HashMap<String, Long>();
+								indexAssetSizes(assetSizes, new File("assets/descriptor/index.sfl"));
+
+								// Find size
+								long size = 0;
+								for (AssetInformation asset : assetsNeedingDownloads.values()) {
+									size += assetSizes.getOrDefault(asset.assetPath, 0l);
+								}
+
+								// Pretty-print
+								String sizeStr = size + "b";
+								if (size >= 1024) {
+									size = size / 1024;
+									sizeStr = size + "kb";
+								}
+								if (size >= 1024) {
+									size = size / 1024;
+									sizeStr = size + "mb";
+								}
+								if (size >= 1024) {
+									size = size / 1024;
+									sizeStr = size + "gb";
+								}
+
+								// Update
+								String sizeStrF = sizeStr;
+								SwingUtilities.invokeAndWait(() -> {
+									lblThanks.setText("Need to download " + sizeStrF);
+									lblThanks.setVisible(true);
+								});
+
+								// Notify
+								if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
+										"WARNING! This operation will download " + sizeStr
+												+ " of asset data!\n\nAre you sure you want to continue?",
+										"Warning", JOptionPane.YES_NO_OPTION,
+										JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+
+									// Re-enable
+									SwingUtilities.invokeLater(() -> {
+										btnOk.setEnabled(true);
+										btnCancel.setEnabled(true);
+										btnAdd.setEnabled(true);
+										checkBoxDownload.setEnabled(chBoxWasEnabled);
+										qualityLevelBox.setEnabled(true);
+										clientListBox.setEnabled(true);
+										btnRemove.setEnabled(wasEnabledRemove);
+										btnOk.setText("Ok");
+										lblThanks.setVisible(lastArchive != null);
+										if (lastArchive != null)
+											lblThanks.setText("Assets kindly mirrored by "
+													+ lastArchive.entry.get("thanksTo").getAsString());
 									});
-									HashMap<String, Long> assetSizes = new HashMap<String, Long>();
-									indexAssetSizes(assetSizes, new File("assets/descriptor/index.sfl"));
 
-									// Find size
-									long size = LauncherUtils.getGameDescriptor().getAssetDownloadSize(
-											archiveDef.get("url").getAsString(), assetRoot,
-											versions.toArray(t -> new String[t]), archiveDef, archiveDescriptor,
-											assetHashes, assetSizes);
-
-									// Pretty-print
-									String sizeStr = size + "b";
-									if (size >= 1024) {
-										size = size / 1024;
-										sizeStr = size + "kb";
-									}
-									if (size >= 1024) {
-										size = size / 1024;
-										sizeStr = size + "mb";
-									}
-									if (size >= 1024) {
-										size = size / 1024;
-										sizeStr = size + "gb";
-									}
-
-									// Update
-									String sizeStrF = sizeStr;
-									SwingUtilities.invokeAndWait(() -> {
-										lblThanks.setText("Need to download " + sizeStrF);
-										lblThanks.setVisible(true);
-									});
-
-									// Notify
-									if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
-											"WARNING! This operation will download " + sizeStr
-													+ " of asset data!\n\nAre you sure you want to continue?",
-											"Warning", JOptionPane.YES_NO_OPTION,
-											JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
-
-										// Re-enable
-										SwingUtilities.invokeLater(() -> {
-											btnOk.setEnabled(true);
-											btnCancel.setEnabled(true);
-											btnAdd.setEnabled(true);
-											checkBoxDownload.setEnabled(chBoxWasEnabled);
-											clientListBox.setEnabled(true);
-											btnRemove.setEnabled(wasEnabledRemove);
-											btnOk.setText("Ok");
-											lblThanks.setVisible(lastArchive != null);
-											if (lastArchive != null)
-												lblThanks.setText("Assets kindly mirrored by "
-														+ lastArchive.entry.get("thanksTo").getAsString());
-										});
-
-										return;
-									} else
-										break;
+									return;
 								}
 							}
 
@@ -675,6 +794,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								btnAdd.setEnabled(true);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
+								qualityLevelBox.setEnabled(true);
 								clientListBox.setEnabled(true);
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
@@ -706,6 +826,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								btnAdd.setEnabled(true);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
+								qualityLevelBox.setEnabled(true);
 								clientListBox.setEnabled(true);
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
@@ -794,6 +915,18 @@ public class VersionManagerWindow extends JDialog {
 					settings.addProperty("id", lastArchive.id);
 					settings.addProperty("stream", !checkBoxDownload.isSelected());
 					Files.writeString(localArchiveSettings.toPath(), settings.toString());
+
+					// Save quality levels
+					File enabledQualityLevelListFile = new File("assets/qualitylevels.json");
+					if (checkBoxDownload.isSelected()) {
+						// Save
+						JsonArray arr = new JsonArray();
+						for (QualityLevelEntry lv : qualityLevelElements) {
+							if (lv.enabled)
+								arr.add(lv.level);
+						}
+						Files.writeString(enabledQualityLevelListFile.toPath(), arr.toString());
+					}
 				} catch (IOException e1) {
 					throw new RuntimeException(e1);
 				}
@@ -847,6 +980,134 @@ public class VersionManagerWindow extends JDialog {
 
 		// Set
 		btnOk.setEnabled(lastArchive != null && filteredClientEntryData().length != 0);
+	}
+
+	private void loadQualityLevelBox(JComboBox<QualityLevelEntry> qualityLevelBox, String[] levels) {
+		// Create quality level list
+		ArrayList<QualityLevelEntry> entries = new ArrayList<QualityLevelEntry>();
+
+		// Load quality levels
+		ArrayList<String> qualityLevels = new ArrayList<String>();
+		File enabledQualityLevelListFile = new File("assets/qualitylevels.json");
+		if (enabledQualityLevelListFile.exists()) {
+			// Read quality levels
+			try {
+				JsonArray qualityLevelsArr = JsonParser
+						.parseString(Files.readString(enabledQualityLevelListFile.toPath())).getAsJsonArray();
+				for (JsonElement ele : qualityLevelsArr) {
+					// Check validity
+					String lvl = ele.getAsString();
+					if (!qualityLevels.contains(lvl) && Stream.of(levels).anyMatch(t -> t.equalsIgnoreCase(lvl))) {
+						// Add
+						qualityLevels.add(lvl);
+					}
+				}
+			} catch (IOException e) {
+			}
+		}
+
+		// Verify
+		if (qualityLevels.size() == 0) {
+			// Add all
+			for (String lvl : levels)
+				qualityLevels.add(lvl);
+		}
+
+		// Populate list
+		QualityLevelEntry mask = new QualityLevelEntry();
+		for (String level : levels) {
+			QualityLevelEntry lv = new QualityLevelEntry();
+			lv.level = level;
+			lv.enabled = qualityLevels.contains(level);
+			lv.checkBox = new JCheckBox();
+			lv.checkBox.setSelected(lv.enabled);
+			lv.checkBox.setText(lv.toString());
+			entries.add(lv);
+		}
+		qualityLevelElements = entries;
+
+		// Add renderer
+		qualityLevelBox.setRenderer(new DefaultListCellRenderer() {
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Component getListCellRendererComponent(JList<? extends Object> list, Object lvE, int index,
+					boolean isSelected, boolean cellHasFocus) {
+				JLabel comp = (JLabel) super.getListCellRendererComponent(list, lvE, index, isSelected, cellHasFocus);
+
+				QualityLevelEntry lv = (QualityLevelEntry) lvE;
+				if (lv == null || lv.level == null) {
+					String str = "";
+					for (QualityLevelEntry lvl : qualityLevelElements) {
+						if (lvl.enabled) {
+							if (!str.isEmpty())
+								str += ", ";
+							str += lvl.level;
+						}
+					}
+					comp.setText("Quality levels: " + str);
+					return comp;
+				}
+
+				// Set checkbox
+				lv.checkBox.setComponentOrientation(list.getComponentOrientation());
+				lv.checkBox.setSelected(lv.enabled);
+				lv.checkBox.setText(lv.toString());
+				lv.checkBox.setForeground(comp.getForeground());
+				lv.checkBox.setBackground(comp.getBackground());
+				lv.checkBox.setEnabled(list.isEnabled());
+				lv.checkBox.setFont(list.getFont());
+				lv.checkBox.setBorder(comp.getBorder());
+				return lv.checkBox;
+			}
+
+		});
+		qualityLevelBox.addActionListener(e -> {
+			QualityLevelEntry ent = (QualityLevelEntry) qualityLevelBox.getSelectedItem();
+			if (ent != null) {
+				ent.enabled = !ent.enabled;
+				qualityLevelBox.setPopupVisible(true);
+				qualityLevelBox.setSelectedItem(mask);
+				qualityLevelBox.repaint();
+			}
+		});
+
+		// Set model
+		qualityLevelBox.setModel(new ComboBoxModel<QualityLevelEntry>() {
+			private QualityLevelEntry selected;
+
+			@Override
+			public int getSize() {
+				return entries.size() + 1;
+			}
+
+			@Override
+			public QualityLevelEntry getElementAt(int index) {
+				if (index == 0)
+					return mask;
+				return entries.get(index - 1);
+			}
+
+			@Override
+			public void setSelectedItem(Object anItem) {
+				selected = (QualityLevelEntry) anItem;
+			}
+
+			@Override
+			public Object getSelectedItem() {
+				return selected;
+			}
+
+			@Override
+			public void addListDataListener(ListDataListener l) {
+			}
+
+			@Override
+			public void removeListDataListener(ListDataListener l) {
+			}
+
+		});
 	}
 
 	private ClientEntry[] filteredClientEntryData() {

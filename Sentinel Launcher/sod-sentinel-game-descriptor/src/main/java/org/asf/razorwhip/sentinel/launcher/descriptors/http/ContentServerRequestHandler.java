@@ -13,6 +13,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.activation.FileTypeMap;
 import javax.activation.MimetypesFileTypeMap;
@@ -21,7 +22,9 @@ import org.asf.connective.RemoteClient;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
 import org.asf.connective.processors.HttpPushProcessor;
+import org.asf.razorwhip.sentinel.launcher.AssetManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 import org.asf.razorwhip.sentinel.launcher.descriptors.SodGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.util.TripleDesUtil;
 
@@ -37,39 +40,65 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 	private HashMap<String, String> encryptedDocs;
 	private HashMap<String, File> overriddenAssetFiles;
 
+	private boolean hashed;
+
 	private String fallbackAssetServerEndpoint;
-	private File sourceDir;
+	private Map<String, AssetInformation> assets;
 	private File overrideDir;
 
 	private String sanitizePath(String path) {
+		if (path.contains("\\"))
+			path = path.replace("\\", "/");
 		while (path.startsWith("/"))
 			path = path.substring(1);
 		while (path.endsWith("/"))
 			path = path.substring(0, path.length() - 1);
 		while (path.contains("//"))
 			path = path.replace("//", "/");
-		if (path.contains("\\"))
-			path = path.replace("\\", "/");
 		if (!path.startsWith("/"))
 			path = "/" + path;
 		return path;
 	}
 
-	public interface IPreProcessor {
-		public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-				HttpResponse response, File sourceDir);
+	private File loadAsset(String path) {
+		// Check
+		if (assets == null)
+			return null;
 
-		public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-				HttpRequest request, HttpResponse response, InputStream source, File sourceDir) throws IOException;
+		// Sanitize
+		if (path.contains("\\"))
+			path = path.replace("\\", "/");
+		while (path.startsWith("/"))
+			path = path.substring(1);
+		while (path.endsWith("/"))
+			path = path.substring(0, path.length() - 1);
+		while (path.contains("//"))
+			path = path.replace("//", "/");
+
+		// Return
+		AssetInformation asset = assets.get(path.toLowerCase());
+		if (asset == null || !asset.localAssetFile.exists())
+			return null;
+		return asset.localAssetFile;
 	}
 
-	public ContentServerRequestHandler(JsonObject archiveDef, JsonObject descriptorDef, File sourceDir, String path,
-			IPreProcessor[] preProcessors, String fallbackAssetServerEndpoint, File overrideDir) throws IOException {
-		this.sourceDir = sourceDir;
+	public interface IPreProcessor {
+		public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
+				HttpResponse response);
+
+		public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
+				HttpRequest request, HttpResponse response, InputStream source) throws IOException;
+	}
+
+	public ContentServerRequestHandler(JsonObject archiveDef, JsonObject descriptorDef,
+			Map<String, AssetInformation> assets, String path, IPreProcessor[] preProcessors,
+			String fallbackAssetServerEndpoint, File overrideDir) throws IOException {
+		this.assets = assets;
 		this.path = sanitizePath(path);
 		this.preProcessors = preProcessors;
 		this.overrideDir = overrideDir;
 		this.fallbackAssetServerEndpoint = fallbackAssetServerEndpoint;
+		this.hashed = archiveDef.has("useHashedArchive") && archiveDef.get("useHashedArchive").getAsBoolean();
 
 		// Populate encrypted documents
 		encryptedDocs = new HashMap<String, String>();
@@ -93,10 +122,11 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 					// Load secret
 					if (encrypted) {
 						String secret = "C92EC1AA-54CD-4D0C-A8D5-403FCCF1C0BD";
-						if (sourceDir != null) {
-							File verSpecificSecret = new File(sourceDir, "DWADragonsUnity/" + key.split("/")[1] + "/"
-									+ key.split("/")[2] + "/versionxmlsecret.conf");
-							if (verSpecificSecret.exists()) {
+						String assetPath = "DWADragonsUnity/" + key.split("/")[1] + "/" + key.split("/")[2]
+								+ "/versionxmlsecret.conf";
+						if (assets != null) {
+							File verSpecificSecret = loadAsset(assetPath);
+							if (verSpecificSecret != null) {
 								// Read
 								for (String line : Files.readAllLines(verSpecificSecret.toPath())) {
 									if (!line.isBlank() && !line.startsWith("#") && line.contains("=")) {
@@ -109,10 +139,18 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 							}
 						} else {
 							// Download
-							for (String line : LauncherUtils.downloadString(fallbackAssetServerEndpoint
-									+ (fallbackAssetServerEndpoint.endsWith("/") ? "" : "/") + "DWADragonsUnity/"
-									+ key.split("/")[1] + "/" + key.split("/")[2] + "/versionxmlsecret.conf")
-									.split("\n")) {
+							String url = fallbackAssetServerEndpoint;
+							if (!url.endsWith("/"))
+								url += "/";
+							if (hashed) {
+								AssetInformation asset = AssetManager.getActiveArchive().getAsset(assetPath);
+								if (asset == null)
+									url += assetPath;
+								else
+									url += asset.assetHash + ".sa";
+							} else
+								url += assetPath;
+							for (String line : LauncherUtils.downloadString(url).split("\n")) {
 								if (!line.isBlank() && !line.startsWith("#") && line.contains("=")) {
 									String k = line.substring(0, line.indexOf("="));
 									String v = line.substring(line.indexOf("=") + 1);
@@ -159,10 +197,11 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 		}
 	}
 
-	public ContentServerRequestHandler(File sourceDir, String path, IPreProcessor[] preProcessors,
-			String fallbackAssetServerEndpoint, File overrideDir, HashMap<String, String> encryptedDocs,
-			boolean encryptedInput, HashMap<String, File> overriddenAssetFiles) {
-		this.sourceDir = sourceDir;
+	public ContentServerRequestHandler(boolean hashed, Map<String, AssetInformation> assets, String path,
+			IPreProcessor[] preProcessors, String fallbackAssetServerEndpoint, File overrideDir,
+			HashMap<String, String> encryptedDocs, boolean encryptedInput, HashMap<String, File> overriddenAssetFiles) {
+		this.hashed = hashed;
+		this.assets = assets;
 		this.path = sanitizePath(path);
 		this.preProcessors = preProcessors;
 		this.overrideDir = overrideDir;
@@ -174,8 +213,8 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 
 	@Override
 	public HttpPushProcessor createNewInstance() {
-		return new ContentServerRequestHandler(sourceDir, path, preProcessors, fallbackAssetServerEndpoint, overrideDir,
-				encryptedDocs, encryptedInput, overriddenAssetFiles);
+		return new ContentServerRequestHandler(hashed, assets, path, preProcessors, fallbackAssetServerEndpoint,
+				overrideDir, encryptedDocs, encryptedInput, overriddenAssetFiles);
 	}
 
 	@Override
@@ -319,9 +358,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 			// Prepare
 			long length = -1;
 			InputStream fileData = null;
-			File requestedFile = null;
-			if (sourceDir != null)
-				requestedFile = new File(sourceDir, path);
+			File requestedFile = loadAsset(path);
 
 			// Check modifications
 			File modFile = new File(new File(overrideDir, "serveroverrides"), path);
@@ -693,14 +730,26 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 				}
 				fileData = new FileInputStream(requestedFile);
 				length = requestedFile.length();
-			} else {
+			} else if (fallbackAssetServerEndpoint != null) {
 				// From server
 
 				// Attempt to contact fallback server
 				String url = fallbackAssetServerEndpoint;
-				while (url.endsWith("/"))
-					url = url.substring(0, url.lastIndexOf("/"));
-				url += path;
+				if (!url.endsWith("/"))
+					url += "/";
+				String pth = path.substring(1);
+
+				// Check
+				if (!hashed)
+					url += pth;
+				else {
+					// Find
+					AssetInformation asset = AssetManager.getActiveArchive().getAsset(pth);
+					if (asset == null)
+						url += pth;
+					else
+						url += asset.assetHash + ".sa";
+				}
 
 				// Try to contact server
 				try {
@@ -713,6 +762,9 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 					setResponseStatus(404, "Not found");
 					return;
 				}
+			} else {
+				setResponseStatus(404, "Not found");
+				return;
 			}
 
 			// Find type
@@ -748,10 +800,10 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 			// Find preprocessor
 			boolean processed = false;
 			for (IPreProcessor processor : preProcessors) {
-				if (processor.match(path, method, client, contentType, getRequest(), getResponse(), sourceDir)) {
+				if (processor.match(path, method, client, contentType, getRequest(), getResponse())) {
 					// Run preprocessor
 					fileData = processor.preProcess(path, method, client, contentType, getRequest(), getResponse(),
-							fileData, sourceDir);
+							fileData);
 					processed = true;
 				}
 			}

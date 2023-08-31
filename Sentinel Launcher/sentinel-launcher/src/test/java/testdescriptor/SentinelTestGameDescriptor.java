@@ -2,10 +2,13 @@ package testdescriptor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 
 import com.google.gson.JsonObject;
 
@@ -37,56 +40,58 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public boolean verifyLocalAssets(String assetServer, File assetDir, String version, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException {
-		return true;
+	public AssetInformation[] collectVersionAssets(AssetInformation[] assets, String[] qualityLevels, String version,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			Map<String, String> assetHashes) {
+		// TODO Auto-generated method stub
+		return new AssetInformation[0];
 	}
 
 	@Override
-	public void downloadAssets(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes) throws IOException {
+	public void downloadAssets(String assetServer, String[] versions, AssetInformation[] assetsNeedingUpdates,
+			AssetInformation[] collectedAssets, AssetInformation[] allAssets, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, Map<String, String> assetHashes) throws IOException {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback.run();
+	}
+
+	@Override
+	public void prepareLaunchWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback.run();
+	}
+
+	@Override
+	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
+		// TODO Auto-generated method stub
+		successCallback.run();
+	}
+
+	@Override
+	public void startGameWithLocalAssets(AssetInformation[] collectedAssets, AssetInformation[] allAssets,
+			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
 			Consumer<String> errorCallback) {
 		// TODO Auto-generated method stub
 		successCallback.run();
 	}
 
 	@Override
-	public void prepareLaunchWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Consumer<String> errorCallback) {
+	public String[] knownAssetQualityLevels() {
 		// TODO Auto-generated method stub
-		successCallback.run();
-	}
-
-	@Override
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
-		successCallback.run();
-	}
-
-	@Override
-	public void startGameWithLocalAssets(File assetArchive, File assetModifications, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientVersion, File clientDir, Runnable successCallback,
-			Runnable exitCallback, Consumer<String> errorCallback) {
-		// TODO Auto-generated method stub
-		successCallback.run();
-	}
-
-	@Override
-	public long getAssetDownloadSize(String assetServer, File assetDir, String[] versions, JsonObject archiveDef,
-			JsonObject descriptorDef, HashMap<String, String> assetHashes, HashMap<String, Long> assetFileSizes)
-			throws IOException {
-		// TODO Auto-generated method stub
-		return 0;
+		return new String[] { "High", "Medium", "Low" };
 	}
 
 }

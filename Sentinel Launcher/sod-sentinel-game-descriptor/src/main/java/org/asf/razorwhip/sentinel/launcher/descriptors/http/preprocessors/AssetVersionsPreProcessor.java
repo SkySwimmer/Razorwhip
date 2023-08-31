@@ -33,13 +33,13 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 
 	@Override
 	public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-			HttpResponse response, File sourceDir) {
+			HttpResponse response) {
 		return path.toLowerCase().endsWith("/assetversionsdo.xml");
 	}
 
 	@Override
 	public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-			HttpRequest request, HttpResponse response, InputStream source, File sourceDir) throws IOException {
+			HttpRequest request, HttpResponse response, InputStream source) throws IOException {
 		// Read manifest
 		byte[] manifestB = source.readAllBytes();
 		source.close();
@@ -77,16 +77,18 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 					assetOverrides, dataRootFolder, "", null);
 
 			// Unspecified version, platform and locale, specified quality
-			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), quality.toLowerCase()), assetOverrides,
-					dataRootFolder, "", null);
+			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), quality.toLowerCase()),
+					assetOverrides, dataRootFolder, "", null);
 
 			// Unspecified platform and locale, specified version and quality
-			discoverAssetsIn(new File(new File(assetModifications, "contentoverrides"), version + "/" + quality.toLowerCase()),
+			discoverAssetsIn(
+					new File(new File(assetModifications, "contentoverrides"), version + "/" + quality.toLowerCase()),
 					assetOverrides, dataRootFolder, "", null);
 
 			// Unspecified locale, specified version, platform and quality
 			discoverAssetsIn(
-					new File(new File(assetModifications, "contentoverrides"), plat + "/" + version + "/" + quality.toLowerCase()),
+					new File(new File(assetModifications, "contentoverrides"),
+							plat + "/" + version + "/" + quality.toLowerCase()),
 					assetOverrides, dataRootFolder, "", null);
 
 			// Find locales
@@ -102,12 +104,12 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 						dir.getName());
 
 				// Unspecified platform, specified version, locale and quality
-				discoverAssetsIn(new File(dir, version + "/" + quality.toLowerCase()), assetOverrides, dataRootFolder, "",
-						dir.getName());
+				discoverAssetsIn(new File(dir, version + "/" + quality.toLowerCase()), assetOverrides, dataRootFolder,
+						"", dir.getName());
 
 				// Specified version, locale, platform and quality
-				discoverAssetsIn(new File(dir, plat + "/" + version + "/" + quality.toLowerCase()), assetOverrides, dataRootFolder,
-						"", dir.getName());
+				discoverAssetsIn(new File(dir, plat + "/" + version + "/" + quality.toLowerCase()), assetOverrides,
+						dataRootFolder, "", dir.getName());
 			}
 
 			// Discover assets from server overrides

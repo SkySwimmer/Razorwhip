@@ -7,7 +7,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.URL;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 
 import org.asf.connective.RemoteClient;
 import org.asf.connective.impl.http_1_1.RemoteClientHttp_1_1;
@@ -29,13 +28,13 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 
 	@Override
 	public boolean match(String path, String method, RemoteClient client, String contentType, HttpRequest request,
-			HttpResponse response, File sourceDir) {
+			HttpResponse response) {
 		return path.toLowerCase().endsWith("/dwadragonsmain.xml");
 	}
 
 	@Override
 	public InputStream preProcess(String path, String method, RemoteClient client, String contentType,
-			HttpRequest request, HttpResponse response, InputStream source, File sourceDir) throws IOException {
+			HttpRequest request, HttpResponse response, InputStream source) throws IOException {
 		// Read manifest
 		byte[] manifestB = source.readAllBytes();
 		source.close();
