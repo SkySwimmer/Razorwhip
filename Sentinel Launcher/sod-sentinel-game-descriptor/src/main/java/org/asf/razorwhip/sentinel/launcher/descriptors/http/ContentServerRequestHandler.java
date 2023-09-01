@@ -419,7 +419,6 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 					}
 				}
 			}
-			// TODO: support for fallback quality levels
 
 			// Check modifications
 			File modFile = new File(new File(overrideDir, "serveroverrides"), path);

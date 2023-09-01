@@ -17,8 +17,11 @@ import java.io.File;
 import org.asf.connective.RemoteClient;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
+import org.asf.razorwhip.sentinel.launcher.AssetManager;
+import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler.IPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.AssetVersionManifestData;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.AssetVersionManifestData.AssetVersionBlock.AssetVariantBlock;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
@@ -49,10 +52,10 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 
 		// Parse
 		String[] pathParts = path.split("/");
-		if (pathParts.length >= 4) {
-			String quality = pathParts[1];
+		if (pathParts.length >= 5) {
 			String plat = pathParts[2];
 			String version = pathParts[3];
+			String quality = pathParts[4];
 
 			// Get data folder path
 			String dataRootFolder = path.substring(("/DWADragonsUnity/" + plat + "/" + version + "/").length());
@@ -262,6 +265,91 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 					assets.add(block);
 				}
 
+				if (!AssetManager.getActiveArchive().streamingModeEnabled) {
+					// Apply quality proxies to asset versions so the client re-downloads assets
+					// when the quality becomes available
+					for (AssetVersionManifestData.AssetVersionBlock block : assets) {
+						// Check
+						if (!assetOverrides.containsKey(block.name)) {
+							// Create path
+							String pth = "DWADragonsUnity/" + plat + "/" + version + "/" + dataRootFolder + "/";
+							String assetPth = block.name;
+							String pathData = pth + "data/";
+							String pathSharedData = pth + "shareddata/";
+							String pathContentData = pth + "contentdata/";
+							String pathMovies = pth + "movies/";
+							String pathSound = pth + "sound/";
+							String pathScene = pth + "scene/";
+							if (assetPth.startsWith("RS_DATA/"))
+								assetPth = pathData + assetPth.substring("RS_DATA/".length());
+							else if (assetPth.startsWith("RS_CONTENT/"))
+								assetPth = pathContentData + assetPth.substring("RS_CONTENT/".length());
+							else if (assetPth.startsWith("RS_MOVIES/"))
+								assetPth = pathMovies + assetPth.substring("RS_MOVIES/".length());
+							else if (assetPth.startsWith("RS_SHARED/"))
+								assetPth = pathSharedData + assetPth.substring("RS_SHARED/".length());
+							else if (assetPth.startsWith("RS_SOUND/"))
+								assetPth = pathSound + assetPth.substring("RS_SOUND/".length());
+							else if (assetPth.startsWith("RS_SOUND/"))
+								assetPth = pathSound + assetPth.substring("RS_SOUND/".length());
+							else if (assetPth.startsWith("RS_SCENE/"))
+								assetPth = pathScene + assetPth.substring("RS_SCENE/".length());
+
+							// For each variant
+							for (AssetVariantBlock variant : block.variants) {
+								String pthA = assetPth;
+								if (variant.locale != null) {
+									File f = new File(assetPth);
+									if (f.getName().contains(".")) {
+										String ext = f.getName().substring(f.getName().lastIndexOf("."));
+										String fn = assetPth.substring(0, assetPth.lastIndexOf("."));
+										pthA = fn + "." + variant.locale + ext;
+									} else {
+										pthA = pthA + "." + variant.locale;
+									}
+								}
+
+								// Find asset
+								AssetInformation asset = AssetManager.getActiveArchive().getAsset(pthA);
+								if (asset != null) {
+									// Check existence
+									if (!asset.isUpToDate()) {
+										// Find nearest available quality
+										String pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/",
+												"/mid/");
+										asset = AssetManager.getActiveArchive().getAsset(pthAM);
+										if (asset != null && asset.isUpToDate()) {
+											// Found asset
+											int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+											if (newV == variant.version)
+												newV++;
+											variant.version = newV;
+										}
+										pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/low/");
+										asset = AssetManager.getActiveArchive().getAsset(pthAM);
+										if (asset != null && asset.isUpToDate()) {
+											// Found asset
+											int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+											if (newV == variant.version)
+												newV++;
+											variant.version = newV;
+										}
+										pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/high/");
+										asset = AssetManager.getActiveArchive().getAsset(pthAM);
+										if (asset != null && asset.isUpToDate()) {
+											// Found asset
+											int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+											if (newV == variant.version)
+												newV++;
+											variant.version = newV;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
 				// Apply
 				assetData.assets = assets.toArray(t -> new AssetVersionManifestData.AssetVersionBlock[t]);
 			} else if (assetData.legacyData != null) {
@@ -309,6 +397,93 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 						block.size = f.length();
 						block.version = idHash(Files.readAllBytes(f.toPath()));
 						assets.add(block);
+					}
+				}
+
+				if (!AssetManager.getActiveArchive().streamingModeEnabled) {
+					// Apply quality proxies to asset versions so the client re-downloads assets
+					// when the quality becomes available
+					for (AssetVersionManifestData.AssetBlockLegacy block : assets) {
+						// Check
+						if (!assetOverrides.containsKey(block.assetName)) {
+							// Create path
+							String pth = "DWADragonsUnity/" + plat + "/" + version + "/" + quality + "/"
+									+ (block.locale == null ? "en-US" : block.locale) + "/";
+							String assetPth = block.assetName;
+							String pathData = pth + "Data/";
+							String pathSharedData = pth + "SharedData/";
+							String pathContentData = pth + "ContentData/";
+							String pathMovies = pth + "Movies/";
+							String pathSound = pth + "Sound/";
+							String pathScene = pth + "Scenes/";
+							if (assetPth.startsWith("RS_DATA/"))
+								assetPth = pathData + assetPth.substring("RS_DATA/".length());
+							else if (assetPth.startsWith("RS_CONTENT/"))
+								assetPth = pathContentData + assetPth.substring("RS_CONTENT/".length());
+							else if (assetPth.startsWith("RS_MOVIES/"))
+								assetPth = pathMovies + assetPth.substring("RS_MOVIES/".length());
+							else if (assetPth.startsWith("RS_SHARED/"))
+								assetPth = pathSharedData + assetPth.substring("RS_SHARED/".length());
+							else if (assetPth.startsWith("RS_SOUND/"))
+								assetPth = pathSound + assetPth.substring("RS_SOUND/".length());
+							else if (assetPth.startsWith("RS_SOUND/"))
+								assetPth = pathSound + assetPth.substring("RS_SOUND/".length());
+							else if (assetPth.startsWith("RS_SCENE/"))
+								assetPth = pathScene + assetPth.substring("RS_SCENE/".length());
+
+							// Find asset
+							String pthA = assetPth;
+							AssetInformation asset = AssetManager.getActiveArchive().getAsset(pthA);
+							if (asset == null) {
+								// Try another quality level
+								String pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/mid/");
+								asset = AssetManager.getActiveArchive().getAsset(pthAM);
+								if (asset == null) {
+									// Try another quality level
+									pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/low/");
+									asset = AssetManager.getActiveArchive().getAsset(pthAM);
+									if (asset == null) {
+										// Try another quality level
+										pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/high/");
+										asset = AssetManager.getActiveArchive().getAsset(pthAM);
+									}
+								}
+							}
+							if (asset != null) {
+								// Check existence
+								if (!asset.isUpToDate()) {
+									// Find nearest available quality
+									String pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/",
+											"/mid/");
+									asset = AssetManager.getActiveArchive().getAsset(pthAM);
+									if (asset != null && asset.isUpToDate()) {
+										// Found asset
+										int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+										if (newV == block.version)
+											newV++;
+										block.version = newV;
+									}
+									pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/low/");
+									asset = AssetManager.getActiveArchive().getAsset(pthAM);
+									if (asset != null && asset.isUpToDate()) {
+										// Found asset
+										int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+										if (newV == block.version)
+											newV++;
+										block.version = newV;
+									}
+									pthAM = pthA.toLowerCase().replace("/" + quality.toLowerCase() + "/", "/high/");
+									asset = AssetManager.getActiveArchive().getAsset(pthAM);
+									if (asset != null && asset.isUpToDate()) {
+										// Found asset
+										int newV = idHash(asset.assetHash.getBytes("UTF-8"));
+										if (newV == block.version)
+											newV++;
+										block.version = newV;
+									}
+								}
+							}
+						}
 					}
 				}
 

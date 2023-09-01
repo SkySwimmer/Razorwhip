@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javax.swing.JOptionPane;
 
@@ -136,7 +137,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Check root files
 		for (AssetInformation asset : assets) {
-			if (!asset.assetPath.contains("/")) {
+			if (!asset.assetPath.contains("/") && !collected.contains(asset)) {
 				// Add
 				collected.add(asset);
 			}
@@ -145,7 +146,8 @@ public class SodGameDescriptor implements IGameDescriptor {
 		// Check other files
 		for (AssetInformation asset : assets) {
 			String name = asset.assetPath;
-			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")) {
+			if (!name.toLowerCase().startsWith("content/") && !name.toLowerCase().startsWith("dwadragonsunity/")
+					&& !collected.contains(asset)) {
 				// Add
 				collected.add(asset);
 			}
@@ -154,7 +156,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		// Check content files
 		for (AssetInformation asset : assets) {
 			String name = asset.assetPath;
-			if (name.toLowerCase().startsWith("content/")) {
+			if (name.toLowerCase().startsWith("content/") && !collected.contains(asset)) {
 				// Add
 				collected.add(asset);
 			}
@@ -164,7 +166,8 @@ public class SodGameDescriptor implements IGameDescriptor {
 		for (AssetInformation asset : assets) {
 			String name = asset.assetPath;
 			if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")
-					&& !name.substring(("dwadragonsunity/win/" + version + "/").length()).contains("/")) {
+					&& !name.substring(("dwadragonsunity/win/" + version + "/").length()).contains("/")
+					&& !collected.contains(asset)) {
 				// Add
 				collected.add(asset);
 			}
@@ -172,9 +175,26 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Check by quality
 		for (String level : qualityLevels) {
+			// Verify existence
+			if (!qualityExists(assets, version, level)) {
+				// Check if another quality level assets exist
+				if (qualityExists(assets, version, "Mid")) {
+					// Override level
+					level = "Mid";
+				} else if (qualityExists(assets, version, "Low")) {
+					// Override level
+					level = "Low";
+				} else if (qualityExists(assets, version, "High")) {
+					// Override level
+					level = "High";
+				}
+			}
+
+			// Add assets
 			for (AssetInformation asset : assets) {
 				String name = asset.assetPath;
-				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/")) {
+				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/")
+						&& !collected.contains(asset)) {
 					// Add
 					collected.add(asset);
 				}
@@ -182,6 +202,14 @@ public class SodGameDescriptor implements IGameDescriptor {
 		}
 
 		return collected.toArray(t -> new AssetInformation[t]);
+	}
+
+	private boolean qualityExists(AssetInformation[] assets, String version, String level) {
+		return Stream.of(assets)
+				.anyMatch(t -> t.assetPath.toLowerCase()
+						.startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/data/dragonsres"))
+				|| Stream.of(assets).anyMatch(t -> t.assetPath.toLowerCase().startsWith(
+						"dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/en-us/data/dragonsres"));
 	}
 
 	@Override
@@ -257,7 +285,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		try {
 			// Discover assets
 			Map<String, AssetInformation> assets = new LinkedHashMap<String, AssetInformation>();
-			for (AssetInformation asset : collectedAssets) {
+			for (AssetInformation asset : allAssets) {
 				String path = asset.assetPath;
 
 				// Sanitize
