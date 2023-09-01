@@ -52,25 +52,44 @@ public interface IGameDescriptor {
 	 * @param url             Client download URL
 	 * @param version         Client version
 	 * @param clientOutputDir Client output directory
+	 * @param archive         Archive instance
 	 * @param archiveDef      Archive definition object
 	 * @param descriptorDef   Descriptor definition object
 	 * @param clientHash      Expected client hash
 	 * @throws IOException If downloading fails
 	 */
-	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientHash) throws IOException;
+	public void downloadClient(String url, String version, File clientOutputDir, ArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientHash) throws IOException;
+
+	/**
+	 * Adds clients to a asset archive folder
+	 * 
+	 * @param version           Client version
+	 * @param archiveClientsDir Clients folder of the archive
+	 * @param archiveDir        Archive folder
+	 * @param archive           Source archive instance
+	 * @param archiveDef        Source archive definition object
+	 * @param descriptorDef     Source archive descriptor definition object
+	 * @param clientHash        Expected client hash
+	 * @throws IOException If adding the client fails
+	 * @return Client output file
+	 */
+	public File addClientToArchiveFolder(String version, File archiveClientsDir, File archiveDir,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientHash)
+			throws IOException;
 
 	/**
 	 * Called to modify clients
 	 * 
 	 * @param clientDir     Client folder
 	 * @param version       Client version
+	 * @param archive       Archive instance
 	 * @param archiveDef    Archive definition object
 	 * @param descriptorDef Descriptor definition object
 	 * @throws IOException If modifying the client fails
 	 */
-	public void modifyClient(File clientDir, String version, JsonObject archiveDef, JsonObject descriptorDef)
-			throws IOException;
+	public void modifyClient(File clientDir, String version, ArchiveInformation archive, JsonObject archiveDef,
+			JsonObject descriptorDef) throws IOException;
 
 	/**
 	 * Collects assets for a specific game version

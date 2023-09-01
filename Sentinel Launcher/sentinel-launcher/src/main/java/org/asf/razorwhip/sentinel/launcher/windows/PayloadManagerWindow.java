@@ -104,6 +104,7 @@ public class PayloadManagerWindow extends JDialog {
 	public PayloadManagerWindow(JFrame parent) {
 		super(parent);
 		initialize();
+		setLocationRelativeTo(parent);
 	}
 
 	public boolean showDialog() throws IOException {

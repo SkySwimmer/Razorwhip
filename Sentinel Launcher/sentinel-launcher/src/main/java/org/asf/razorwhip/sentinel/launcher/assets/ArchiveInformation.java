@@ -28,6 +28,7 @@ public class ArchiveInformation {
 	public String deprecationNotice;
 
 	public boolean connectionAvailable;
+	public boolean isUserArchive;
 
 	@Override
 	public String toString() {

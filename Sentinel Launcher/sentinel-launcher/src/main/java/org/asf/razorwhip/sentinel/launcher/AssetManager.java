@@ -129,8 +129,7 @@ public class AssetManager {
 		// Check
 		if (archiveList.size() == 0) {
 			// Load archives into memory
-			JsonObject archiveLst = JsonParser
-					.parseString(Files.readString(new File("assets/assetarchives.json").toPath())).getAsJsonObject();
+			JsonObject archiveLst = loadArchiveList();
 			loadArchives(archiveLst);
 		}
 
@@ -140,43 +139,50 @@ public class AssetManager {
 
 		// Check changes
 		if (saved) {
-			// Delete removed clients
-			File localVersions = new File("cache/clienthashes.json");
-			if (localVersions.exists()) {
-				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
-						.getAsJsonObject();
-				JsonArray clientList = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
-						.getAsJsonArray();
-				JsonObject newHashList = new JsonObject();
-				for (String version : localHashList.keySet()) {
-					// Check if present
-					boolean found = false;
-					for (JsonElement ele : clientList) {
-						if (ele.getAsString().equals(version)) {
-							found = true;
-							break;
-						}
-					}
-					if (!found) {
-						// Delete client
-						LauncherMain.closeClientsIfNeeded();
-						LauncherUtils.deleteDir(new File("clients/client-" + version));
-					} else
-						newHashList.add(version, localHashList.get(version));
-				}
-				Files.writeString(localVersions.toPath(), newHashList.toString());
-			}
-
-			// Delete last selected version
-			new File("lastclient.json").delete();
-			loadClientList();
-
-			// Reset collected data
-			collectedAssets = null;
-			collectedClients = null;
+			reloadSavedSettings();
 		}
 
 		return saved;
+	}
+
+	/**
+	 * Internal
+	 */
+	public static void reloadSavedSettings() throws IOException {
+		// Delete removed clients
+		File localVersions = new File("cache/clienthashes.json");
+		if (localVersions.exists()) {
+			JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
+					.getAsJsonObject();
+			JsonArray clientList = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
+					.getAsJsonArray();
+			JsonObject newHashList = new JsonObject();
+			for (String version : localHashList.keySet()) {
+				// Check if present
+				boolean found = false;
+				for (JsonElement ele : clientList) {
+					if (ele.getAsString().equals(version)) {
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					// Delete client
+					LauncherMain.closeClientsIfNeeded();
+					LauncherUtils.deleteDir(new File("clients/client-" + version));
+				} else
+					newHashList.add(version, localHashList.get(version));
+			}
+			Files.writeString(localVersions.toPath(), newHashList.toString());
+		}
+
+		// Delete last selected version
+		new File("lastclient.json").delete();
+		loadClientList();
+
+		// Reset collected data
+		collectedAssets = null;
+		collectedClients = null;
 	}
 
 	/**
@@ -192,8 +198,7 @@ public class AssetManager {
 		JsonObject settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
 				.getAsJsonObject();
 		String id = settings.get("id").getAsString();
-		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
-				.getAsJsonObject();
+		JsonObject archiveLst = loadArchiveList();
 		JsonObject archiveDef = archiveLst.get(id).getAsJsonObject();
 
 		// Create list
@@ -398,8 +403,7 @@ public class AssetManager {
 
 		// Load active archive
 		String archiveID = settings.get("id").getAsString();
-		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
-				.getAsJsonObject();
+		JsonObject archiveLst = loadArchiveList();
 
 		// Verify settings
 		boolean valid = true;
@@ -457,8 +461,7 @@ public class AssetManager {
 			settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
 					.getAsJsonObject();
 			archiveID = settings.get("id").getAsString();
-			archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
-					.getAsJsonObject();
+			archiveLst = loadArchiveList();
 		}
 
 		// Load archives into memory
@@ -483,8 +486,7 @@ public class AssetManager {
 		// Load settings
 		JsonObject settings = JsonParser.parseString(Files.readString(new File("assets/localdata.json").toPath()))
 				.getAsJsonObject();
-		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
-				.getAsJsonObject();
+		JsonObject archiveLst = loadArchiveList();
 
 		// Load archives into memory
 		loadArchives(archiveLst);
@@ -546,9 +548,11 @@ public class AssetManager {
 	/**
 	 * Verifies and updates clients
 	 * 
+	 * @param throwError True to throw an exception instead of closing the program
+	 *                   when the client cannot be downloaded, false otherwise
 	 * @throws IOException If verification errors
 	 */
-	public static void verifyClients() throws IOException {
+	public static void verifyClients(boolean throwError) throws IOException {
 		// Determine platform
 		String plat = null;
 		if (System.getProperty("os.name").toLowerCase().contains("win")
@@ -603,9 +607,12 @@ public class AssetManager {
 							// Download
 							LauncherUtils.gameDescriptor.downloadClient(
 									activeArchive.archiveClientLst.get(clientVersion).getAsString(), clientVersion,
-									clientFolder, activeArchive.archiveDef, activeArchive.descriptorDef, cHash);
+									clientFolder, activeArchive, activeArchive.archiveDef, activeArchive.descriptorDef,
+									cHash);
 						} else {
 							// Error
+							if (throwError)
+								throw new IOException("No server connection");
 							LauncherUtils.log("Skipped client update as there is no asset server connection.");
 							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
 									"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
@@ -616,6 +623,8 @@ public class AssetManager {
 						// Check source
 						if (!new File(activeArchive.source).exists()) {
 							// Error
+							if (throwError)
+								throw new IOException("Source file does not exist");
 							LauncherUtils.log("Skipped client update as the source file is missing.");
 							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
 									"Failed to copy client data from asset source file!\n\nPlease make sure the following file exists: "
@@ -630,8 +639,8 @@ public class AssetManager {
 
 					// Modify client
 					LauncherUtils.log("Modifying client " + clientVersion + "...", true);
-					LauncherUtils.gameDescriptor.modifyClient(clientFolder, clientVersion, activeArchive.archiveDef,
-							activeArchive.descriptorDef);
+					LauncherUtils.gameDescriptor.modifyClient(clientFolder, clientVersion, activeArchive,
+							activeArchive.archiveDef, activeArchive.descriptorDef);
 
 					// Re-extract descriptor
 					if (!new File("tmp-sgdextract").exists()) {
@@ -697,6 +706,29 @@ public class AssetManager {
 	}
 
 	/**
+	 * Migrates assets if they are using a older format
+	 * 
+	 * @throws IOException If migration errors
+	 */
+	public static void migrateAssetsIfNeeded() throws IOException {
+		File assetRootData = new File("assets/assetarchive");
+		File isSentinelArchive = new File(assetRootData, "sentinelarchive");
+		if (assetRootData.exists() && !isSentinelArchive.exists()) {
+			// Migrate
+			migrateAssets();
+
+			// Hide bars
+			LauncherUtils.hideProgressPanel();
+			LauncherUtils.resetProgressBar();
+		} else if (!isSentinelArchive.exists()) {
+			assetRootData.mkdirs();
+			isSentinelArchive.createNewFile();
+		}
+		File assetArchive = new File(assetRootData, "assets");
+		assetArchive.mkdirs();
+	}
+
+	/**
 	 * Verifies and downloads updated assets
 	 * 
 	 * @throws IOException If verification errors
@@ -708,21 +740,7 @@ public class AssetManager {
 			LauncherUtils.log("Checking for asset archive updates...");
 
 			// Verify assets
-			File assetRootData = new File("assets/assetarchive");
-			File isSentinelArchive = new File(assetRootData, "sentinelarchive");
-			if (assetRootData.exists() && !isSentinelArchive.exists()) {
-				// Migrate
-				migrateAssets();
-
-				// Hide bars
-				LauncherUtils.hideProgressPanel();
-				LauncherUtils.resetProgressBar();
-			} else if (!isSentinelArchive.exists()) {
-				assetRootData.mkdirs();
-				isSentinelArchive.createNewFile();
-			}
-			File assetArchive = new File(assetRootData, "assets");
-			assetArchive.mkdirs();
+			migrateAssetsIfNeeded();
 			LauncherUtils.setStatus("Checking for updates...");
 
 			// Verify assets of clients
@@ -972,8 +990,19 @@ public class AssetManager {
 
 	private static void loadArchives(JsonObject archiveLst) {
 		archiveList.clear();
+
+		// Load user-created archives
+		JsonObject localArchives = null;
+		File localArchivesFile = new File("assets/userarchives.json");
+		if (localArchivesFile.exists()) {
+			try {
+				localArchives = JsonParser.parseString(Files.readString(localArchivesFile.toPath())).getAsJsonObject();
+			} catch (IOException e) {
+			}
+		}
+
 		for (String key : archiveLst.keySet()) {
-			ArchiveInformation ac = loadArchive(key, archiveLst);
+			ArchiveInformation ac = loadArchive(key, archiveLst, localArchives);
 			if (ac.descriptorType.matches("^[A-Za-z0-9\\-.,_ ]+$")) {
 				try {
 					if (assetManagementAvailable) {
@@ -1012,6 +1041,18 @@ public class AssetManager {
 		info.archiveID = archiveID;
 		info.archiveDef = archiveDef;
 		info.archiveName = archiveDef.get("archiveName").getAsString();
+
+		// Check if its a user-created archive
+		File localArchivesFile = new File("assets/userarchives.json");
+		if (localArchivesFile.exists()) {
+			// Load
+			JsonObject localArchives = JsonParser.parseString(Files.readString(localArchivesFile.toPath()))
+					.getAsJsonObject();
+
+			// Check
+			if (localArchives.has(archiveID))
+				info.isUserArchive = true;
+		}
 
 		// Load settings
 		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
@@ -1081,7 +1122,7 @@ public class AssetManager {
 		activeArchive = info;
 	}
 
-	private static ArchiveInformation loadArchive(String archiveID, JsonObject archiveLst) {
+	private static ArchiveInformation loadArchive(String archiveID, JsonObject archiveLst, JsonObject userArchives) {
 		// Load archive settings
 		JsonObject archiveDef = archiveLst.get(archiveID).getAsJsonObject();
 
@@ -1090,6 +1131,8 @@ public class AssetManager {
 		info.archiveID = archiveID;
 		info.archiveDef = archiveDef;
 		info.archiveName = archiveDef.get("archiveName").getAsString();
+		if (userArchives != null)
+			info.isUserArchive = userArchives.has(info.archiveID);
 
 		// Load settings
 		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
@@ -1174,7 +1217,13 @@ public class AssetManager {
 		return path;
 	}
 
-	private static boolean testArchiveConnection(ArchiveInformation info) {
+	/**
+	 * Tests a connection with a asset server of a archive
+	 * 
+	 * @param info Archive information object
+	 * @return True if connected, false otherwise
+	 */
+	public static boolean testArchiveConnection(ArchiveInformation info) {
 		boolean res = true;
 		if (info.mode == ArchiveMode.REMOTE)
 			res = LauncherUtils.gameDescriptor.verifyAssetConnection(info.source);
@@ -1320,6 +1369,56 @@ public class AssetManager {
 
 		// Write hash
 		Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
+	}
+
+	private static JsonObject loadArchiveList() throws IOException {
+		JsonObject archiveLst = JsonParser.parseString(Files.readString(new File("assets/assetarchives.json").toPath()))
+				.getAsJsonObject();
+
+		// Load local archives
+		File localArchivesFile = new File("assets/userarchives.json");
+		if (localArchivesFile.exists()) {
+			// Load
+			JsonObject localArchives = JsonParser.parseString(Files.readString(localArchivesFile.toPath()))
+					.getAsJsonObject();
+
+			// Add to list
+			for (String id : localArchives.keySet()) {
+				archiveLst.add(id, localArchives.get(id));
+			}
+		}
+
+		// Return
+		return archiveLst;
+	}
+
+	/**
+	 * Removes user archives
+	 * 
+	 * @param archiveID Archive ID
+	 * @throws IOException If removing the archive fails
+	 */
+	public static void removeUserArchive(String archiveID) throws IOException {
+		if (!archiveList.containsKey(archiveID) || !archiveList.get(archiveID).isUserArchive)
+			throw new IOException("User-added archive '" + archiveID + "' could not be found!");
+
+		// Remove from list
+		archiveList.remove(archiveID);
+
+		// Remove from disk
+		File localArchivesFile = new File("assets/userarchives.json");
+		if (localArchivesFile.exists()) {
+			// Load
+			JsonObject localArchives = JsonParser.parseString(Files.readString(localArchivesFile.toPath()))
+					.getAsJsonObject();
+
+			// Remove archive
+			if (localArchives.has(archiveID))
+				localArchives.remove(archiveID);
+
+			// Save
+			Files.writeString(localArchivesFile.toPath(), localArchives.toString());
+		}
 	}
 
 }

@@ -34,6 +34,7 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
@@ -80,6 +81,15 @@ public class LauncherUtils {
 
 	static void addUrlToComponentClassLoader(URL url) {
 		loader.addUrl(url);
+	}
+
+	/**
+	 * Retrieves the launcher window
+	 * 
+	 * @return Launcher JFrame instance
+	 */
+	public static JFrame getLauncherWindow() {
+		return launcherWindow.frmSentinelLauncher;
 	}
 
 	/**
@@ -203,6 +213,17 @@ public class LauncherUtils {
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
+	}
+
+	/**
+	 * Checks if the progress panel is visible
+	 * 
+	 * @return True if visible, false otherwise
+	 */
+	public static boolean isProgressPanelVisible() {
+		if (progressPanel == null)
+			return false;
+		return progressPanel.isVisible();
 	}
 
 	/**
@@ -367,6 +388,17 @@ public class LauncherUtils {
 	 */
 	public static void log(String message) {
 		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] " + message);
+	}
+
+	/**
+	 * Retrieves the status label message
+	 * 
+	 * @return Status label message or null
+	 */
+	public static String getStatusMessage() {
+		if (statusLabel == null)
+			return null;
+		return statusLabel.getText();
 	}
 
 	/**

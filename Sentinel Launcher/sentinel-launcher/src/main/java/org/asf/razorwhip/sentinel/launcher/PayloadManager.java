@@ -227,7 +227,7 @@ public class PayloadManager {
 	 */
 	public static boolean showPayloadManagementWindow() throws IOException {
 		JsonObject lastIndex = indexPayloads();
-		PayloadManagerWindow window = new PayloadManagerWindow();
+		PayloadManagerWindow window = new PayloadManagerWindow(LauncherUtils.getLauncherWindow());
 		if (window.showDialog()) {
 			// Delete removed payloads
 			JsonObject index = new JsonObject();
@@ -548,7 +548,8 @@ public class PayloadManager {
 					newIndex);
 			copyDirWithProgress(new File("cache/payloadcache/payloaddata", "assetmodifications"),
 					new File("assetmodifications"), "assetmodifications/", lastFiles, newIndex);
-			for (File clientDir : new File("clients").listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
+			for (File clientDir : new File("clients")
+					.listFiles(t -> t.getName().startsWith("client-") && t.isDirectory())) {
 				String clientVersion = clientDir.getName().substring("client-".length());
 
 				// Check modifications

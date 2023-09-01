@@ -10,6 +10,7 @@ import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,9 +79,38 @@ public class SodGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientHash) throws IOException {
+	public void downloadClient(String url, String version, File clientOutputDir, ArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientHash) throws IOException {
 		// Download zip
+		downloadClientZip(url, version, clientHash);
+
+		// Extract
+		LauncherUtils.log("Extracting " + version + " client...", true);
+		LauncherUtils.unZip(new File("cache/clientzips", version + ".zip"), clientOutputDir);
+	}
+
+	@Override
+	public File addClientToArchiveFolder(String version, File archiveClientsDir, File archiveDir,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientHash)
+			throws IOException {
+		// Check zip file
+		File sourceZip = new File("cache/clientzips/" + version + ".zip");
+		if (!sourceZip.exists() || !LauncherUtils
+				.sha512Hash(Files.readAllBytes(new File("cache/clientzips/" + version + ".zip").toPath()))
+				.equals(clientHash)) {
+			// Download client
+			downloadClientZip(archive.source, version, clientHash);
+		}
+
+		// Add zip to archive
+		File output = new File(archiveClientsDir, "client-" + version + ".zip");
+		output.getParentFile().mkdirs();
+		Files.copy(Path.of("cache/clientzips/" + version + ".zip"), output.toPath(),
+				StandardCopyOption.REPLACE_EXISTING);
+		return output;
+	}
+
+	private void downloadClientZip(String url, String version, String clientHash) throws IOException {
 		new File("cache/clientzips").mkdirs();
 		LauncherUtils.log("Downloading " + version + " client...", true);
 		LauncherUtils.downloadFile(url, new File("cache/clientzips/" + version + ".zip"));
@@ -99,15 +129,11 @@ public class SodGameDescriptor implements IGameDescriptor {
 				throw new IOException("Integrity check failed!");
 			}
 		}
-
-		// Extract
-		LauncherUtils.log("Extracting " + version + " client...", true);
-		LauncherUtils.unZip(new File("cache/clientzips", version + ".zip"), clientOutputDir);
 	}
 
 	@Override
-	public void modifyClient(File clientDir, String version, JsonObject archiveDef, JsonObject descriptorDef)
-			throws IOException {
+	public void modifyClient(File clientDir, String version, ArchiveInformation archive, JsonObject archiveDef,
+			JsonObject descriptorDef) throws IOException {
 		// Modify the client
 
 		// Modify resources.assets

@@ -1024,7 +1024,7 @@ public class LauncherMain {
 				AssetManager.prepareStreamingArchiveConnection();
 
 				// Check clients
-				AssetManager.verifyClients();
+				AssetManager.verifyClients(false);
 
 				// Verify assets
 				AssetManager.verifyAssets();

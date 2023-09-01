@@ -25,16 +25,23 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void downloadClient(String url, String version, File clientOutputDir, JsonObject archiveDef,
-			JsonObject descriptorDef, String clientHash) throws IOException {
+	public void downloadClient(String url, String version, File clientOutputDir, ArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientHash) throws IOException {
 		clientOutputDir.mkdirs();
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public void modifyClient(File clientDir, String version, JsonObject archiveDef, JsonObject descriptorDef)
+	public File addClientToArchiveFolder(String version, File archiveClientsDir, File archiveDir,
+			ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientHash)
 			throws IOException {
+		throw new IOException("Not implemented");
+	}
+
+	@Override
+	public void modifyClient(File clientDir, String version, ArchiveInformation archive, JsonObject archiveDef,
+			JsonObject descriptorDef) throws IOException {
 		// TODO Auto-generated method stub
 
 	}
