@@ -373,11 +373,13 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 						// 5: [4+] = asset
 						String plat = pathParts[2];
 						String version = pathParts[3];
-						if (path.toLowerCase().startsWith("/dwadragonsunity/" + plat + "/" + version + "/")) {
+						if (path.toLowerCase().startsWith(
+								"/dwadragonsunity/" + plat.toLowerCase() + "/" + version.toLowerCase() + "/")) {
 							// Check quality
 							if (pathParts.length >= 5) {
-								String requestedAsset = path
-										.substring(("/dwadragonsunity/" + plat + "/" + version + "/").length());
+								String requestedAsset = path.substring(
+										("/dwadragonsunity/" + plat.toLowerCase() + "/" + version.toLowerCase() + "/")
+												.length());
 								String[] assetParts = requestedAsset.split("/");
 
 								// Check asset
