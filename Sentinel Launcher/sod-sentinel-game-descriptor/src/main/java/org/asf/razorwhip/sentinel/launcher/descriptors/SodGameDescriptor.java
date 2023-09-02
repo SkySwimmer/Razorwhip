@@ -14,10 +14,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import javax.swing.JOptionPane;
 
@@ -99,7 +104,11 @@ public class SodGameDescriptor implements IGameDescriptor {
 				.sha512Hash(Files.readAllBytes(new File("cache/clientzips/" + version + ".zip").toPath()))
 				.equals(clientHash)) {
 			// Download client
+			int val = LauncherUtils.getProgress();
+			int max = LauncherUtils.getProgressMax();
 			downloadClientZip(archive.source, version, clientHash);
+			LauncherUtils.log("Adding client to archive...", true);
+			LauncherUtils.setProgress(val, max);
 		}
 
 		// Add zip to archive
@@ -108,6 +117,66 @@ public class SodGameDescriptor implements IGameDescriptor {
 		Files.copy(Path.of("cache/clientzips/" + version + ".zip"), output.toPath(),
 				StandardCopyOption.REPLACE_EXISTING);
 		return output;
+	}
+
+	@Override
+	public void addCleanClientFilesToArchiveFile(ZipOutputStream output, String version, String clientEntryPrefix,
+			File archiveFile, ArchiveInformation archiveInst, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientHash, BiConsumer<Integer, Integer> progressCallback) throws IOException {
+		// Check zip file
+		File sourceZip = new File("cache/clientzips/" + version + ".zip");
+		if (!sourceZip.exists() || !LauncherUtils
+				.sha512Hash(Files.readAllBytes(new File("cache/clientzips/" + version + ".zip").toPath()))
+				.equals(clientHash)) {
+			// Download client
+			int val = LauncherUtils.getProgress();
+			int max = LauncherUtils.getProgressMax();
+			downloadClientZip(archiveInst.source, version, clientHash);
+			LauncherUtils.log("Adding client to archive...", true);
+			LauncherUtils.setProgress(val, max);
+		}
+
+		// Count entries
+		ZipFile archive = new ZipFile(sourceZip);
+		int count = 0;
+		Enumeration<? extends ZipEntry> en = archive.entries();
+		while (en.hasMoreElements()) {
+			en.nextElement();
+			count++;
+		}
+		archive.close();
+
+		// Prepare and set max
+		archive = new ZipFile(sourceZip);
+		en = archive.entries();
+		int max = count;
+
+		// Transfer zip
+		int i = 0;
+		while (en.hasMoreElements()) {
+			ZipEntry ent = en.nextElement();
+			if (ent == null)
+				break;
+
+			if (ent.isDirectory()) {
+				ZipEntry e = new ZipEntry(clientEntryPrefix + ent.getName());
+				output.putNextEntry(e);
+				output.closeEntry();
+			} else {
+				ZipEntry e = new ZipEntry(clientEntryPrefix + ent.getName());
+				output.putNextEntry(e);
+				InputStream is = archive.getInputStream(ent);
+				is.transferTo(output);
+				is.close();
+				output.closeEntry();
+			}
+
+			progressCallback.accept(i++, max);
+		}
+		progressCallback.accept(max, max);
+
+		// Close
+		archive.close();
 	}
 
 	private void downloadClientZip(String url, String version, String clientHash) throws IOException {
@@ -188,41 +257,58 @@ public class SodGameDescriptor implements IGameDescriptor {
 			}
 		}
 
-		// Check root asset files
-		for (AssetInformation asset : assets) {
-			String name = asset.assetPath;
-			if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/")
-					&& !name.substring(("dwadragonsunity/win/" + version + "/").length()).contains("/")
-					&& !collected.contains(asset)) {
-				// Add
-				collected.add(asset);
-			}
-		}
+		// For each platform
+		String[] platforms = new String[] {
 
-		// Check by quality
-		for (String level : qualityLevels) {
-			// Verify existence
-			if (!qualityExists(assets, version, level)) {
-				// Check if another quality level assets exist
-				if (qualityExists(assets, version, "Mid")) {
-					// Override level
-					level = "Mid";
-				} else if (qualityExists(assets, version, "Low")) {
-					// Override level
-					level = "Low";
-				} else if (qualityExists(assets, version, "High")) {
-					// Override level
-					level = "High";
-				}
-			}
+				"win",
 
-			// Add assets
+				"wsa",
+
+				"android",
+
+				"ios",
+
+				"steam"
+
+		};
+		for (String plat : platforms) {
+			// Check root asset files
 			for (AssetInformation asset : assets) {
 				String name = asset.assetPath;
-				if (name.toLowerCase().startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/")
+				if (name.toLowerCase().startsWith("dwadragonsunity/" + plat + "/" + version + "/")
+						&& !name.substring(("dwadragonsunity/" + plat + "/" + version + "/").length()).contains("/")
 						&& !collected.contains(asset)) {
 					// Add
 					collected.add(asset);
+				}
+			}
+
+			// Check by quality
+			for (String level : qualityLevels) {
+				// Verify existence
+				if (!qualityExists(assets, plat, version, level)) {
+					// Check if another quality level assets exist
+					if (qualityExists(assets, plat, version, "Mid")) {
+						// Override level
+						level = "Mid";
+					} else if (qualityExists(assets, plat, version, "Low")) {
+						// Override level
+						level = "Low";
+					} else if (qualityExists(assets, plat, version, "High")) {
+						// Override level
+						level = "High";
+					}
+				}
+
+				// Add assets
+				for (AssetInformation asset : assets) {
+					String name = asset.assetPath;
+					if (name.toLowerCase()
+							.startsWith("dwadragonsunity/" + plat + "/" + version + "/" + level.toLowerCase() + "/")
+							&& !collected.contains(asset)) {
+						// Add
+						collected.add(asset);
+					}
 				}
 			}
 		}
@@ -230,12 +316,12 @@ public class SodGameDescriptor implements IGameDescriptor {
 		return collected.toArray(t -> new AssetInformation[t]);
 	}
 
-	private boolean qualityExists(AssetInformation[] assets, String version, String level) {
+	private boolean qualityExists(AssetInformation[] assets, String plat, String version, String level) {
 		return Stream.of(assets)
-				.anyMatch(t -> t.assetPath.toLowerCase()
-						.startsWith("dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/data/dragonsres"))
-				|| Stream.of(assets).anyMatch(t -> t.assetPath.toLowerCase().startsWith(
-						"dwadragonsunity/win/" + version + "/" + level.toLowerCase() + "/en-us/data/dragonsres"));
+				.anyMatch(t -> t.assetPath.toLowerCase().startsWith(
+						"dwadragonsunity/" + plat + "/" + version + "/" + level.toLowerCase() + "/data/dragonsres"))
+				|| Stream.of(assets).anyMatch(t -> t.assetPath.toLowerCase().startsWith("dwadragonsunity/" + plat + "/"
+						+ version + "/" + level.toLowerCase() + "/en-us/data/dragonsres"));
 	}
 
 	@Override

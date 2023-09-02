@@ -3,7 +3,9 @@ package org.asf.razorwhip.sentinel.launcher.api;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.zip.ZipOutputStream;
 
 import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
@@ -60,6 +62,27 @@ public interface IGameDescriptor {
 	 */
 	public void downloadClient(String url, String version, File clientOutputDir, ArchiveInformation archive,
 			JsonObject archiveDef, JsonObject descriptorDef, String clientHash) throws IOException;
+
+	/**
+	 * Adds a clean client folder to a archive SGA file (progress bar is already
+	 * visible, use the progress callback to set progress)
+	 * 
+	 * @param output            Output zip
+	 * @param version           Client version
+	 * @param clientEntryPrefix Client path entry prefix string (the client entry
+	 *                          folder is already created)
+	 * @param archiveFile       Archive SGA file
+	 * @param archive           Source archive instance
+	 * @param archiveDef        Source archive definition object
+	 * @param descriptorDef     Source archive descriptor definition object
+	 * @param clientHash        Expected client hash
+	 * @param progressCallback  Progress callback function (first argument is
+	 *                          progress, second argument is max value)
+	 * @throws IOException If adding the client fails
+	 */
+	public void addCleanClientFilesToArchiveFile(ZipOutputStream output, String version, String clientEntryPrefix,
+			File archiveFile, ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientHash, BiConsumer<Integer, Integer> progressCallback) throws IOException;
 
 	/**
 	 * Adds clients to a asset archive folder

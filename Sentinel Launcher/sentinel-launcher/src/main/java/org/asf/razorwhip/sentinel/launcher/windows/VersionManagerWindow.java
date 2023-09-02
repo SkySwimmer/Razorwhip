@@ -25,17 +25,24 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 import java.awt.event.ActionEvent;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -1200,7 +1207,167 @@ public class VersionManagerWindow extends JDialog {
 							LauncherUtils.log("Preparing to export archive...", true);
 							if (selected == 0) {
 								// SGA file
-								// TODO
+
+								// Create output
+								LauncherUtils.log("Preparing output file...");
+								FileOutputStream fO = new FileOutputStream(outputFile);
+								ZipOutputStream zO = new ZipOutputStream(fO);
+								try {
+									// Calculate progress max
+									// Things to do:
+									// - Archive information file
+									// - Add clients
+									// - Add assets
+									// - Add archive descriptor
+									int max = 1;
+									Map<String, AssetInformation> deduped = new LinkedHashMap<String, AssetInformation>();
+									for (AssetInformation asset : assets.values()) {
+										if (!deduped.containsKey(asset.assetHash))
+											deduped.put(asset.assetHash, asset);
+									}
+									int descriptorIndexSize = indexDir(new File("assets/descriptor"));
+									max += versions.size() * 100;
+									max += deduped.size();
+									max += descriptorIndexSize;
+									LauncherUtils.resetProgressBar();
+									LauncherUtils.setProgress(0, max);
+									LauncherUtils.showProgressPanel();
+
+									// Determine platform
+									String plat = null;
+									if (System.getProperty("os.name").toLowerCase().contains("win")
+											&& !System.getProperty("os.name").toLowerCase().contains("darwin")) { // Windows
+										plat = "windows";
+									} else if (System.getProperty("os.name").toLowerCase().contains("darwin")
+											|| System.getProperty("os.name").toLowerCase().contains("mac")) { // MacOS
+										plat = "macos";
+									} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {// Linux
+										plat = "linux";
+									}
+
+									// Copy clients
+									int i = 0;
+									int p = 0;
+									LauncherUtils.log("Adding clients...");
+									LauncherUtils.setStatus(
+											"Archiving... Adding " + i + "/" + versions.size() + " clients...");
+
+									// Add client folder
+									ZipEntry ent = new ZipEntry("clients/");
+									zO.putNextEntry(ent);
+									zO.closeEntry();
+
+									// Add clients
+									for (String version : versions) {
+										LauncherUtils.log("Adding " + version + "...");
+										LauncherUtils.setStatus("Archiving... Adding " + (i + 1) + "/" + versions.size()
+												+ " clients... [0%]");
+
+										// Add client folder
+										ent = new ZipEntry("clients/client-" + version + "/");
+										zO.putNextEntry(ent);
+										zO.closeEntry();
+
+										// Add clients
+										int maxM = max;
+										int in = i;
+										int progStart = LauncherUtils.getProgress();
+										String cHash = archiveDescriptor.get("versionHashes").getAsJsonObject()
+												.get(plat).getAsJsonObject().get(version).getAsString();
+										LauncherUtils.getGameDescriptor().addCleanClientFilesToArchiveFile(zO, version,
+												"clients/client-" + version + "/", outputFile, lastArchive,
+												lastArchive.archiveDef, archiveDescriptor, cHash, (val, mx) -> {
+													// Calculate
+													float step = (100f / (float) mx);
+													LauncherUtils.setProgress(progStart + (int) (step * val), maxM);
+													LauncherUtils.setStatus(
+															"Archiving... Adding " + (in + 1) + "/" + versions.size()
+																	+ " clients... [" + (int) (step * val) + "%]");
+												});
+
+										// Increase
+										i++;
+										p = progStart + 100;
+										LauncherUtils.setProgress(p, max);
+									}
+
+									// Add asset folder
+									ent = new ZipEntry("assets/");
+									zO.putNextEntry(ent);
+									zO.closeEntry();
+
+									// Copy assets
+									i = 0;
+									LauncherUtils.log("Adding asset files...");
+									LauncherUtils.setStatus(
+											"Archiving... Copying " + i + "/" + deduped.size() + " assets... [0%]");
+									for (AssetInformation asset : deduped.values()) {
+										float step = (100f / (float) deduped.size());
+										LauncherUtils.log("Adding " + asset.assetPath + "...");
+										LauncherUtils.setStatus("Archiving... Added " + (i + 1) + "/" + deduped.size()
+												+ " assets... [" + (int) (step * i) + "%]");
+
+										// Copy
+										ent = new ZipEntry("assets/" + asset.assetHash + ".sa");
+										zO.putNextEntry(ent);
+										FileInputStream fIn = new FileInputStream(asset.localAssetFile);
+										fIn.transferTo(zO);
+										fIn.close();
+										zO.closeEntry();
+
+										// Increase
+										i++;
+										p++;
+										LauncherUtils.setProgress(p, max);
+									}
+
+									// Add descriptor folder
+									ent = new ZipEntry("descriptor/");
+									zO.putNextEntry(ent);
+									zO.closeEntry();
+
+									// Copy descriptor
+									i = 0;
+									LauncherUtils.log("Adding descriptor files...");
+									LauncherUtils.setStatus("Archiving... Copying " + i + "/" + descriptorIndexSize
+											+ " descriptor files...");
+									transferDescriptor(new File("assets/descriptor"), zO, "", i, descriptorIndexSize);
+
+									// Create archive information file
+									LauncherUtils.log("Creating archive information file...", true);
+									JsonObject archiveInfoJson = new JsonObject();
+									archiveInfoJson.addProperty("type", lastArchive.descriptorType);
+									archiveInfoJson.addProperty("allowFullDownload", true);
+									archiveInfoJson.addProperty("allowStreaming", true);
+
+									// Create client information
+									JsonObject clientLst = new JsonObject();
+									for (String version : versions) {
+										clientLst.addProperty(version, "clients/client-" + version);
+									}
+									archiveInfoJson.add("clients", clientLst);
+
+									// Write
+									ent = new ZipEntry("archiveinfo.json");
+									zO.putNextEntry(ent);
+									zO.write(new GsonBuilder().setPrettyPrinting().create().toJson(archiveInfoJson)
+											.getBytes("UTF-8"));
+									zO.closeEntry();
+
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
+
+									// Done
+									LauncherUtils.log("Finished! Archive saved to " + outputFile.getPath() + "!", true);
+									JOptionPane.showMessageDialog(VersionManagerWindow.this,
+											"Archive created successfully!\n\nArchive has been saved to '"
+													+ outputFile.getPath() + "'",
+											"Archive created successfully", JOptionPane.INFORMATION_MESSAGE);
+								} finally {
+									zO.close();
+									fO.close();
+								}
 							} else if (selected == 1) {
 								// Server folder
 
@@ -1232,6 +1399,7 @@ public class VersionManagerWindow extends JDialog {
 
 								// Copy clients
 								int i = 0;
+								int p = 0;
 								LauncherUtils.log("Copying clients...");
 								LauncherUtils.setStatus(
 										"Creating archive... Copying " + i + "/" + versions.size() + " clients...");
@@ -1264,13 +1432,10 @@ public class VersionManagerWindow extends JDialog {
 									clientPaths.put(version, pth);
 
 									// Increase
-									LauncherUtils.increaseProgress();
 									i++;
+									p++;
+									LauncherUtils.setProgress(p, max);
 								}
-
-								// Hide bars
-								LauncherUtils.hideProgressPanel();
-								LauncherUtils.resetProgressBar();
 
 								// Copy assets
 								i = 0;
@@ -1289,13 +1454,10 @@ public class VersionManagerWindow extends JDialog {
 											StandardCopyOption.REPLACE_EXISTING);
 
 									// Increase
-									LauncherUtils.increaseProgress();
 									i++;
+									p++;
+									LauncherUtils.setProgress(p, max);
 								}
-
-								// Hide bars
-								LauncherUtils.hideProgressPanel();
-								LauncherUtils.resetProgressBar();
 
 								// Show window
 								LauncherUtils.log("Waiting for user input...", true);
@@ -1333,6 +1495,10 @@ public class VersionManagerWindow extends JDialog {
 									Files.writeString(archiveInfo.toPath(),
 											new GsonBuilder().setPrettyPrinting().create().toJson(archiveInfoJson));
 
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
+
 									// Done
 									LauncherUtils.log("Finished! Archive saved to " + outputFile.getPath() + "!", true);
 									JOptionPane.showMessageDialog(VersionManagerWindow.this,
@@ -1349,10 +1515,11 @@ public class VersionManagerWindow extends JDialog {
 									ArchiveDefSnippetViewer viewer = new ArchiveDefSnippetViewer();
 									viewer.show(VersionManagerWindow.this,
 											new GsonBuilder().setPrettyPrinting().create().toJson(entry));
+								} else {
+									// Hide bars
+									LauncherUtils.hideProgressPanel();
+									LauncherUtils.resetProgressBar();
 								}
-
-								// Increase
-								LauncherUtils.increaseProgress();
 							}
 
 							// Done
@@ -1718,6 +1885,42 @@ public class VersionManagerWindow extends JDialog {
 		}
 	}
 
+	private int transferDescriptor(File dir, ZipOutputStream zO, String prefix, int index, int max) throws IOException {
+		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
+			ZipEntry ent = new ZipEntry("descriptor/" + prefix + subDir.getName() + "/");
+			zO.putNextEntry(ent);
+			zO.closeEntry();
+			index += transferDescriptor(subDir, zO, prefix + subDir.getName() + "/", index, max);
+			index++;
+			LauncherUtils.setStatus("Archiving... Copying " + index + "/" + max + " descriptor files...");
+			LauncherUtils.increaseProgress();
+		}
+		for (File f : dir.listFiles(t -> t.isFile())) {
+			ZipEntry ent = new ZipEntry("descriptor/" + prefix + f.getName());
+			zO.putNextEntry(ent);
+			FileInputStream fIn = new FileInputStream(f);
+			fIn.transferTo(zO);
+			fIn.close();
+			zO.closeEntry();
+			index++;
+			LauncherUtils.setStatus("Archiving... Copying " + index + "/" + max + " descriptor files...");
+			LauncherUtils.increaseProgress();
+		}
+		return index;
+	}
+
+	private static int indexDir(File dir) {
+		int i = 0;
+		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
+			i += indexDir(subDir) + 1;
+		}
+		File[] listFiles = dir.listFiles(t -> !t.isDirectory());
+		for (int j = 0; j < listFiles.length; j++) {
+			i++;
+		}
+		return i;
+	}
+
 	private boolean updateDescriptorIfNeeded(boolean chBoxWasEnabled, boolean wasEnabledRemove) throws Exception {
 		// Update descriptor
 		if (updateDescriptor) {
@@ -1931,6 +2134,15 @@ public class VersionManagerWindow extends JDialog {
 				LauncherUtils.resetProgressBar();
 				updateDescriptor = false;
 			} else {
+				// Check source
+				if (!new File(lastArchive.source).exists()) {
+					// Hide bars
+					LauncherUtils.hideProgressPanel();
+					LauncherUtils.resetProgressBar();
+					updateDescriptor = false;
+					return true;
+				}
+
 				// Re-extract descriptor
 				LauncherUtils.log("Re-extracting archive descriptor...", true);
 				SwingUtilities.invokeAndWait(() -> {
@@ -1940,49 +2152,91 @@ public class VersionManagerWindow extends JDialog {
 					}
 				});
 
-				// TODO: support
+				// Count entries
+				ZipFile archive = new ZipFile(lastArchive.source);
+				int count = 0;
+				Enumeration<? extends ZipEntry> en = archive.entries();
+				while (en.hasMoreElements()) {
+					ZipEntry ent = en.nextElement();
+					if (ent == null)
+						break;
+					if (!ent.getName().equals("descriptor/") && ent.getName().startsWith("descriptor/"))
+						count++;
+				}
+				archive.close();
+				downloadFinished = false;
+				Thread th2 = new Thread(() -> {
+					String lastMsg = "";
+					while (!downloadFinished) {
+						try {
+							int percentage = (int) ((100f / (float) (LauncherUtils.getProgressMax()))
+									* (float) LauncherUtils.getProgress());
+							if (!lastMsg.equals(
+									"Re-extracting archive descriptor... Please wait... [" + percentage + "%]")) {
+								lastMsg = "Re-extracting archive descriptor... Please wait... [" + percentage + "%]";
+								SwingUtilities.invokeAndWait(() -> {
+									if (!downloadFinished) {
+										lblThanks.setText("Re-extracting archive descriptor... Please wait... ["
+												+ percentage + "%]");
+									}
+								});
+							}
+							Thread.sleep(100);
+						} catch (InvocationTargetException | InterruptedException e1) {
+							break;
+						}
+					}
+				});
+				th2.setDaemon(true);
+				th2.start();
+				LauncherUtils.resetProgressBar();
+				LauncherUtils.showProgressPanel();
+				LauncherUtils.setProgressMax(count);
+
+				// Extract
+				if (new File("assets/descriptor").exists())
+					LauncherUtils.deleteDir(new File("assets/descriptor"));
+				new File("assets/descriptor").mkdirs();
+
+				// Prepare and set max
+				archive = new ZipFile(lastArchive.source);
+				en = archive.entries();
+				int max = count;
+
+				// Extract zip
+				int i = 0;
+				while (en.hasMoreElements()) {
+					ZipEntry ent = en.nextElement();
+					if (ent == null)
+						break;
+					if (ent.getName().equals("descriptor/") || !ent.getName().startsWith("descriptor/"))
+						continue;
+
+					if (ent.isDirectory()) {
+						new File("assets/descriptor", ent.getName()).mkdirs();
+					} else {
+						FileOutputStream output = new FileOutputStream(new File("assets/descriptor", ent.getName()));
+						InputStream is = archive.getInputStream(ent);
+						is.transferTo(output);
+						is.close();
+						output.close();
+					}
+
+					LauncherUtils.setProgress(i++, max);
+				}
+				LauncherUtils.setProgress(max, max);
+				downloadFinished = true;
+				archive.close();
+
+				// Write fake hash
+				Files.writeString(Path.of("assets/descriptor.hash"),
+						"local-" + LauncherUtils.sha512Hash((new File(lastArchive.source).lastModified() + "-"
+								+ lastArchive.source + "-" + new File(lastArchive.source).length()).getBytes("UTF-8")));
 
 				// Hide bars
 				LauncherUtils.hideProgressPanel();
 				LauncherUtils.resetProgressBar();
-
-				// Show error
-				LauncherUtils.log("Presently unsupported!");
-				JOptionPane.showMessageDialog(VersionManagerWindow.this,
-						"Failed to extract asset archive descriptor data as the system has not been implemented yet",
-						"Load error", JOptionPane.ERROR_MESSAGE);
-
-				// Re-enable
-				SwingUtilities.invokeLater(() -> {
-					btnOk.setEnabled(true);
-					btnCancel.setEnabled(true);
-					archiveSelector.setEnabled(true);
-					btnAdd.setEnabled(true);
-					checkBoxDownload.setEnabled(chBoxWasEnabled);
-					qualityLevelBox.setEnabled(true);
-					clientListBox.setEnabled(true);
-					btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
-							&& lastArchive.supportsDownloads);
-					btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
-					btnDelete.setEnabled(true);
-					btnDelete.setEnabled(true);
-					btnImport.setEnabled(true);
-					btnRemove.setEnabled(wasEnabledRemove);
-					btnOk.setText("Ok");
-					lblThanks.setVisible(lastArchive != null && lastArchive.archiveDef.has("thanksTo"));
-					if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
-						lblThanks.setText(
-								"Assets kindly mirrored by " + lastArchive.archiveDef.get("thanksTo").getAsString());
-				});
-				return false;
-
-//				// Write hash
-//				Files.writeString(Path.of("assets/descriptor.hash"), rHashDescriptor);
-
-//				// Hide bars
-//				LauncherUtils.hideProgressPanel();
-//				LauncherUtils.resetProgressBar();
-//				updateDescriptor = false;
+				updateDescriptor = false;
 			}
 		}
 		return true;

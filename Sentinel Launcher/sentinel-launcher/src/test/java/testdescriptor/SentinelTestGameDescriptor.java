@@ -3,7 +3,9 @@ package testdescriptor;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.zip.ZipOutputStream;
 
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
@@ -52,6 +54,14 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 			Map<String, String> assetHashes) {
 		// TODO Auto-generated method stub
 		return new AssetInformation[0];
+	}
+
+	@Override
+	public void addCleanClientFilesToArchiveFile(ZipOutputStream output, String version, String clientEntryPrefix,
+			File archiveFile, ArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
+			String clientHash, BiConsumer<Integer, Integer> progressCallback) throws IOException {
+		// TODO Auto-generated method stub
+
 	}
 
 	@Override
