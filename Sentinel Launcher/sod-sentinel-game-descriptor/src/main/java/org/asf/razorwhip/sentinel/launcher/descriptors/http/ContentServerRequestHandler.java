@@ -262,6 +262,19 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 				// Check
 				if (path.substring(1).contains("/"))
 					path = "/DWADragonsUnity" + path;
+			} else if (path.toLowerCase().startsWith("/sentinel/") || path.toLowerCase().equals("/sentinel")) {
+				// Get subpath
+				path = sanitizePath(path.substring("/sentinel".length()));
+
+				// Make sure its not attempting to access a resource outside of the scope
+				if (path.startsWith("..") || path.endsWith("..") || path.contains("/..") || path.contains("../")) {
+					setResponseStatus(403, "Forbidden");
+					return;
+				}
+
+				// Check
+				if (path.substring(1).contains("/"))
+					path = "/DWADragonsUnity" + path;
 			} else if (path.toLowerCase().startsWith("/sentinelproxy.com/")
 					|| path.toLowerCase().equals("/sentinelproxy.com")) {
 				// Get subpath
@@ -816,7 +829,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 					// Pull file
 					URL u = new URL(url);
 					URLConnection conn = u.openConnection();
-					fileData = new ContentDownloaderStream(conn);
+					fileData = conn.getInputStream();
 					length = conn.getContentLengthLong();
 				} catch (Exception e) {
 					setResponseStatus(404, "Not found");

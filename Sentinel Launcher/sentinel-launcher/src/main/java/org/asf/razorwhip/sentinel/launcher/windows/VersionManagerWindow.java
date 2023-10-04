@@ -1593,7 +1593,61 @@ public class VersionManagerWindow extends JDialog {
 		});
 		btnImport.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				// Import
+
+				// Show selection
+				int selected = JOptionPane.showOptionDialog(VersionManagerWindow.this,
+						"Welcome to the archive import tool!\nHere you can add local and unofficial archives to Sentinel.\n\nPlease select a operation...\n ",
+						"Archive Exporter", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null,
+						new Object[] { "Import SGA file", "Add fan-run remote server", "Cancel" }, "Cancel");
+
+				// Check cancel
+				if (selected == 2 || selected == -1)
+					return;
+
+				// Disable
+				boolean wasEnabledRemove = btnRemove.isEnabled();
+				btnOk.setEnabled(false);
+				qualityLevelBox.setEnabled(false);
+				btnCancel.setEnabled(false);
+				archiveSelector.setEnabled(false);
+				btnAdd.setEnabled(false);
+				boolean chBoxWasEnabled = checkBoxDownload.isEnabled();
+				checkBoxDownload.setEnabled(false);
+				clientListBox.setEnabled(false);
+				btnExport.setEnabled(false);
+				btnImport.setEnabled(false);
+				btnRemove.setEnabled(false);
+				btnDelete.setEnabled(false);
+
+				// Set text
+				btnOk.setText("Busy...");
+
+				// Handle option
 				// TODO
+
+				// Re-enable
+				SwingUtilities.invokeLater(() -> {
+					btnOk.setEnabled(true);
+					btnCancel.setEnabled(true);
+					archiveSelector.setEnabled(true);
+					btnAdd.setEnabled(true);
+					checkBoxDownload.setEnabled(chBoxWasEnabled);
+					btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+					btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+							&& lastArchive.supportsDownloads);
+					btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+					btnDelete.setEnabled(true);
+					btnImport.setEnabled(true);
+					qualityLevelBox.setEnabled(true);
+					clientListBox.setEnabled(true);
+					btnRemove.setEnabled(wasEnabledRemove);
+					btnOk.setText("Ok");
+					lblThanks.setVisible(lastArchive != null);
+					if (lastArchive != null)
+						lblThanks.setText(
+								"Assets kindly mirrored by " + lastArchive.archiveDef.get("thanksTo").getAsString());
+				});
 			}
 		});
 		btnDelete.addActionListener(new ActionListener() {

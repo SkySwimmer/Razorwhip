@@ -95,6 +95,10 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 		manifest = manifest.replace(oldEndpoints.messagingServiceEndpoint, endpoints.messagingServiceEndpoint);
 		manifest = manifest.replace(oldEndpoints.userServiceEndpoint, endpoints.userServiceEndpoint);
 
+		// Redirect telemetry to prevent issues with 1.x
+		manifest = manifest.replace("http://alyx.jumpstart.com/", endpoints.commonServiceEndpoint);
+		manifest = manifest.replace("https://alyx.jumpstart.com/", endpoints.commonServiceEndpoint);
+
 		// Modify sfs hosts
 		JsonObject sfsHosts = descriptorDef.get("manifestSmartfoxEndpoints").getAsJsonObject();
 		for (String sfsH : sfsHosts.keySet()) {

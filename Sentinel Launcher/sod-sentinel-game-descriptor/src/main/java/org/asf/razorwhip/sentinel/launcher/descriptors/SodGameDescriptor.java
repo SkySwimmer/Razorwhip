@@ -7,13 +7,11 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -211,7 +209,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
 		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "localhost:5326/DWADragonsUnity/");
+		replaceData(resourcesData, endpoint, "http://localhost:5326/sentinel/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 
 		// Check version
@@ -454,8 +452,8 @@ public class SodGameDescriptor implements IGameDescriptor {
 	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
 			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
 			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
-		prepareLaunch(assetArchiveURL, null, null, assetModifications, archive, archiveDef, descriptorDef,
-				clientVersion, clientDir, successCallback, errorCallback);
+		prepareLaunch(assetArchiveURL, null, archive.getAllAssets(), assetModifications, archive, archiveDef,
+				descriptorDef, clientVersion, clientDir, successCallback, errorCallback);
 	}
 
 	@Override
@@ -650,15 +648,6 @@ public class SodGameDescriptor implements IGameDescriptor {
 		successCallback.run();
 	}
 
-	private byte[] reverse(byte[] data) {
-		int ind = 0;
-		byte[] iRev = new byte[data.length];
-		for (int i = data.length - 1; i >= 0; i--) {
-			iRev[ind++] = data[i];
-		}
-		return iRev;
-	}
-
 	private void replaceData(byte[] assetsData, String source, String target) throws UnsupportedEncodingException {
 		// Locate byte offset
 		while (true) {
@@ -666,10 +655,9 @@ public class SodGameDescriptor implements IGameDescriptor {
 			if (offset == -1)
 				break;
 
-			// Overwrite the data
-			int length = ByteBuffer.wrap(reverse(Arrays.copyOfRange(assetsData, offset - 4, offset))).getInt();
+			// Overwrite the data;
 			byte[] addr = target.getBytes(StandardCharsets.UTF_8);
-			for (int i = offset; i < offset + length && i < assetsData.length; i++)
+			for (int i = offset; i < offset + source.length() && i < assetsData.length; i++)
 				if (i - offset >= addr.length)
 					assetsData[i] = 0;
 				else
