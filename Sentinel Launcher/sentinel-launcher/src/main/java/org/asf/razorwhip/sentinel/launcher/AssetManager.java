@@ -641,6 +641,8 @@ public class AssetManager {
 					LauncherUtils.log("Modifying client " + clientVersion + "...", true);
 					LauncherUtils.gameDescriptor.modifyClient(clientFolder, clientVersion, activeArchive,
 							activeArchive.archiveDef, activeArchive.descriptorDef);
+					LauncherUtils.hideProgressPanel();
+					LauncherUtils.resetProgressBar();
 
 					// Re-extract descriptor
 					if (!new File("tmp-sgdextract").exists()) {
