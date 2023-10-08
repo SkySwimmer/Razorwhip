@@ -1,6 +1,7 @@
 package org.asf.razorwhip.sentinel.launcher;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -12,10 +13,14 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -627,14 +632,62 @@ public class AssetManager {
 								throw new IOException("Source file does not exist");
 							LauncherUtils.log("Skipped client update as the source file is missing.");
 							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
-									"Failed to copy client data from asset source file!\n\nPlease make sure the following file exists: "
-											+ activeArchive.source,
-									"Client source file missing", JOptionPane.ERROR_MESSAGE);
+									"Failed to copy client data from asset source file!\n\nThe archive SGA file is not presently on disk!\n"
+											+ "File path: " + activeArchive.source,
+									"Archive file missing", JOptionPane.ERROR_MESSAGE);
 							System.exit(1);
 						}
 
-						// Extract client
-						// TODO: local asset support
+						// Prepare extract
+						String clientEntry = activeArchive.archiveClientLst.get(clientVersion).getAsString() + "/";
+						LauncherUtils.log("Extracting " + clientVersion + " client...", true);
+						clientFolder.mkdirs();
+
+						// Count entries
+						ZipFile zip = new ZipFile(activeArchive.source);
+						int count = 0;
+						Enumeration<? extends ZipEntry> en = zip.entries();
+						while (en.hasMoreElements()) {
+							ZipEntry ent = en.nextElement();
+							if (ent == null)
+								break;
+							if (!ent.getName().equals(clientEntry) && ent.getName().startsWith(clientEntry))
+								count++;
+						}
+						zip.close();
+						LauncherUtils.resetProgressBar();
+						LauncherUtils.showProgressPanel();
+						LauncherUtils.setProgressMax(count);
+
+						// Prepare and set max
+						zip = new ZipFile(activeArchive.source);
+						en = zip.entries();
+						int max = count;
+
+						// Extract zip
+						int i = 0;
+						while (en.hasMoreElements()) {
+							ZipEntry ent = en.nextElement();
+							if (ent == null)
+								break;
+							if (ent.getName().equals(clientEntry) || !ent.getName().startsWith(clientEntry))
+								continue;
+
+							if (ent.isDirectory()) {
+								new File(clientFolder, ent.getName().substring(clientEntry.length())).mkdirs();
+							} else {
+								FileOutputStream output = new FileOutputStream(
+										new File(clientFolder, ent.getName().substring(clientEntry.length())));
+								InputStream is = zip.getInputStream(ent);
+								is.transferTo(output);
+								is.close();
+								output.close();
+							}
+
+							LauncherUtils.setProgress(i++, max);
+						}
+						LauncherUtils.setProgress(max, max);
+						zip.close();
 					}
 
 					// Modify client
@@ -799,9 +852,53 @@ public class AssetManager {
 						System.exit(1);
 					}
 
-					// Copy
+					// Prepare
 					LauncherUtils.log("Extracting client assets...", true);
-					// TODO: local asset support
+					ZipFile zip = new ZipFile(activeArchive.source);
+					AssetInformation[] assetsNeedingUpdates = assetsNeedingDownloads.values()
+							.toArray(t -> new AssetInformation[t]);
+					LauncherUtils.setProgress(0, assetsNeedingUpdates.length);
+					LauncherUtils.showProgressPanel();
+
+					// Download
+					int i = 0;
+					for (AssetInformation asset : assetsNeedingUpdates) {
+						// Log
+						LauncherUtils.log("Extracting asset: " + asset);
+						LauncherUtils
+								.setStatus("Extracting " + (i + 1) + "/" + assetsNeedingUpdates.length + " assets...");
+
+						// Prepare output
+						File assetF = new File(asset.localAssetFile.getPath() + ".tmp");
+						assetF.getParentFile().mkdirs();
+
+						// Download
+						InputStream data = zip.getInputStream(zip.getEntry("assets/" + asset.assetHash + ".sa"));
+						FileOutputStream out = new FileOutputStream(assetF);
+						data.transferTo(out);
+						data.close();
+						out.close();
+
+						// Verify hash
+						String rHash = asset.assetHash;
+						String cHash = LauncherUtils.sha512Hash(Files.readAllBytes(assetF.toPath()));
+						if (!rHash.equals(cHash)) {
+							// Failed
+							assetF.delete();
+							throw new IOException("Integrity check failure");
+						}
+
+						// Save
+						assetF.renameTo(asset.localAssetFile);
+
+						// Increase
+						LauncherUtils.increaseProgress();
+						i++;
+					}
+
+					// Done
+					LauncherUtils.setProgress(LauncherUtils.getProgressMax());
+					zip.close();
 				}
 			}
 		}
@@ -1043,6 +1140,7 @@ public class AssetManager {
 		info.archiveID = archiveID;
 		info.archiveDef = archiveDef;
 		info.archiveName = archiveDef.get("archiveName").getAsString();
+		info.descriptorType = archiveDef.get("type").getAsString();
 
 		// Check if its a user-created archive
 		File localArchivesFile = new File("assets/userarchives.json");
@@ -1056,24 +1154,36 @@ public class AssetManager {
 				info.isUserArchive = true;
 		}
 
-		// Load settings
-		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
-		info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
-		info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
-
-		// Load deprecation status
-		if (archiveDef.has("deprecated")) {
-			info.isDeprecated = archiveDef.get("deprecated").getAsBoolean();
-			if (info.isDeprecated && archiveDef.has("deprecationNotice"))
-				info.deprecationNotice = archiveDef.get("deprecationNotice").getAsString();
-			else
-				info.isDeprecated = false;
-		}
-
 		// Load source and mode
-		info.source = archiveDef.get("url").getAsString();
 		info.mode = ArchiveMode.REMOTE;
-		// TODO: support for file-based archives
+		if (archiveDef.has("isSgaFile") && archiveDef.get("isSgaFile").getAsBoolean()) {
+			info.mode = ArchiveMode.LOCAL;
+
+			// Load settings
+			info.source = archiveDef.get("filePath").getAsString();
+			info.supportsDownloads = true;
+			info.supportsStreaming = false;
+
+			// Load clients
+			info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
+		} else {
+			// Load URL
+			info.source = archiveDef.get("url").getAsString();
+
+			// Load settings
+			info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
+			info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
+			info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
+
+			// Load deprecation status
+			if (archiveDef.has("deprecated")) {
+				info.isDeprecated = archiveDef.get("deprecated").getAsBoolean();
+				if (info.isDeprecated && archiveDef.has("deprecationNotice"))
+					info.deprecationNotice = archiveDef.get("deprecationNotice").getAsString();
+				else
+					info.isDeprecated = false;
+			}
+		}
 
 		// Test connection
 		info.connectionAvailable = testArchiveConnection(info);
@@ -1081,9 +1191,10 @@ public class AssetManager {
 		// Store current settings
 		if (info.supportsStreaming && !info.isDeprecated)
 			info.streamingModeEnabled = streamingAssets;
+		else if (!info.supportsStreaming)
+			info.streamingModeEnabled = false;
 
 		// Prepare to load archive descriptor
-		info.descriptorType = archiveDef.get("type").getAsString();
 		if (info.mode == ArchiveMode.REMOTE) {
 			// Remote
 			LauncherUtils.log("Checking for archive updates...", true);
@@ -1092,7 +1203,10 @@ public class AssetManager {
 			updateArchiveDescriptor(assetConnection, info);
 		} else {
 			// Local
-			// TODO: re-extract descriptor if updated
+			LauncherUtils.log("Checking for archive updates...", true);
+			LauncherUtils.log("Verifying connection...");
+			boolean assetConnection = info.connectionAvailable;
+			updateLocalArchiveDescriptor(assetConnection, info);
 		}
 
 		// Load archive assets
@@ -1135,28 +1249,38 @@ public class AssetManager {
 		info.archiveName = archiveDef.get("archiveName").getAsString();
 		if (userArchives != null)
 			info.isUserArchive = userArchives.has(info.archiveID);
-
-		// Load settings
-		info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
-		info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
-		info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
-
-		// Load descriptor
 		info.descriptorType = archiveDef.get("type").getAsString();
 
-		// Load deprecation status
-		if (archiveDef.has("deprecated")) {
-			info.isDeprecated = archiveDef.get("deprecated").getAsBoolean();
-			if (info.isDeprecated && archiveDef.has("deprecationNotice"))
-				info.deprecationNotice = archiveDef.get("deprecationNotice").getAsString();
-			else
-				info.isDeprecated = false;
-		}
-
 		// Load source and mode
-		info.source = archiveDef.get("url").getAsString();
 		info.mode = ArchiveMode.REMOTE;
-		// TODO: support for file-based archives
+		if (archiveDef.has("isSgaFile") && archiveDef.get("isSgaFile").getAsBoolean()) {
+			info.mode = ArchiveMode.LOCAL;
+
+			// Load settings
+			info.source = archiveDef.get("filePath").getAsString();
+			info.supportsDownloads = true;
+			info.supportsStreaming = false;
+
+			// Load clients
+			info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
+		} else {
+			// Load URL
+			info.source = archiveDef.get("url").getAsString();
+
+			// Load settings
+			info.supportsDownloads = archiveDef.get("allowFullDownload").getAsBoolean();
+			info.supportsStreaming = archiveDef.get("allowStreaming").getAsBoolean();
+			info.archiveClientLst = archiveDef.get("clients").getAsJsonObject();
+
+			// Load deprecation status
+			if (archiveDef.has("deprecated")) {
+				info.isDeprecated = archiveDef.get("deprecated").getAsBoolean();
+				if (info.isDeprecated && archiveDef.has("deprecationNotice"))
+					info.deprecationNotice = archiveDef.get("deprecationNotice").getAsString();
+				else
+					info.isDeprecated = false;
+			}
+		}
 
 		// Test connection
 		info.connectionAvailable = testArchiveConnection(info);
@@ -1229,8 +1353,10 @@ public class AssetManager {
 		boolean res = true;
 		if (info.mode == ArchiveMode.REMOTE)
 			res = LauncherUtils.gameDescriptor.verifyAssetConnection(info.source);
+		else
+			res = new File(info.source).exists();
 		info.connectionAvailable = res;
-		return res; // TODO: local file-based archives
+		return res;
 	}
 
 	private static void loadClientList() throws JsonSyntaxException, IOException {
@@ -1307,6 +1433,83 @@ public class AssetManager {
 						"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
 						"No connection to server", JOptionPane.ERROR_MESSAGE);
 				System.exit(1);
+			}
+		}
+
+		// Hide bars
+		LauncherUtils.hideProgressPanel();
+		LauncherUtils.resetProgressBar();
+	}
+
+	private static void updateLocalArchiveDescriptor(boolean assetConnection, ArchiveInformation archive)
+			throws IOException {
+		// Check hash
+		String cHashDescriptor = "";
+		if (!new File("descriptor-local.version").exists()) {
+			if (assetConnection) {
+				// Re-extract descriptor
+				LauncherUtils.log("Re-extracting archive descriptor...", true);
+
+				// Count entries
+				ZipFile zip = new ZipFile(archive.source);
+				int count = 0;
+				Enumeration<? extends ZipEntry> en = zip.entries();
+				while (en.hasMoreElements()) {
+					ZipEntry ent = en.nextElement();
+					if (ent == null)
+						break;
+					if (!ent.getName().equals("descriptor/") && ent.getName().startsWith("descriptor/"))
+						count++;
+				}
+				zip.close();
+				LauncherUtils.resetProgressBar();
+				LauncherUtils.showProgressPanel();
+				LauncherUtils.setProgressMax(count);
+
+				// Extract
+				if (new File("assets/descriptor").exists())
+					LauncherUtils.deleteDir(new File("assets/descriptor"));
+				new File("assets/descriptor").mkdirs();
+
+				// Prepare and set max
+				zip = new ZipFile(archive.source);
+				en = zip.entries();
+				int max = count;
+
+				// Extract zip
+				int i = 0;
+				while (en.hasMoreElements()) {
+					ZipEntry ent = en.nextElement();
+					if (ent == null)
+						break;
+					if (ent.getName().equals("descriptor/") || !ent.getName().startsWith("descriptor/"))
+						continue;
+
+					if (ent.isDirectory()) {
+						new File("assets/descriptor", ent.getName().substring("descriptor/".length())).mkdirs();
+					} else {
+						FileOutputStream output = new FileOutputStream(
+								new File("assets/descriptor", ent.getName().substring("descriptor/".length())));
+						InputStream is = zip.getInputStream(ent);
+						is.transferTo(output);
+						is.close();
+						output.close();
+					}
+
+					LauncherUtils.setProgress(i++, max);
+				}
+				LauncherUtils.setProgress(max, max);
+				zip.close();
+			} else {
+				// Skip
+				LauncherUtils.log("Skipped archive descriptor update check as the source file doesnt exist.");
+				if (cHashDescriptor.equals("")) {
+					JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
+							"Could not extract the archive descriptor!\n\nThe archive SGA file is not presently on disk!\n"
+									+ "File path: " + archive.source,
+							"Archive file missing", JOptionPane.ERROR_MESSAGE);
+					System.exit(1);
+				}
 			}
 		}
 
@@ -1421,6 +1624,41 @@ public class AssetManager {
 			// Save
 			Files.writeString(localArchivesFile.toPath(), localArchives.toString());
 		}
+	}
+
+	/**
+	 * Adds user archives
+	 * 
+	 * @param archiveDef Archive definition to add
+	 * @return ArchiveInformation instance
+	 * @throws IOException If adding the archive fails
+	 */
+	public static ArchiveInformation addUserArchive(JsonObject archiveDef) throws IOException {
+		// Generate ID
+		String archiveID = "user-" + UUID.randomUUID();
+		while (archiveList.containsKey(archiveID)) {
+			archiveID = "user-" + UUID.randomUUID();
+		}
+
+		// Load list from disk
+		JsonObject localArchives = new JsonObject();
+		File localArchivesFile = new File("assets/userarchives.json");
+		if (localArchivesFile.exists()) {
+			// Load
+			localArchives = JsonParser.parseString(Files.readString(localArchivesFile.toPath())).getAsJsonObject();
+		}
+
+		// Remove archive
+		localArchives.add(archiveID, archiveDef);
+
+		// Save
+		Files.writeString(localArchivesFile.toPath(), localArchives.toString());
+
+		// Add to list
+		JsonObject archiveLst = loadArchiveList();
+		ArchiveInformation archive = loadArchive(archiveID, archiveLst, localArchives);
+		archiveList.put(archiveID, archive);
+		return archive;
 	}
 
 }

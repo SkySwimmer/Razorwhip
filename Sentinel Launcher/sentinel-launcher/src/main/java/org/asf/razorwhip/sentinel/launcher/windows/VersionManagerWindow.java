@@ -165,6 +165,7 @@ public class VersionManagerWindow extends JDialog {
 			checkBoxDownload.setSelected(!streaming);
 		} else if (AssetManager.getArchives().length > 0) {
 			lastArchive = AssetManager.getArchives()[0];
+			checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 			checkBoxDownload.setEnabled(
 					!lastArchive.isDeprecated && lastArchive.supportsDownloads && lastArchive.supportsStreaming);
 			checkBoxDownload.setSelected(!lastArchive.supportsStreaming);
@@ -455,6 +456,7 @@ public class VersionManagerWindow extends JDialog {
 								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 							}
 							lastArchive = eA;
+							checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 							btnExport
 									.setText(lastArchive == null || lastArchive.mode == ArchiveMode.REMOTE ? "Export..."
 											: "Delete");
@@ -530,7 +532,8 @@ public class VersionManagerWindow extends JDialog {
 							LauncherUtils.log("Collecting game clients...");
 							ArrayList<String> versions = new ArrayList<String>();
 							for (ClientEntry client : clients) {
-								versions.add(client.version);
+								if (lastArchive.archiveClientLst.has(client.version))
+									versions.add(client.version);
 							}
 
 							// Collect assets
@@ -638,6 +641,7 @@ public class VersionManagerWindow extends JDialog {
 										btnCancel.setEnabled(true);
 										archiveSelector.setEnabled(true);
 										btnAdd.setEnabled(true);
+										checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 										checkBoxDownload.setEnabled(chBoxWasEnabled);
 										btnExport.setEnabled(
 												lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
@@ -650,7 +654,8 @@ public class VersionManagerWindow extends JDialog {
 										btnRemove.setEnabled(wasEnabledRemove);
 										btnOk.setText("Ok");
 										lblThanks.setVisible(lastArchive != null);
-										if (lastArchive != null)
+										lblThanks.setText("");
+										if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 											lblThanks.setText("Assets kindly mirrored by "
 													+ lastArchive.archiveDef.get("thanksTo").getAsString());
 									});
@@ -666,6 +671,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								archiveSelector.setEnabled(true);
 								btnAdd.setEnabled(true);
+								checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
 										&& lastArchive.supportsDownloads);
@@ -677,7 +683,8 @@ public class VersionManagerWindow extends JDialog {
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
 								lblThanks.setVisible(lastArchive != null);
-								if (lastArchive != null)
+								lblThanks.setText("");
+								if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 									lblThanks.setText("Assets kindly mirrored by "
 											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 								doSave();
@@ -704,6 +711,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								archiveSelector.setEnabled(true);
 								btnAdd.setEnabled(true);
+								checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
 										&& lastArchive.supportsDownloads);
@@ -715,7 +723,8 @@ public class VersionManagerWindow extends JDialog {
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
 								lblThanks.setVisible(lastArchive != null);
-								if (lastArchive != null)
+								lblThanks.setText("");
+								if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 									lblThanks.setText("Assets kindly mirrored by "
 											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 							});
@@ -729,6 +738,8 @@ public class VersionManagerWindow extends JDialog {
 				// Make sure descriptor gets re-downloaded
 				if (new File("assets/descriptor.hash").exists())
 					new File("assets/descriptor.hash").delete();
+				if (new File("assets/descriptor-local.version").exists())
+					new File("assets/descriptor-local.version").delete();
 
 				// Close
 				doSave();
@@ -859,7 +870,8 @@ public class VersionManagerWindow extends JDialog {
 							LauncherUtils.log("Collecting game clients...");
 							ArrayList<String> versions = new ArrayList<String>();
 							for (ClientEntry client : clients) {
-								versions.add(client.version);
+								if (lastArchive.archiveClientLst.has(client.version))
+									versions.add(client.version);
 							}
 
 							// Collect assets
@@ -976,6 +988,7 @@ public class VersionManagerWindow extends JDialog {
 										btnCancel.setEnabled(true);
 										archiveSelector.setEnabled(true);
 										btnAdd.setEnabled(true);
+										checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 										checkBoxDownload.setEnabled(chBoxWasEnabled);
 										btnExport.setEnabled(
 												lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
@@ -988,7 +1001,8 @@ public class VersionManagerWindow extends JDialog {
 										btnRemove.setEnabled(wasEnabledRemove);
 										btnOk.setText("Ok");
 										lblThanks.setVisible(lastArchive != null);
-										if (lastArchive != null)
+										lblThanks.setText("");
+										if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 											lblThanks.setText("Assets kindly mirrored by "
 													+ lastArchive.archiveDef.get("thanksTo").getAsString());
 									});
@@ -1060,6 +1074,7 @@ public class VersionManagerWindow extends JDialog {
 									btnCancel.setEnabled(true);
 									archiveSelector.setEnabled(true);
 									btnAdd.setEnabled(true);
+									checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 									checkBoxDownload.setEnabled(chBoxWasEnabled);
 									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
 											&& lastArchive.supportsDownloads);
@@ -1071,7 +1086,8 @@ public class VersionManagerWindow extends JDialog {
 									btnRemove.setEnabled(wasEnabledRemove);
 									btnOk.setText("Ok");
 									lblThanks.setVisible(lastArchive != null);
-									if (lastArchive != null)
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 										lblThanks.setText("Assets kindly mirrored by "
 												+ lastArchive.archiveDef.get("thanksTo").getAsString());
 								});
@@ -1137,6 +1153,7 @@ public class VersionManagerWindow extends JDialog {
 									btnCancel.setEnabled(true);
 									archiveSelector.setEnabled(true);
 									btnAdd.setEnabled(true);
+									checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 									checkBoxDownload.setEnabled(chBoxWasEnabled);
 									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
 											&& lastArchive.supportsDownloads);
@@ -1148,7 +1165,8 @@ public class VersionManagerWindow extends JDialog {
 									btnRemove.setEnabled(wasEnabledRemove);
 									btnOk.setText("Ok");
 									lblThanks.setVisible(lastArchive != null);
-									if (lastArchive != null)
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 										lblThanks.setText("Assets kindly mirrored by "
 												+ lastArchive.archiveDef.get("thanksTo").getAsString());
 								});
@@ -1173,6 +1191,7 @@ public class VersionManagerWindow extends JDialog {
 										btnCancel.setEnabled(true);
 										archiveSelector.setEnabled(true);
 										btnAdd.setEnabled(true);
+										checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 										checkBoxDownload.setEnabled(chBoxWasEnabled);
 										btnExport.setEnabled(
 												lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
@@ -1185,7 +1204,8 @@ public class VersionManagerWindow extends JDialog {
 										btnRemove.setEnabled(wasEnabledRemove);
 										btnOk.setText("Ok");
 										lblThanks.setVisible(lastArchive != null);
-										if (lastArchive != null)
+										lblThanks.setText("");
+										if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 											lblThanks.setText("Assets kindly mirrored by "
 													+ lastArchive.archiveDef.get("thanksTo").getAsString());
 									});
@@ -1337,8 +1357,6 @@ public class VersionManagerWindow extends JDialog {
 									LauncherUtils.log("Creating archive information file...", true);
 									JsonObject archiveInfoJson = new JsonObject();
 									archiveInfoJson.addProperty("type", lastArchive.descriptorType);
-									archiveInfoJson.addProperty("allowFullDownload", true);
-									archiveInfoJson.addProperty("allowStreaming", true);
 
 									// Create client information
 									JsonObject clientLst = new JsonObject();
@@ -1477,17 +1495,16 @@ public class VersionManagerWindow extends JDialog {
 									archiveInfoJson.addProperty("archiveName", res.archiveName);
 									if (res.creditsField != null)
 										archiveInfoJson.addProperty("thanksTo", res.creditsField);
-									archiveInfoJson.addProperty("url", urlBase + "assets");
 									archiveInfoJson.addProperty("type", lastArchive.descriptorType);
-									archiveInfoJson.addProperty("allowFullDownload", true);
-									archiveInfoJson.addProperty("allowStreaming", true);
+									archiveInfoJson.addProperty("allowFullDownload", res.allowDownload);
+									archiveInfoJson.addProperty("allowStreaming", res.allowStreaming);
 									archiveInfoJson.addProperty("deprecated", false);
 									archiveInfoJson.addProperty("deprecationNotice", "");
 
 									// Create client information
 									JsonObject clientLst = new JsonObject();
 									for (String version : versions) {
-										clientLst.addProperty(version, urlBase + clientPaths.get(version));
+										clientLst.addProperty(version, clientPaths.get(version));
 									}
 									archiveInfoJson.add("clients", clientLst);
 
@@ -1531,6 +1548,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								archiveSelector.setEnabled(true);
 								btnAdd.setEnabled(true);
+								checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
 										&& lastArchive.supportsDownloads);
@@ -1542,7 +1560,8 @@ public class VersionManagerWindow extends JDialog {
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
 								lblThanks.setVisible(lastArchive != null);
-								if (lastArchive != null)
+								lblThanks.setText("");
+								if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 									lblThanks.setText("Assets kindly mirrored by "
 											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 							});
@@ -1558,7 +1577,7 @@ public class VersionManagerWindow extends JDialog {
 									stackTrace += "\nCaused by: " + t;
 							}
 							JOptionPane.showMessageDialog(VersionManagerWindow.this,
-									"An error occurred!\n\nError details: " + e2 + stackTrace, "Launcher error",
+									"An error occurred!\n\nError details: " + e2 + stackTrace, "Export error",
 									JOptionPane.ERROR_MESSAGE);
 							downloadFinished = true;
 
@@ -1568,6 +1587,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								archiveSelector.setEnabled(true);
 								btnAdd.setEnabled(true);
+								checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
 								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
@@ -1580,7 +1600,8 @@ public class VersionManagerWindow extends JDialog {
 								btnRemove.setEnabled(wasEnabledRemove);
 								btnOk.setText("Ok");
 								lblThanks.setVisible(lastArchive != null);
-								if (lastArchive != null)
+								lblThanks.setText("");
+								if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
 									lblThanks.setText("Assets kindly mirrored by "
 											+ lastArchive.archiveDef.get("thanksTo").getAsString());
 							});
@@ -1620,34 +1641,376 @@ public class VersionManagerWindow extends JDialog {
 				btnRemove.setEnabled(false);
 				btnDelete.setEnabled(false);
 
-				// Set text
-				btnOk.setText("Busy...");
+				Thread th = new Thread(() -> {
+					try {
+						// Set text
+						btnOk.setText("Busy...");
 
-				// Handle option
-				// TODO
+						// Handle option
+						SwingUtilities.invokeAndWait(() -> {
+							lblThanks.setText("Preparing to import...");
+							lblThanks.setVisible(true);
+						});
+						LauncherUtils.setStatus("Preparing to import...");
+						LauncherUtils.log("Determining mode...");
+						if (selected == 0) {
+							// SGA file
+							LauncherUtils.log("SGA mode, requesting user file selection...");
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Awaiting user selection...");
+								lblThanks.setVisible(true);
+							});
+							LauncherUtils.log("Awaiting user selection...");
+							JFileChooser f = new JFileChooser();
+							f.setDialogTitle("Choose SGA file to load...");
+							FileFilter filter = new FileFilter() {
 
-				// Re-enable
-				SwingUtilities.invokeLater(() -> {
-					btnOk.setEnabled(true);
-					btnCancel.setEnabled(true);
-					archiveSelector.setEnabled(true);
-					btnAdd.setEnabled(true);
-					checkBoxDownload.setEnabled(chBoxWasEnabled);
-					btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
-					btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
-							&& lastArchive.supportsDownloads);
-					btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
-					btnDelete.setEnabled(true);
-					btnImport.setEnabled(true);
-					qualityLevelBox.setEnabled(true);
-					clientListBox.setEnabled(true);
-					btnRemove.setEnabled(wasEnabledRemove);
-					btnOk.setText("Ok");
-					lblThanks.setVisible(lastArchive != null);
-					if (lastArchive != null)
-						lblThanks.setText(
-								"Assets kindly mirrored by " + lastArchive.archiveDef.get("thanksTo").getAsString());
-				});
+								@Override
+								public boolean accept(File f) {
+									return f.isDirectory() || f.getName().endsWith(".sga");
+								}
+
+								@Override
+								public String getDescription() {
+									return "Sentinel game asset archive files (*.sga)";
+								}
+
+							};
+							f.addChoosableFileFilter(filter);
+							f.setFileFilter(filter);
+							f.showOpenDialog(VersionManagerWindow.this);
+							if (f.getSelectedFile() == null) {
+								// Re-enable
+								SwingUtilities.invokeLater(() -> {
+									btnOk.setEnabled(true);
+									btnCancel.setEnabled(true);
+									archiveSelector.setEnabled(true);
+									btnAdd.setEnabled(true);
+									checkBoxDownload.setEnabled(chBoxWasEnabled);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									btnImport.setEnabled(true);
+									qualityLevelBox.setEnabled(true);
+									clientListBox.setEnabled(true);
+									btnRemove.setEnabled(wasEnabledRemove);
+									btnOk.setText("Ok");
+									lblThanks.setVisible(lastArchive != null);
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+										lblThanks.setText("Assets kindly mirrored by "
+												+ lastArchive.archiveDef.get("thanksTo").getAsString());
+								});
+							}
+
+							// Read file
+							LauncherUtils.log("Reading SGA file...");
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Reading SGA file...");
+								lblThanks.setVisible(true);
+							});
+							ZipFile zip = new ZipFile(f.getSelectedFile());
+							ZipEntry entry = zip.getEntry("archiveinfo.json");
+							if (entry == null) {
+								// Invalid
+								zip.close();
+
+								// Show error
+								JOptionPane.showMessageDialog(VersionManagerWindow.this,
+										"Invalid SGA file was selected.\n\nPlease select a valid Sentinel Archive File.",
+										"Import error", JOptionPane.ERROR_MESSAGE);
+
+								// Re-enable
+								SwingUtilities.invokeLater(() -> {
+									btnOk.setEnabled(true);
+									btnCancel.setEnabled(true);
+									archiveSelector.setEnabled(true);
+									btnAdd.setEnabled(true);
+									checkBoxDownload.setEnabled(chBoxWasEnabled);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									btnImport.setEnabled(true);
+									qualityLevelBox.setEnabled(true);
+									clientListBox.setEnabled(true);
+									btnRemove.setEnabled(wasEnabledRemove);
+									btnOk.setText("Ok");
+									lblThanks.setVisible(lastArchive != null);
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+										lblThanks.setText("Assets kindly mirrored by "
+												+ lastArchive.archiveDef.get("thanksTo").getAsString());
+								});
+							}
+
+							// Read data
+							InputStream strm = zip.getInputStream(entry);
+							JsonObject archiveDetails = JsonParser.parseString(new String(strm.readAllBytes(), "UTF-8"))
+									.getAsJsonObject();
+							strm.close();
+
+							// add details
+							LauncherUtils.log("Adding archive...");
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Adding archive...");
+								lblThanks.setVisible(true);
+							});
+							archiveDetails.addProperty("isSgaFile", true);
+							archiveDetails.addProperty("archiveName", f.getSelectedFile().getName());
+							archiveDetails.addProperty("filePath", f.getSelectedFile().getCanonicalPath());
+
+							// Add archive
+							ArchiveInformation archive = AssetManager.addUserArchive(archiveDetails);
+
+							// Select
+							lastArchive = archive;
+							saveSettings();
+							if (new File("assets/descriptor.hash").exists())
+								new File("assets/descriptor.hash").delete();
+							if (new File("assets/descriptor-local.version").exists())
+								new File("assets/descriptor-local.version").delete();
+							SwingUtilities.invokeAndWait(() -> {
+								// Re-enable
+								btnOk.setEnabled(true);
+								btnCancel.setEnabled(true);
+								archiveSelector.setEnabled(true);
+								btnAdd.setEnabled(true);
+								checkBoxDownload.setEnabled(chBoxWasEnabled);
+								btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+										&& lastArchive.supportsDownloads);
+								btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+								btnDelete.setEnabled(true);
+								btnImport.setEnabled(true);
+								qualityLevelBox.setEnabled(true);
+								clientListBox.setEnabled(true);
+								btnRemove.setEnabled(wasEnabledRemove);
+								btnOk.setText("Ok");
+								lblThanks.setVisible(lastArchive != null);
+								lblThanks.setText("");
+								if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+									lblThanks.setText("Assets kindly mirrored by "
+											+ lastArchive.archiveDef.get("thanksTo").getAsString());
+
+								// Set buttons and boxes
+								checkBoxDownload.setEnabled(!lastArchive.isDeprecated && lastArchive.supportsDownloads
+										&& lastArchive.supportsStreaming);
+								checkBoxDownload.setSelected(!lastArchive.supportsStreaming);
+								lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+								btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+										&& lastArchive.supportsDownloads);
+								btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+								btnDelete.setEnabled(true);
+								archiveSelector.setSelectedItem(lastArchive);
+
+								// Load client list
+								refreshClientList();
+							});
+						} else if (selected == 1) {
+							// Remote server
+
+							// Show input
+							LauncherUtils.log("Remote server mode, requesting URL...");
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Awaiting URL input...");
+								lblThanks.setVisible(true);
+							});
+							LauncherUtils.log("Awaiting URL input...");
+							String url = JOptionPane.showInputDialog(VersionManagerWindow.this, "Server URL",
+									"Add server", JOptionPane.QUESTION_MESSAGE);
+							if (url == null) {
+								// Re-enable
+								SwingUtilities.invokeLater(() -> {
+									btnOk.setEnabled(true);
+									btnCancel.setEnabled(true);
+									archiveSelector.setEnabled(true);
+									btnAdd.setEnabled(true);
+									checkBoxDownload.setEnabled(chBoxWasEnabled);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									btnImport.setEnabled(true);
+									qualityLevelBox.setEnabled(true);
+									clientListBox.setEnabled(true);
+									btnRemove.setEnabled(wasEnabledRemove);
+									btnOk.setText("Ok");
+									lblThanks.setVisible(lastArchive != null);
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+										lblThanks.setText("Assets kindly mirrored by "
+												+ lastArchive.archiveDef.get("thanksTo").getAsString());
+								});
+								return;
+							}
+
+							// Contact server
+							LauncherUtils.log("Contacting server...");
+							SwingUtilities.invokeAndWait(() -> {
+								lblThanks.setText("Contacting server...");
+								lblThanks.setVisible(true);
+							});
+							try {
+								// Download information
+								String archiveURL = url;
+								if (!archiveURL.endsWith("/"))
+									archiveURL += "/";
+								JsonObject archiveDetails = JsonParser
+										.parseString(
+												LauncherUtils.downloadString(archiveURL + "sentinelarchiveinfo.json"))
+										.getAsJsonObject();
+								if (!archiveDetails.has("archiveName") || !archiveDetails.has("type")
+										|| !archiveDetails.has("allowFullDownload")
+										|| !archiveDetails.has("allowStreaming") || !archiveDetails.has("deprecated")
+										|| !archiveDetails.has("clients")
+										|| !archiveDetails.get("clients").isJsonObject())
+									throw new IOException();
+
+								// Update URLs
+								LauncherUtils.log("Adding archive...");
+								SwingUtilities.invokeAndWait(() -> {
+									lblThanks.setText("Adding archive...");
+									lblThanks.setVisible(true);
+								});
+								archiveDetails.addProperty("url", archiveURL + "assets");
+								JsonObject clients = archiveDetails.get("clients").getAsJsonObject();
+								for (String version : clients.keySet()) {
+									clients.addProperty(version, archiveURL + clients.get(version).getAsString());
+								}
+
+								// Add archive
+								ArchiveInformation archive = AssetManager.addUserArchive(archiveDetails);
+
+								// Select
+								lastArchive = archive;
+								saveSettings();
+								if (new File("assets/descriptor.hash").exists())
+									new File("assets/descriptor.hash").delete();
+								if (new File("assets/descriptor-local.version").exists())
+									new File("assets/descriptor-local.version").delete();
+								SwingUtilities.invokeAndWait(() -> {
+									// Re-enable
+									btnOk.setEnabled(true);
+									btnCancel.setEnabled(true);
+									archiveSelector.setEnabled(true);
+									btnAdd.setEnabled(true);
+									checkBoxDownload.setEnabled(chBoxWasEnabled);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									btnImport.setEnabled(true);
+									qualityLevelBox.setEnabled(true);
+									clientListBox.setEnabled(true);
+									btnRemove.setEnabled(wasEnabledRemove);
+									btnOk.setText("Ok");
+									lblThanks.setVisible(lastArchive != null);
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+										lblThanks.setText("Assets kindly mirrored by "
+												+ lastArchive.archiveDef.get("thanksTo").getAsString());
+
+									// Set buttons and boxes
+									checkBoxDownload.setEnabled(!lastArchive.isDeprecated
+											&& lastArchive.supportsDownloads && lastArchive.supportsStreaming);
+									checkBoxDownload.setSelected(!lastArchive.supportsStreaming);
+									lblQualityLevels.setVisible(checkBoxDownload.isSelected());
+									qualityLevelBox.setVisible(checkBoxDownload.isSelected());
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									archiveSelector.setSelectedItem(lastArchive);
+
+									// Load client list
+									refreshClientList();
+								});
+							} catch (Exception e2) {
+								// Fail
+
+								// Show error
+								JOptionPane.showMessageDialog(VersionManagerWindow.this, "Could not contact " + url
+										+ "\n\nPlease make sure this is a sentinel-exported archive source and that the host is online.",
+										"Import error", JOptionPane.ERROR_MESSAGE);
+
+								// Re-enable
+								SwingUtilities.invokeLater(() -> {
+									btnOk.setEnabled(true);
+									btnCancel.setEnabled(true);
+									archiveSelector.setEnabled(true);
+									btnAdd.setEnabled(true);
+									checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
+									checkBoxDownload.setEnabled(chBoxWasEnabled);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+											&& lastArchive.supportsDownloads);
+									btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+									btnDelete.setEnabled(true);
+									btnImport.setEnabled(true);
+									qualityLevelBox.setEnabled(true);
+									clientListBox.setEnabled(true);
+									btnRemove.setEnabled(wasEnabledRemove);
+									btnOk.setText("Ok");
+									lblThanks.setVisible(lastArchive != null);
+									lblThanks.setText("");
+									if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+										lblThanks.setText("Assets kindly mirrored by "
+												+ lastArchive.archiveDef.get("thanksTo").getAsString());
+								});
+								return;
+							}
+						}
+					} catch (Exception e2) {
+						// Error
+						String stackTrace = "";
+						Throwable t = e2;
+						while (t != null) {
+							for (StackTraceElement ele : t.getStackTrace())
+								stackTrace += "\n     At: " + ele;
+							t = t.getCause();
+							if (t != null)
+								stackTrace += "\nCaused by: " + t;
+						}
+						JOptionPane.showMessageDialog(VersionManagerWindow.this,
+								"An error occurred!\n\nError details: " + e2 + stackTrace, "Import error",
+								JOptionPane.ERROR_MESSAGE);
+						downloadFinished = true;
+
+						// Re-enable
+						SwingUtilities.invokeLater(() -> {
+							btnOk.setEnabled(true);
+							btnCancel.setEnabled(true);
+							archiveSelector.setEnabled(true);
+							btnAdd.setEnabled(true);
+							checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
+							checkBoxDownload.setEnabled(chBoxWasEnabled);
+							btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+							btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
+									&& lastArchive.supportsDownloads);
+							btnDelete.setVisible(lastArchive != null && lastArchive.isUserArchive);
+							btnDelete.setEnabled(true);
+							btnImport.setEnabled(true);
+							qualityLevelBox.setEnabled(true);
+							clientListBox.setEnabled(true);
+							btnRemove.setEnabled(wasEnabledRemove);
+							btnOk.setText("Ok");
+							lblThanks.setVisible(lastArchive != null);
+							lblThanks.setText("");
+							if (lastArchive != null && lastArchive.archiveDef.has("thanksTo"))
+								lblThanks.setText("Assets kindly mirrored by "
+										+ lastArchive.archiveDef.get("thanksTo").getAsString());
+						});
+					}
+				}, "Importer thread");
+				th.setDaemon(true);
+				th.start();
 			}
 		});
 		btnDelete.addActionListener(new ActionListener() {
@@ -1682,6 +2045,7 @@ public class VersionManagerWindow extends JDialog {
 					if (AssetManager.getArchives().length > 0) {
 						// Select first
 						lastArchive = AssetManager.getArchives()[0];
+						checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 						checkBoxDownload.setEnabled(!lastArchive.isDeprecated && lastArchive.supportsDownloads
 								&& lastArchive.supportsStreaming);
 						checkBoxDownload.setSelected(!lastArchive.supportsStreaming);
@@ -1993,6 +2357,7 @@ public class VersionManagerWindow extends JDialog {
 						btnCancel.setEnabled(true);
 						archiveSelector.setEnabled(true);
 						btnAdd.setEnabled(true);
+						checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 						checkBoxDownload.setEnabled(chBoxWasEnabled);
 						qualityLevelBox.setEnabled(true);
 						clientListBox.setEnabled(true);
@@ -2090,6 +2455,7 @@ public class VersionManagerWindow extends JDialog {
 								btnCancel.setEnabled(true);
 								archiveSelector.setEnabled(true);
 								btnAdd.setEnabled(true);
+								checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 								checkBoxDownload.setEnabled(chBoxWasEnabled);
 								qualityLevelBox.setEnabled(true);
 								clientListBox.setEnabled(true);
@@ -2123,6 +2489,7 @@ public class VersionManagerWindow extends JDialog {
 							btnCancel.setEnabled(true);
 							archiveSelector.setEnabled(true);
 							btnAdd.setEnabled(true);
+							checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 							checkBoxDownload.setEnabled(chBoxWasEnabled);
 							qualityLevelBox.setEnabled(true);
 							btnExport.setEnabled(lastArchive != null && lastArchive.mode == ArchiveMode.REMOTE
@@ -2267,9 +2634,10 @@ public class VersionManagerWindow extends JDialog {
 						continue;
 
 					if (ent.isDirectory()) {
-						new File("assets/descriptor", ent.getName()).mkdirs();
+						new File("assets/descriptor", ent.getName().substring("descriptor/".length())).mkdirs();
 					} else {
-						FileOutputStream output = new FileOutputStream(new File("assets/descriptor", ent.getName()));
+						FileOutputStream output = new FileOutputStream(
+								new File("assets/descriptor", ent.getName().substring("descriptor/".length())));
 						InputStream is = archive.getInputStream(ent);
 						is.transferTo(output);
 						is.close();
@@ -2286,6 +2654,7 @@ public class VersionManagerWindow extends JDialog {
 				Files.writeString(Path.of("assets/descriptor.hash"),
 						"local-" + LauncherUtils.sha512Hash((new File(lastArchive.source).lastModified() + "-"
 								+ lastArchive.source + "-" + new File(lastArchive.source).length()).getBytes("UTF-8")));
+				Files.writeString(Path.of("descriptor-local.version"), "latest");
 
 				// Hide bars
 				LauncherUtils.hideProgressPanel();

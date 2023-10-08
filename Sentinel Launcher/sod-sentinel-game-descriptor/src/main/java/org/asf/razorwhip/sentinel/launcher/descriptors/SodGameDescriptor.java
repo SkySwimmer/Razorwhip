@@ -259,15 +259,17 @@ public class SodGameDescriptor implements IGameDescriptor {
 		String[] platforms = new String[] {
 
 				"win",
-
-				"wsa",
-
-				"android",
-
-				"ios",
-
-				"steam"
-
+//
+//	Disabled so players dont need to download >100gb of data to create custom archives
+//
+//				"wsa",
+//
+//				"android",
+//
+//				"ios",
+//
+//				"steam"
+//
 		};
 		for (String plat : platforms) {
 			// Check root asset files

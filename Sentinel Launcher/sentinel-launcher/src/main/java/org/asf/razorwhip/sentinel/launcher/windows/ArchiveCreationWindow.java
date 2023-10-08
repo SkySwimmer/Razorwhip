@@ -15,6 +15,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.SwingConstants;
 import java.awt.Font;
+import javax.swing.JCheckBox;
 
 public class ArchiveCreationWindow {
 
@@ -29,6 +30,8 @@ public class ArchiveCreationWindow {
 		public String archiveURL;
 		public String archiveName;
 		public String creditsField;
+		public boolean allowStreaming;
+		public boolean allowDownload;
 	}
 
 	/**
@@ -58,14 +61,14 @@ public class ArchiveCreationWindow {
 	private void initialize() {
 		frmCreateArchive = new JDialog();
 		frmCreateArchive.setTitle("Archive Creation");
-		frmCreateArchive.setBounds(100, 100, 528, 323);
+		frmCreateArchive.setBounds(100, 100, 528, 355);
 		frmCreateArchive.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		frmCreateArchive.getContentPane().setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 		frmCreateArchive.setLocationRelativeTo(null);
 		frmCreateArchive.setResizable(false);
 
 		JPanel panel = new JPanel();
-		panel.setPreferredSize(new Dimension(500, 275));
+		panel.setPreferredSize(new Dimension(500, 315));
 		frmCreateArchive.getContentPane().add(panel);
 		panel.setLayout(null);
 
@@ -76,27 +79,27 @@ public class ArchiveCreationWindow {
 		panel.add(lbl);
 
 		JLabel lblArchiveUrl = new JLabel("Archive URL");
-		lblArchiveUrl.setBounds(12, 64, 476, 17);
+		lblArchiveUrl.setBounds(12, 56, 476, 17);
 		panel.add(lblArchiveUrl);
 
 		archiveUrlField = new JTextField();
-		archiveUrlField.setBounds(12, 82, 476, 21);
+		archiveUrlField.setBounds(12, 74, 476, 21);
 		panel.add(archiveUrlField);
 
 		JLabel lblName = new JLabel("Archive name");
-		lblName.setBounds(12, 111, 476, 17);
+		lblName.setBounds(12, 103, 476, 17);
 		panel.add(lblName);
 
 		archiveNameField = new JTextField();
-		archiveNameField.setBounds(12, 129, 476, 21);
+		archiveNameField.setBounds(12, 121, 476, 21);
 		panel.add(archiveNameField);
 
 		JLabel lblCredits = new JLabel("Hosting credits (optional, place your name or organization here)");
-		lblCredits.setBounds(12, 160, 476, 17);
+		lblCredits.setBounds(12, 150, 476, 17);
 		panel.add(lblCredits);
 
 		creditsField = new JTextField();
-		creditsField.setBounds(12, 178, 476, 21);
+		creditsField.setBounds(12, 168, 476, 21);
 		panel.add(creditsField);
 
 		JButton btnNewButton = new JButton("Create");
@@ -124,12 +127,22 @@ public class ArchiveCreationWindow {
 				btnNewButton.doClick();
 			}
 		});
-		btnNewButton.setBounds(346, 236, 142, 27);
+		btnNewButton.setBounds(346, 276, 142, 27);
 		panel.add(btnNewButton);
 
 		JButton btnNewButton_1 = new JButton("Cancel");
-		btnNewButton_1.setBounds(229, 236, 105, 27);
+		btnNewButton_1.setBounds(229, 276, 105, 27);
 		panel.add(btnNewButton_1);
+
+		JCheckBox chckbxAllowArchiveDownloads = new JCheckBox("Allow archive downloads");
+		chckbxAllowArchiveDownloads.setSelected(true);
+		chckbxAllowArchiveDownloads.setBounds(8, 199, 480, 25);
+		panel.add(chckbxAllowArchiveDownloads);
+
+		JCheckBox chckbxAllowStreaming = new JCheckBox("Allow streaming of assets");
+		chckbxAllowStreaming.setSelected(true);
+		chckbxAllowStreaming.setBounds(8, 228, 480, 25);
+		panel.add(chckbxAllowStreaming);
 
 		btnNewButton_1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -150,12 +163,21 @@ public class ArchiveCreationWindow {
 							JOptionPane.ERROR_MESSAGE);
 					return;
 				}
+				if (!chckbxAllowStreaming.isSelected() && !chckbxAllowArchiveDownloads.isSelected()) {
+					// Error
+					JOptionPane.showMessageDialog(frmCreateArchive,
+							"Please allow either streaming or download, you cannot have both disabled.",
+							"Missing details", JOptionPane.ERROR_MESSAGE);
+					return;
+				}
 				result = new CreationResult();
 				result.archiveURL = archiveUrlField.getText();
 				result.archiveName = archiveNameField.getText();
 				result.creditsField = creditsField.getText();
 				if (result.creditsField.isEmpty())
 					result.creditsField = null;
+				result.allowDownload = chckbxAllowArchiveDownloads.isSelected();
+				result.allowStreaming = chckbxAllowStreaming.isSelected();
 				frmCreateArchive.dispose();
 			}
 		});
