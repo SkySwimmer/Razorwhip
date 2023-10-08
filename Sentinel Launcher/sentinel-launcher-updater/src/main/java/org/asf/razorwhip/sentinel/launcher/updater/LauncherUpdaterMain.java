@@ -1207,7 +1207,6 @@ public class LauncherUpdaterMain {
 				}
 			}
 		}, "Launcher Thread");
-		th.setDaemon(true);
 		th.start();
 	}
 
