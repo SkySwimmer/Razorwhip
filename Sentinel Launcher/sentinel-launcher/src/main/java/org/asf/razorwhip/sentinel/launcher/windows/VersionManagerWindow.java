@@ -2654,7 +2654,7 @@ public class VersionManagerWindow extends JDialog {
 				Files.writeString(Path.of("assets/descriptor.hash"),
 						"local-" + LauncherUtils.sha512Hash((new File(lastArchive.source).lastModified() + "-"
 								+ lastArchive.source + "-" + new File(lastArchive.source).length()).getBytes("UTF-8")));
-				Files.writeString(Path.of("descriptor-local.version"), "latest");
+				Files.writeString(Path.of("assets/descriptor-local.version"), "latest");
 
 				// Hide bars
 				LauncherUtils.hideProgressPanel();

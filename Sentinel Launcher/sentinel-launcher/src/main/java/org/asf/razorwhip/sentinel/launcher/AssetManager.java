@@ -1446,7 +1446,7 @@ public class AssetManager {
 			throws IOException {
 		// Check hash
 		String cHashDescriptor = "";
-		if (!new File("descriptor-local.version").exists()) {
+		if (!new File("assets/descriptor-local.version").exists()) {
 			if (assetConnection) {
 				// Re-extract descriptor
 				LauncherUtils.log("Re-extracting archive descriptor...", true);
@@ -1501,6 +1501,12 @@ public class AssetManager {
 				}
 				LauncherUtils.setProgress(max, max);
 				zip.close();
+
+				// Write fake hash
+				Files.writeString(Path.of("assets/descriptor.hash"),
+						"local-" + LauncherUtils.sha512Hash((new File(archive.source).lastModified() + "-"
+								+ archive.source + "-" + new File(archive.source).length()).getBytes("UTF-8")));
+				Files.writeString(Path.of("assets/descriptor-local.version"), "latest");
 			} else {
 				// Skip
 				LauncherUtils.log("Skipped archive descriptor update check as the source file doesnt exist.");

@@ -44,6 +44,7 @@ import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
 import org.asf.razorwhip.sentinel.launcher.api.ISentinelPayload;
 import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
+import org.asf.razorwhip.sentinel.launcher.experiments.SentinelExperimentManager;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -66,6 +67,7 @@ public class LauncherMain {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		SentinelExperimentManager.bindManager();
 		LauncherUtils.args = args;
 
 		// Check

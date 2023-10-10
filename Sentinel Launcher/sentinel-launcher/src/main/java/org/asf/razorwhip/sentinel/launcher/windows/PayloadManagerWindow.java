@@ -1,6 +1,8 @@
 package org.asf.razorwhip.sentinel.launcher.windows;
 
 import java.awt.FlowLayout;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.SystemColor;
 
 import javax.swing.JPanel;
@@ -90,6 +92,7 @@ public class PayloadManagerWindow extends JDialog {
 		public PayloadDependency[] dependencies;
 		public PayloadDependency[] conflictsWith;
 
+		public long timeSelect;
 		public boolean enabled;
 		public JCheckBox box;
 	}
@@ -343,21 +346,30 @@ public class PayloadManagerWindow extends JDialog {
 		});
 		payloadListBox.addMouseListener(new MouseAdapter() {
 			public synchronized void mouseClicked(MouseEvent evt) {
-				if (evt.getClickCount() == 1) {
-					int index = payloadListBox.locationToIndex(evt.getPoint());
+				if (evt.getClickCount() >= 1) {
+					Point mouse = evt.getPoint();
+					int index = payloadListBox.locationToIndex(mouse);
+					Point l = payloadListBox.indexToLocation(index);
 					if (index >= 0 && index < payloads.size()) {
+						Rectangle bounds = payloadListBox.getCellBounds(index, index);
 						PayloadEntry entry = payloads.values().toArray(new PayloadEntry[0])[index];
-						entry.enabled = !entry.enabled;
-						entry.box.setEnabled(entry.enabled);
-						payloadListBox.repaint();
+						if (payloadListBox.getSelectedValue() == entry && entry.timeSelect != -1
+								&& (((System.currentTimeMillis() - entry.timeSelect) >= 250)
+										|| evt.getClickCount() >= 2)
+								&& (l.y + bounds.height) >= mouse.y) {
+							// Change state
+							entry.enabled = !entry.enabled;
+							entry.box.setEnabled(entry.enabled);
+							payloadListBox.repaint();
 
-						// Cascade
-						if (entry.enabled) {
-							// Enable dependencies
-							enableDependencies(entry);
-						} else {
-							// Disable dependent
-							disableDependent(entry);
+							// Cascade
+							if (entry.enabled) {
+								// Enable dependencies
+								enableDependencies(entry);
+							} else {
+								// Disable dependent
+								disableDependent(entry);
+							}
 						}
 					}
 				}
@@ -371,10 +383,13 @@ public class PayloadManagerWindow extends JDialog {
 				entry.box.setComponentOrientation(list.getComponentOrientation());
 				entry.box.setFont(list.getFont());
 				entry.box.setBackground(list.getBackground());
-				if (cellHasFocus)
+				if (cellHasFocus) {
 					entry.box.setForeground(SystemColor.blue);
-				else
+					entry.timeSelect = System.currentTimeMillis();
+				} else {
 					entry.box.setForeground(SystemColor.black);
+					entry.timeSelect = -1;
+				}
 				entry.box.setSelected(entry.enabled);
 				entry.box.setEnabled(true);
 				return entry.box;
@@ -742,8 +757,8 @@ public class PayloadManagerWindow extends JDialog {
 			// Verify signature
 			if (LauncherUtils.isPackageSigned(spf) && LauncherUtils
 					.verifyPackageSignature(new File("cache/payloadcache/payloadverificationkeys", id + ".pem"), spf)) {
-				LauncherUtils.extractPackagePublicKey(new File("cache/payloadcache/payloadverificationkeys", id + ".pem"),
-						spf);
+				LauncherUtils.extractPackagePublicKey(
+						new File("cache/payloadcache/payloadverificationkeys", id + ".pem"), spf);
 			} else if (LauncherUtils.isPackageSigned(spf)) {
 				if (throwError)
 					throw new IOException("Incompatible payload");
