@@ -26,33 +26,5 @@
 			"1.14.0": "https://assetarchive.projectedge.net/clients/original-1.14.0.zip",
 			"1.13.0": "https://assetarchive.projectedge.net/clients/original-1.13.0.zip"
 		}
-	},
-	"569c9552-b243-460e-9103-fb3b4cd81505": {
-		"archiveName": "AerialWorks Project Edge",
-		"thanksTo": "Nexus Emulation",
-		
-		"url": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/",
-		"type": "projectedge-revised-v2",
-		
-		"allowFullDownload": true,
-		"allowStreaming": true,
-		
-		"deprecated": true,
-		"deprecationNotice": "The AerialWorks servers are deprecated and will be shut down on the 18th of October.\n\nAfter a few months of service, the AerialWorks servers started to be unable to handle the load, as a result we had to do a host switch.\n\nThe AerialWorks servers will be shut down soon since they are no longer supported.",
-		
-		"clients": {
-			"3.31.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-3.31.0.zip",
-			"3.12.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-3.12.0.zip",
-			"2.12.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.12.0.zip",
-			"2.11.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.11.0.zip",
-			"2.10.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.10.0.zip",
-			"2.9.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.9.0.zip",
-			"2.8.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.8.0.zip",
-			"2.5.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-2.5.0.zip",
-			"1.18.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.18.0.zip",
-			"1.17.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.17.0.zip",
-			"1.14.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.14.0.zip",
-			"1.13.0": "https://aerialworks.ddns.net/edge-temp-host/assetarchive.projectedge.net/clients/original-1.13.0.zip"
-		}
 	}
 }
