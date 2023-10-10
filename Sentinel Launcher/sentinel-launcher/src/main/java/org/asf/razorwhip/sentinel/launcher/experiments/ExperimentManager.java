@@ -3,6 +3,7 @@ package org.asf.razorwhip.sentinel.launcher.experiments;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.asf.razorwhip.sentinel.launcher.experiments.api.IExperiment;
 
@@ -25,7 +26,8 @@ public abstract class ExperimentManager {
 	private JsonObject managerCache;
 	private HashMap<String, ArrayList<IExperiment>> experimentInterfaces = new HashMap<String, ArrayList<IExperiment>>();
 	private HashMap<String, String> experimentPrettyNames = new HashMap<String, String>();
-	private HashMap<String, Boolean> experiments = new HashMap<String, Boolean>();
+	private LinkedHashMap<String, Boolean> experiments = new LinkedHashMap<String, Boolean>();
+	private ArrayList<String> experimentsNeedingReinit = new ArrayList<String>();
 
 	private void initManager() {
 		if (inited)
@@ -104,13 +106,6 @@ public abstract class ExperimentManager {
 	protected abstract JsonObject loadExperimentCache() throws IOException;
 
 	/**
-	 * Finds and registers experiment interfaces for the given experiment key
-	 * 
-	 * @param key Experiment key
-	 */
-	protected abstract void registerExperimentInterfaces(String key);
-
-	/**
 	 * Retrieves all experiment keys
 	 * 
 	 * @return Array of experiment keys
@@ -170,9 +165,6 @@ public abstract class ExperimentManager {
 
 			// Register and set state
 			experiments.put(key, enabledExperiments.has(key) ? enabledExperiments.get(key).getAsBoolean() : false);
-
-			// Register interfaces
-			registerExperimentInterfaces(key);
 		}
 	}
 
@@ -224,12 +216,19 @@ public abstract class ExperimentManager {
 
 			// Apply to cache
 			managerCache.addProperty(key, isExperimentEnabled(key));
+			experimentsNeedingReinit.add(key);
 
 			// Save cache
 			try {
 				saveExperimentCache(managerCache);
 			} catch (IOException e) {
 			}
+		} else if (experimentsNeedingReinit.contains(key)) {
+			// Apply state
+			if (isExperimentEnabled(key))
+				inter.onEnable();
+			else
+				inter.onDisable();
 		}
 
 		// Call load
@@ -318,6 +317,7 @@ public abstract class ExperimentManager {
 
 		// Assign
 		experiments.put(key, state);
+		experimentsNeedingReinit.remove(key);
 
 		// Call interfaces if needed
 		if (isExperimentEnabled(key) != state) {

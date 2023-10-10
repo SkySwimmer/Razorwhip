@@ -43,12 +43,6 @@ public class SentinelExperimentManager extends ExperimentManager {
 	}
 
 	@Override
-	protected void registerExperimentInterfaces(String key) {
-		// Sentinel does not have this feature support due to lack of Fluid libraries,
-		// we dont really need it either, we can do it manually
-	}
-
-	@Override
 	protected void saveExperimentConfig(JsonObject config) throws IOException {
 		Files.writeString(Path.of("experiments.json"), new GsonBuilder().setPrettyPrinting().create().toJson(config));
 	}
