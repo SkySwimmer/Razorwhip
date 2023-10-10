@@ -1,7 +1,7 @@
 # Main fields
 Game-ID: schoolofdragons
 Game-Descriptor-Class: org.asf.razorwhip.sentinel.launcher.descriptors.SodGameDescriptor
-Game-Descriptor-Version: 1.0.0.A11
+Game-Descriptor-Version: 1.0.0.A12
 
 # Assets
 Asset-Information-Root-URL: sgd://asset-information/

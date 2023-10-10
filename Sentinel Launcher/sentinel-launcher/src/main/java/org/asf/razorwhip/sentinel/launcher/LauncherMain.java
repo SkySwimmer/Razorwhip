@@ -1067,12 +1067,15 @@ public class LauncherMain {
 				File clientDir = new File("clients/client-" + lastVersion);
 				ActiveArchiveInformation archive = AssetManager.getActiveArchive();
 				modificationDir.mkdirs();
-				if (archive.streamingModeEnabled) {
-					LauncherUtils.gameDescriptor.prepareLaunchWithStreamingAssets(archive.source, modificationDir,
-							archive, archive.archiveDef, archive.descriptorDef, lastVersion, clientDir, () -> {
+				if (archive.streamingModeEnabled && !archive.streamingModeOverriddenDisable) {
+					LauncherUtils.gameDescriptor.prepareLaunchWithStreamingAssets(archive.source,
+							AssetManager.collectAssets(), AssetManager.getActiveArchive().getAllAssets(),
+							modificationDir, archive, archive.archiveDef, archive.descriptorDef, lastVersion, clientDir,
+							() -> {
 								// Success
 								// Call emulation software
 								LauncherUtils.emulationSoftware.prepareLaunchWithStreamingAssets(archive.source,
+										AssetManager.collectAssets(), AssetManager.getActiveArchive().getAllAssets(),
 										modificationDir, archive, archive.archiveDef, archive.descriptorDef,
 										lastVersion, clientDir, () -> {
 											// Success
@@ -1081,8 +1084,10 @@ public class LauncherMain {
 											int i = 0;
 											String[] payloads = PayloadManager.getLoadedPayloadIds();
 											callPrepareWithStreamingForPayload(payloads, i, archive.source,
-													modificationDir, archive, archive.archiveDef, archive.descriptorDef,
-													lastVersion, clientDir, () -> {
+													AssetManager.collectAssets(),
+													AssetManager.getActiveArchive().getAllAssets(), modificationDir,
+													archive, archive.archiveDef, archive.descriptorDef, lastVersion,
+													clientDir, () -> {
 														// Success
 
 														// Launch
@@ -1101,9 +1106,10 @@ public class LauncherMain {
 
 														// Start game
 														LauncherUtils.gameDescriptor.startGameWithStreamingAssets(
-																archive.source, modificationDir, archive,
-																archive.archiveDef, archive.descriptorDef, lastVersion,
-																clientDir, () -> {
+																archive.source, AssetManager.collectAssets(),
+																AssetManager.getActiveArchive().getAllAssets(),
+																modificationDir, archive, archive.archiveDef,
+																archive.descriptorDef, lastVersion, clientDir, () -> {
 																	// Close
 																	LauncherUtils.log("Launch success!", true);
 																	frmSentinelLauncher.setVisible(false);
@@ -1278,28 +1284,30 @@ public class LauncherMain {
 	}
 
 	private void callPrepareWithStreamingForPayload(String[] payloads, int index, String assetArchiveURL,
-			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
-			String clientVersion, File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+			AssetInformation[] collectedAssets, AssetInformation[] allAssets, File assetModifications,
+			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
+			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
 		if (index < payloads.length) {
 			// Call payload
 			ISentinelPayload p = PayloadManager.getPayload(payloads[index]);
 			if (p != null) {
-				p.prepareLaunchWithStreamingAssets(assetArchiveURL, assetModifications, archive, archiveDef,
-						descriptorDef, clientVersion, clientDir, () -> {
+				p.prepareLaunchWithStreamingAssets(assetArchiveURL, collectedAssets, allAssets, assetModifications,
+						archive, archiveDef, descriptorDef, clientVersion, clientDir, () -> {
 							// Success
 
 							// Call next
-							callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, assetModifications,
-									archive, archiveDef, descriptorDef, clientVersion, clientDir, successCallback,
-									errorCallback);
+							callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, collectedAssets,
+									allAssets, assetModifications, archive, archiveDef, descriptorDef, clientVersion,
+									clientDir, successCallback, errorCallback);
 						}, error -> {
 							// Error
 							launchGameError(error);
 						});
 			} else {
 				// Call next
-				callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, assetModifications, archive,
-						archiveDef, descriptorDef, clientVersion, clientDir, successCallback, errorCallback);
+				callPrepareWithStreamingForPayload(payloads, index + 1, assetArchiveURL, collectedAssets, allAssets,
+						assetModifications, archive, archiveDef, descriptorDef, clientVersion, clientDir,
+						successCallback, errorCallback);
 			}
 		} else
 			successCallback.run();

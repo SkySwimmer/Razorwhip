@@ -451,10 +451,11 @@ public class SodGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
-		prepareLaunch(assetArchiveURL, null, archive.getAllAssets(), assetModifications, archive, archiveDef,
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Consumer<String> errorCallback) {
+		prepareLaunch(assetArchiveURL, collectedAssets, allAssets, assetModifications, archive, archiveDef,
 				descriptorDef, clientVersion, clientDir, successCallback, errorCallback);
 	}
 
@@ -467,9 +468,10 @@ public class SodGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
+	public void startGameWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
 		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
 	}
 

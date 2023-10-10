@@ -153,6 +153,9 @@ public interface IGameDescriptor {
 	 * Called to prepare to start the game
 	 * 
 	 * @param assetArchiveURL    URL to the asset archive
+	 * @param collectedAssets    Array of all collected client assets that are
+	 *                           needed for the game to work
+	 * @param allAssets          Array of all assets known in the archive
 	 * @param assetModifications Local asset modifications folder
 	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
@@ -164,9 +167,10 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Consumer<String> errorCallback);
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Consumer<String> errorCallback);
 
 	/**
 	 * Called to prepare to start the game
@@ -193,6 +197,9 @@ public interface IGameDescriptor {
 	 * Called to start the game
 	 * 
 	 * @param assetArchiveURL    URL to the asset archive
+	 * @param collectedAssets    Array of all collected client assets that are
+	 *                           needed for the game to work
+	 * @param allAssets          Array of all assets known in the archive
 	 * @param assetModifications Local asset modifications folder
 	 * @param archive            Archive instance
 	 * @param archiveDef         Archive definition object
@@ -204,9 +211,10 @@ public interface IGameDescriptor {
 	 * @param errorCallback      Callback for errors (call this should an error
 	 *                           occur)
 	 */
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback);
+	public void startGameWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback);
 
 	/**
 	 * Called to start the game

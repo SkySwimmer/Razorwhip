@@ -21,6 +21,7 @@ public class ActiveArchiveInformation extends ArchiveInformation {
 	public Map<String, String> assetHashes = new LinkedHashMap<String, String>();
 
 	public boolean streamingModeEnabled;
+	public boolean streamingModeOverriddenDisable;
 
 	/**
 	 * Clears all assets

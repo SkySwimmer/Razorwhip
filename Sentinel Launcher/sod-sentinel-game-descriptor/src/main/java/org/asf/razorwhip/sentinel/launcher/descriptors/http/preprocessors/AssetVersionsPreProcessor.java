@@ -265,7 +265,8 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 					assets.add(block);
 				}
 
-				if (!AssetManager.getActiveArchive().streamingModeEnabled) {
+				if (!AssetManager.getActiveArchive().streamingModeEnabled
+						|| AssetManager.getActiveArchive().streamingModeOverriddenDisable) {
 					// Apply quality proxies to asset versions so the client re-downloads assets
 					// when the quality becomes available
 					for (AssetVersionManifestData.AssetVersionBlock block : assets) {
@@ -400,7 +401,8 @@ public class AssetVersionsPreProcessor implements IPreProcessor {
 					}
 				}
 
-				if (!AssetManager.getActiveArchive().streamingModeEnabled) {
+				if (!AssetManager.getActiveArchive().streamingModeEnabled
+						|| AssetManager.getActiveArchive().streamingModeOverriddenDisable) {
 					// Apply quality proxies to asset versions so the client re-downloads assets
 					// when the quality becomes available
 					for (AssetVersionManifestData.AssetBlockLegacy block : assets) {

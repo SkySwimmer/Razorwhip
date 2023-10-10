@@ -73,9 +73,10 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Consumer<String> errorCallback) {
 		// TODO Auto-generated method stub
 		successCallback.run();
 	}
@@ -89,9 +90,10 @@ public class SentinelTestGameDescriptor implements IGameDescriptor {
 	}
 
 	@Override
-	public void startGameWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
+	public void startGameWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
 		// TODO Auto-generated method stub
 		successCallback.run();
 	}

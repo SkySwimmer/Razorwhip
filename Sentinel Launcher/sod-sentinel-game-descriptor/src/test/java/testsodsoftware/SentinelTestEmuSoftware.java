@@ -28,9 +28,10 @@ public class SentinelTestEmuSoftware implements IEmulationSoftwareProvider {
 	}
 
 	@Override
-	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, File assetModifications,
-			ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef, String clientVersion,
-			File clientDir, Runnable successCallback, Consumer<String> errorCallback) {
+	public void prepareLaunchWithStreamingAssets(String assetArchiveURL, AssetInformation[] collectedAssets,
+			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
+			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
+			Runnable successCallback, Consumer<String> errorCallback) {
 		successCallback.run();
 	}
 

@@ -512,8 +512,91 @@ public class AssetManager {
 		boolean assetConnection = testArchiveConnection(activeArchive);
 
 		// Check mode
-		if (activeArchive.streamingModeEnabled) {
+		if (activeArchive.streamingModeEnabled && !activeArchive.streamingModeOverriddenDisable) {
 			if (!assetConnection) {
+				// Check if local files are up to date
+				LauncherUtils.log("Verifying local files... Checking status of offline play...", true);
+
+				// Determine platform
+				String plat = null;
+				if (System.getProperty("os.name").toLowerCase().contains("win")
+						&& !System.getProperty("os.name").toLowerCase().contains("darwin")) { // Windows
+					plat = "windows";
+				} else if (System.getProperty("os.name").toLowerCase().contains("darwin")
+						|| System.getProperty("os.name").toLowerCase().contains("mac")) { // MacOS
+					plat = "macos";
+				} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {// Linux
+					plat = "linux";
+				}
+
+				// Verify clients
+				LauncherUtils.log("Verifying clients...");
+				JsonArray clientsArr = new JsonArray();
+				File clientListFile = new File("assets/clients.json");
+				if (clientListFile.exists()) {
+					clientsArr = JsonParser.parseString(Files.readString(Path.of("assets/clients.json")))
+							.getAsJsonArray();
+				}
+				File localVersions = new File("cache/clienthashes.json");
+				if (!localVersions.exists())
+					Files.writeString(localVersions.toPath(), "{}");
+				JsonObject localHashList = JsonParser.parseString(Files.readString(localVersions.toPath()))
+						.getAsJsonObject();
+				boolean clientsUpToDate = true;
+				for (JsonElement clE : clientsArr) {
+					String clientVersion = clE.getAsString();
+					File clientFolder = new File("clients/client-" + clientVersion);
+
+					// Check if present
+					if (activeArchive.archiveClientLst.has(clientVersion)) {
+						// Version present
+						LauncherUtils.log("Checking for updates for " + clientVersion + "...", true);
+
+						// Load old hash
+						String oHash = "";
+						if (localHashList.has(clientVersion))
+							oHash = localHashList.get(clientVersion).getAsString();
+
+						// Load new hash
+						String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
+								.getAsJsonObject().get(clientVersion).getAsString();
+						if (!oHash.equals(cHash) || !clientFolder.exists()) {
+							// Not up to date
+							clientsUpToDate = false;
+							break;
+						}
+					}
+				}
+
+				// Check assets
+				if (clientsUpToDate) {
+					// Prepare
+					boolean assetsUpToDate = true;
+					LauncherUtils.log("Checking for asset archive updates...");
+
+					// Verify assets
+					migrateAssetsIfNeeded();
+
+					// Verify assets of clients
+					AssetInformation[] collectedAssets = collectAssets();
+
+					// Collect assets needing updates
+					LauncherUtils.log("Verifying assets...", true);
+					for (AssetInformation asset : collectedAssets) {
+						if (!asset.isUpToDate()) {
+							assetsUpToDate = false;
+							break;
+						}
+					}
+
+					// Check
+					if (assetsUpToDate) {
+						// We are fine, disable streaming mode too
+						activeArchive.streamingModeOverriddenDisable = true;
+						return;
+					}
+				}
+
 				// Error, select different archive
 				if (assetManagementAvailable) {
 					while (activeArchive.streamingModeEnabled && !assetConnection) {
@@ -792,7 +875,7 @@ public class AssetManager {
 	public static void verifyAssets() throws IOException {
 		// Check mode
 		LauncherUtils.setStatus("Checking for updates...");
-		if (!activeArchive.streamingModeEnabled) {
+		if (!activeArchive.streamingModeEnabled || activeArchive.streamingModeOverriddenDisable) {
 			LauncherUtils.log("Checking for asset archive updates...");
 
 			// Verify assets
