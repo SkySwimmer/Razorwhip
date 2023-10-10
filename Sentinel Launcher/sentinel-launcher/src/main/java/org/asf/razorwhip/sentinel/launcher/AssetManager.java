@@ -703,7 +703,7 @@ public class AssetManager {
 						if (!dirModeDescriptorFileF)
 							LauncherUtils.unZip(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
 						else
-							LauncherUtils.copyDirWithProgress(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
+							LauncherUtils.copyDirWithoutProgress(gameDescriptorFileF, new File("cache/tmp-sgdextract"));
 					}
 					if (new File("cache/tmp-sgdextract", "clientmodifications").exists()) {
 						LauncherUtils.log("Copying game descriptor client modifications...");
@@ -722,7 +722,8 @@ public class AssetManager {
 						if (!dirModeSoftwareFileF)
 							LauncherUtils.unZip(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
 						else
-							LauncherUtils.copyDirWithProgress(emulationSoftwareFileF, new File("cache/tmp-svpextract"));
+							LauncherUtils.copyDirWithoutProgress(emulationSoftwareFileF,
+									new File("cache/tmp-svpextract"));
 					}
 					if (new File("cache/tmp-svpextract", "clientmodifications").exists()) {
 						LauncherUtils.log("Copying emulation software client modifications...");
