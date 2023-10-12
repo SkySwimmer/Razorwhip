@@ -316,11 +316,12 @@ public abstract class ExperimentManager {
 			return;
 
 		// Assign
+		boolean oldState = isExperimentEnabled(key);
 		experiments.put(key, state);
 		experimentsNeedingReinit.remove(key);
 
 		// Call interfaces if needed
-		if (isExperimentEnabled(key) != state) {
+		if (oldState != state) {
 			if (experimentInterfaces.containsKey(key)) {
 				for (IExperiment inter : experimentInterfaces.get(key)) {
 					if (state) {
