@@ -327,7 +327,7 @@ public abstract class ExperimentManager {
 					if (state) {
 						inter.onEnable();
 						inter.onLoad();
-					} else if (System.getProperty("enableAllExperiments") != null)
+					} else if (System.getProperty("enableAllExperiments") == null)
 						inter.onDisable();
 				}
 			}
