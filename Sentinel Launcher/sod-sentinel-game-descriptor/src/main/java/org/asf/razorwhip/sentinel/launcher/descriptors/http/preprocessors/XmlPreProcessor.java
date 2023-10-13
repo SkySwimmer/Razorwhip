@@ -64,7 +64,7 @@ public class XmlPreProcessor implements IPreProcessor {
 			mediaURL += "/";
 
 		// Replace
-		xml = xml.replace(mediaURL, "http://" + host + ":5327/sentinelproxy.com/");
+		xml = xml.replace(mediaURL, "http://" + host + ":16518/sentinelproxy.com/");
 
 		// Return
 		return new ByteArrayInputStream(xml.getBytes("UTF-8"));

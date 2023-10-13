@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,7 @@ import java.util.zip.ZipOutputStream;
 import javax.swing.JOptionPane;
 
 import org.asf.connective.ConnectiveHttpServer;
+import org.asf.connective.NetworkedConnectiveHttpServer;
 import org.asf.connective.tasks.AsyncTaskManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
@@ -209,7 +211,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
 		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "http://localhost:5327/sentinel/");
+		replaceData(resourcesData, endpoint, "http://localhost:16518/sentinel/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 
 		// Check version
@@ -392,8 +394,8 @@ public class SodGameDescriptor implements IGameDescriptor {
 		LauncherUtils.log("Preparing asset server...", true);
 
 		// Create server
-		ConnectiveHttpServer server = ConnectiveHttpServer.create("HTTP/1.1",
-				Map.of("Address", "0.0.0.0", "Port", "5327"));
+		NetworkedConnectiveHttpServer server = ConnectiveHttpServer.createNetworked("HTTP/1.1",
+				Map.of("Address", "0.0.0.0", "Port", "16518"));
 		try {
 			// Discover assets
 			Map<String, AssetInformation> assets = new LinkedHashMap<String, AssetInformation>();
@@ -433,16 +435,22 @@ public class SodGameDescriptor implements IGameDescriptor {
 		try {
 			server.start();
 		} catch (IOException e) {
-			// Check if its the right server
+			// Try localhost first
+			server.setListenAddress(InetAddress.getLoopbackAddress());
 			try {
-				InputStream strm = new URL("http://localhost:5327/sentineltest/sod/testrunning").openStream();
-				byte[] data = strm.readAllBytes();
-				strm.close();
-				if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
-					throw new IOException();
-			} catch (Exception e2) {
-				errorCallback.accept("Port 5327 is in use and not in use by a compatible Sentinel asset archive!");
-				return;
+				server.start();
+			} catch (IOException e2) {
+				// Check if its the right server
+				try {
+					InputStream strm = new URL("http://localhost:16518/sentineltest/sod/testrunning").openStream();
+					byte[] data = strm.readAllBytes();
+					strm.close();
+					if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
+						throw new IOException();
+				} catch (Exception e3) {
+					errorCallback.accept("Port 16518 is in use and not in use by a compatible Sentinel asset archive!");
+					return;
+				}
 			}
 		}
 
