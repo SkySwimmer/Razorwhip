@@ -54,7 +54,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A20";
+	public static final String LAUNCHER_VERSION = "1.0.0.A21";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
