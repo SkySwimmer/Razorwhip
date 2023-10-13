@@ -560,7 +560,8 @@ public class AssetManager {
 						// Load new hash
 						String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
 								.getAsJsonObject().get(clientVersion).getAsString();
-						if (!oHash.equals(cHash) || !clientFolder.exists()) {
+						if (!oHash.equals(cHash) || !clientFolder.exists()
+								|| !new File(clientFolder, "sentinel-updated").exists()) {
 							// Not up to date
 							clientsUpToDate = false;
 							break;
@@ -682,7 +683,8 @@ public class AssetManager {
 				// Load new hash
 				String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
 						.getAsJsonObject().get(clientVersion).getAsString();
-				if (!oHash.equals(cHash) || !clientFolder.exists()) {
+				if (!oHash.equals(cHash) || !clientFolder.exists()
+						|| !new File(clientFolder, "sentinel-updated").exists()) {
 					// Download client
 					if (activeArchive.mode == ArchiveMode.REMOTE)
 						LauncherUtils.log("Updating client " + clientVersion + "...", true);
@@ -837,6 +839,10 @@ public class AssetManager {
 					// Save version
 					localHashList.addProperty(clientVersion, cHash);
 					Files.writeString(localVersions.toPath(), localHashList.toString());
+
+					// Success
+					if (!new File(clientFolder, "sentinel-updated").exists())
+						new File(clientFolder, "sentinel-updated").createNewFile();
 				}
 			}
 		}

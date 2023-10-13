@@ -209,7 +209,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
 		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "http://localhost:5326/sentinel/");
+		replaceData(resourcesData, endpoint, "http://localhost:5327/sentinel/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 
 		// Check version
@@ -393,7 +393,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Create server
 		ConnectiveHttpServer server = ConnectiveHttpServer.create("HTTP/1.1",
-				Map.of("Address", "0.0.0.0", "Port", "5326"));
+				Map.of("Address", "0.0.0.0", "Port", "5327"));
 		try {
 			// Discover assets
 			Map<String, AssetInformation> assets = new LinkedHashMap<String, AssetInformation>();
@@ -435,13 +435,13 @@ public class SodGameDescriptor implements IGameDescriptor {
 		} catch (IOException e) {
 			// Check if its the right server
 			try {
-				InputStream strm = new URL("http://localhost:5326/sentineltest/sod/testrunning").openStream();
+				InputStream strm = new URL("http://localhost:5327/sentineltest/sod/testrunning").openStream();
 				byte[] data = strm.readAllBytes();
 				strm.close();
 				if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
 					throw new IOException();
 			} catch (Exception e2) {
-				errorCallback.accept("Port 5326 is in use and not in use by a compatible Sentinel asset archive!");
+				errorCallback.accept("Port 5327 is in use and not in use by a compatible Sentinel asset archive!");
 				return;
 			}
 		}
