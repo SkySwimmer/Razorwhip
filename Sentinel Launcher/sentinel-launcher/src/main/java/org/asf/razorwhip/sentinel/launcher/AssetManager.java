@@ -298,12 +298,12 @@ public class AssetManager {
 						"Failed to verify the signature of the asset archive configuration.\n\nThe launcher cannot download or update assets and clients at this time.",
 						"Launcher Error", JOptionPane.ERROR_MESSAGE);
 				assetManagementAvailable = false;
-			} else
+			} else {
+				// Save
+				LauncherUtils.log("Saving SAC configuration...");
+				Files.writeString(Path.of("assets/sac-config.json"), configString);
 				assetManagementAvailable = true;
-
-			// Save
-			LauncherUtils.log("Saving SAC configuration...");
-			Files.writeString(Path.of("assets/sac-config.json"), configString);
+			}
 		} catch (Exception e) {
 			SwingUtilities.invokeAndWait(() -> {
 				String stackTrace = "";
