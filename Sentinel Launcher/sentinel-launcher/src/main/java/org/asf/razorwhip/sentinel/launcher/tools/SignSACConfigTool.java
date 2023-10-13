@@ -52,15 +52,8 @@ public class SignSACConfigTool {
 		s.initSign(privKey);
 
 		// Sign
-		FileInputStream fIn2 = new FileInputStream(input);
-		while (true) {
-			byte[] data = new byte[20480];
-			int i = fIn2.read(data);
-			if (i <= 0)
-				break;
-			s.update(data, 0, i);
-		}
-		fIn2.close();
+		String data = Files.readString(input.toPath()).replace("\r", "");
+		s.update(data.getBytes("UTF-8"));
 
 		// Sign
 		byte[] sig = s.sign();

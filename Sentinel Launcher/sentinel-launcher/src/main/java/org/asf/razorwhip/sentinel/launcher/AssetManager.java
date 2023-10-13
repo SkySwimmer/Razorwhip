@@ -280,7 +280,7 @@ public class AssetManager {
 		new File("assets").mkdirs();
 		try {
 			byte[] verifConfigPubKeyB = LauncherUtils.pemDecode(downloadString(assetSourceURL + "publickey.pem"));
-			byte[] configStringB = downloadBytes(assetSourceURL + "archivesettings.json");
+			String configString = downloadString(assetSourceURL + "archivesettings.json").replace("\r", "");
 			byte[] configSignature = downloadBytes(assetSourceURL + "archivesettings.json.sig");
 
 			// Load key
@@ -291,7 +291,7 @@ public class AssetManager {
 			LauncherUtils.log("Verifying signature of SAC configuration...");
 			Signature s = Signature.getInstance("Sha512WithRSA");
 			s.initVerify(verifConfigPubKey);
-			s.update(configStringB);
+			s.update(configString.getBytes("UTF-8"));
 			if (!s.verify(configSignature)) {
 				LauncherUtils.log("Verification failure!");
 				JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
@@ -303,7 +303,7 @@ public class AssetManager {
 
 			// Save
 			LauncherUtils.log("Saving SAC configuration...");
-			Files.write(Path.of("assets/sac-config.json"), configStringB);
+			Files.writeString(Path.of("assets/sac-config.json"), configString);
 		} catch (Exception e) {
 			SwingUtilities.invokeAndWait(() -> {
 				String stackTrace = "";
@@ -691,7 +691,7 @@ public class AssetManager {
 					LauncherMain.closeClientsIfNeeded();
 					if (activeArchive.mode == ArchiveMode.REMOTE) {
 						// Check connection
-						if (activeArchive.connectionAvailable) {
+						if (activeArchive.connectionAvailable && assetManagementAvailable) {
 							// Download
 							LauncherUtils.gameDescriptor.downloadClient(
 									activeArchive.archiveClientLst.get(clientVersion).getAsString(), clientVersion,
@@ -701,11 +701,19 @@ public class AssetManager {
 							// Error
 							if (throwError)
 								throw new IOException("No server connection");
-							LauncherUtils.log("Skipped client update as there is no asset server connection.");
-							JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
-									"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
-									"No connection to server", JOptionPane.ERROR_MESSAGE);
-							System.exit(1);
+							if (assetManagementAvailable) {
+								LauncherUtils.log("Skipped client update as there is no version management.");
+								JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
+										"Could not update the client as there was no connection to Sentinel's servers!\n\nPlease verify your internet connection before trying again.",
+										"No connection to server", JOptionPane.ERROR_MESSAGE);
+								System.exit(1);
+							} else {
+								LauncherUtils.log("Skipped client update as there is no asset server connection.");
+								JOptionPane.showMessageDialog(launcherWindow.frmSentinelLauncher,
+										"Failed to connect to the asset servers!\n\nPlease verify your internet connection before trying again.",
+										"No connection to server", JOptionPane.ERROR_MESSAGE);
+								System.exit(1);
+							}
 						}
 					} else {
 						// Check source
