@@ -579,7 +579,6 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 									// - With lowercase
 									// - With .unity3d in file and without lowercase
 									// - With .unity3d in file and with lowercase
-									String originalReqAsset = requestedAsset;
 									for (int i = 0; i < 4; i++) {
 										String assetFile = requestedAsset;
 
