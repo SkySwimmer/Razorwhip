@@ -574,216 +574,249 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 									// <locale>/<platform>/<version>/<quality>/<RS_DATA/RS_CONTENT/RS_MOVIES/RS_SHARED/RS_SOUND/RS_SCENE>/<asset>
 									//
 
-									// Find
-									modFile = new File(new File(overrideDir, "contentoverrides"), requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+									// Try 4 things:
+									// - Without lowercase
+									// - With lowercase
+									// - With .unity3d in file and without lowercase
+									// - With .unity3d in file and with lowercase
+									String originalReqAsset = requestedAsset;
+									for (int i = 0; i < 4; i++) {
+										String assetFile = requestedAsset;
 
-									// Check by version
-									modFile = new File(new File(overrideDir, "contentoverrides/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check if we need to search for the unity3d file
+										if (i >= 2) {
+											// Add .unity3d if needed
+											String fileName = requestedAsset;
+											if (fileName.contains("/"))
+												fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+											if (!fileName.contains("."))
+												assetFile = requestedAsset + ".unity3d";
+										}
 
-									// Check by platform and version
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/" + plat + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check if we need to try lowercase
+										if (i == 1 || i == 3) {
+											// Parse
+											String fileName = requestedAsset;
+											String fileParent = "";
+											if (fileName.contains("/")) {
+												fileParent = fileName.substring(0, fileName.lastIndexOf("/")) + "/";
+												fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+											}
 
-									// Check by quality
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+											// Convert to lowercase
+											assetFile = fileParent + fileName.toLowerCase();
+										}
 
-									// Check by quality and version
-									modFile = new File(
-											new File(overrideDir,
-													"contentoverrides/" + version + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Find
+										modFile = new File(new File(overrideDir, "contentoverrides"), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by quality, platform and version
-									modFile = new File(new File(overrideDir,
-											"contentoverrides/" + plat + "/" + version + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by version
+										modFile = new File(new File(overrideDir, "contentoverrides/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(new File(overrideDir, "contentoverrides/en-us"), requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by platform and version
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/" + plat + "/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(new File(overrideDir, "contentoverrides/" + locale),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by quality
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/" + locale.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by quality and version
+										modFile = new File(
+												new File(overrideDir,
+														"contentoverrides/" + version + "/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(new File(overrideDir, "contentoverrides/en-us/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by quality, platform and version
+										modFile = new File(new File(overrideDir, "contentoverrides/" + plat + "/"
+												+ version + "/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/" + locale + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(new File(overrideDir, "contentoverrides/en-us"), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(
-											new File(overrideDir,
-													"contentoverrides/" + locale.toLowerCase() + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(new File(overrideDir, "contentoverrides/" + locale),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/en-us/" + plat + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/" + locale.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(
-											new File(overrideDir,
-													"contentoverrides/" + locale + "/" + plat + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(new File(overrideDir, "contentoverrides/en-us/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale
-									modFile = new File(new File(overrideDir,
-											"contentoverrides/" + locale.toLowerCase() + "/" + plat + "/" + version),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/" + locale + "/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/en-us/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(
+												new File(overrideDir,
+														"contentoverrides/" + locale.toLowerCase() + "/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(
-											new File(overrideDir,
-													"contentoverrides/" + locale + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/en-us/" + plat + "/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(new File(overrideDir,
-											"contentoverrides/" + locale.toLowerCase() + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(
+												new File(overrideDir,
+														"contentoverrides/" + locale + "/" + plat + "/" + version),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(
-											new File(overrideDir,
-													"contentoverrides/en-us/" + version + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale
+										modFile = new File(new File(overrideDir, "contentoverrides/"
+												+ locale.toLowerCase() + "/" + plat + "/" + version), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(new File(overrideDir,
-											"contentoverrides/" + locale + "/" + version + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir,
+												"contentoverrides/en-us/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(new File(overrideDir, "contentoverrides/" + locale.toLowerCase()
-											+ "/" + version + "/" + quality.toLowerCase()), requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale and quality
+										modFile = new File(
+												new File(overrideDir,
+														"contentoverrides/" + locale + "/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(new File(overrideDir, "contentoverrides/en-us/" + plat + "/"
-											+ version + "/" + quality.toLowerCase()), requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir, "contentoverrides/"
+												+ locale.toLowerCase() + "/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(new File(overrideDir, "contentoverrides/" + locale + "/" + plat
-											+ "/" + version + "/" + quality.toLowerCase()), requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
-									}
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir,
+												"contentoverrides/en-us/" + version + "/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
 
-									// Check by locale and quality
-									modFile = new File(
-											new File(overrideDir, "contentoverrides/" + locale.toLowerCase() + "/"
-													+ plat + "/" + version + "/" + quality.toLowerCase()),
-											requestedAsset);
-									if (modFile.exists()) {
-										requestedFile = modFile;
-										overriddenAssetFiles.put(requestedAsset, modFile);
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir, "contentoverrides/" + locale + "/"
+												+ version + "/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
+
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir, "contentoverrides/"
+												+ locale.toLowerCase() + "/" + version + "/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
+
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir, "contentoverrides/en-us/" + plat + "/"
+												+ version + "/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
+
+										// Check by locale and quality
+										modFile = new File(new File(overrideDir, "contentoverrides/" + locale + "/"
+												+ plat + "/" + version + "/" + quality.toLowerCase()), assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
+
+										// Check by locale and quality
+										modFile = new File(
+												new File(overrideDir, "contentoverrides/" + locale.toLowerCase() + "/"
+														+ plat + "/" + version + "/" + quality.toLowerCase()),
+												assetFile);
+										if (modFile.exists()) {
+											requestedFile = modFile;
+											overriddenAssetFiles.put(requestedAsset, modFile);
+										}
+
+										// Check result
+										if (overriddenAssetFiles.containsKey(requestedAsset))
+											break;
 									}
 								}
 							}
