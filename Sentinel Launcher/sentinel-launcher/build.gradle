@@ -23,7 +23,7 @@ repositories {
 jar {
 	manifest {
 		attributes([
-			"Main-Class": "org.asf.razorwhip.sentinel.launcher.LauncherMain",
+			"Main-Class": "org.asf.sentinel.launcher.LauncherMain",
 			"Specification-Title": "SentinelLauncher",
 			"Specification-Vendor": "${authorname}",
             "Specification-Version": project.version,
@@ -60,33 +60,36 @@ artifacts {
 }
 
 dependencies {
-	implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'
+	implementation project(":deps:connective-http")
 	
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'	
 	implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.21'
 	
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '17-ea+15', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '17-ea+15', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '17-ea+15', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'mac'
+	
+	implementation group: 'javax.activation', name: 'activation', version: '1.1.1'
 }
 
 project.configurations.implementation.canBeResolved = true
@@ -97,8 +100,6 @@ task installation () {
 			into "build/Installations"
 		}
 		for (ResolvedArtifact arti : project.configurations.implementation.resolvedConfiguration.getResolvedArtifacts()) {
-			if (arti.getClassifier() != null)
-				continue;
 			copy {
 				from arti.file
 				rename arti.file.getName(), arti.name + (arti.getClassifier() != null && !arti.getClassifier().isEmpty() ? "-" + arti.getClassifier() : "") + "." + arti.getExtension()

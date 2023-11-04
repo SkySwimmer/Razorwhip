@@ -46,7 +46,7 @@ public class LauncherUtils {
 	static String[] args;
 	static DynamicClassLoader loader = new DynamicClassLoader();
 
-	static LauncherMain launcherWindow;
+	static LauncherMain launcherInstance;
 
 	private static HashMap<String, ObjectTag> tags = new HashMap<String, ObjectTag>();
 
@@ -55,12 +55,48 @@ public class LauncherUtils {
 	}
 
 	/**
+	 * Retrieves the launcher instance
+	 * 
+	 * @return LauncherMain instance
+	 */
+	public static LauncherMain getLauncherInstance() {
+		return launcherInstance;
+	}
+
+	/**
+	 * Retrieves the launcher utility instance
+	 * 
+	 * @return LauncherUtils instance
+	 */
+	public static LauncherUtils getInstance() {
+		return launcherInstance.getUtils();
+	}
+
+	/**
+	 * Prints a log message
+	 * 
+	 * @param message Message to log
+	 */
+	public void log(String message) {
+		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] " + message);
+	}
+
+	/**
 	 * Retrieves the launcher window
 	 * 
 	 * @return Launcher JFrame instance
 	 */
-	public static JFrame getLauncherWindow() {
-		return launcherWindow.frmSentinelLauncher;
+	public JFrame getLauncherFrame() {
+		return launcherInstance.getWindow().getFrame();
+	}
+
+	/**
+	 * Retrieves the launcher window
+	 * 
+	 * @return LauncherWindow instance
+	 */
+	public LauncherWindow getLauncherWindow() {
+		return launcherInstance.getWindow();
 	}
 
 	/**
@@ -69,7 +105,7 @@ public class LauncherUtils {
 	 * @param name Tag name
 	 * @return ObjectTag instance
 	 */
-	public static ObjectTag addTag(String name) {
+	public ObjectTag addTag(String name) {
 		ObjectTag tag = getTag(name);
 		if (tag != null)
 			return tag;
@@ -84,7 +120,7 @@ public class LauncherUtils {
 	 * @param name Tag name
 	 * @return ObjectTag instance or null
 	 */
-	public static ObjectTag getTag(String name) {
+	public ObjectTag getTag(String name) {
 		return tags.get(name.toLowerCase());
 	}
 
@@ -94,7 +130,7 @@ public class LauncherUtils {
 	 * @param name Tag name
 	 * @return ObjectTag instance or null
 	 */
-	public static ObjectTag removeTag(String name) {
+	public ObjectTag removeTag(String name) {
 		return tags.remove(name.toLowerCase());
 	}
 
@@ -104,7 +140,7 @@ public class LauncherUtils {
 	 * @param name Tag name
 	 * @return True if present, false otherwise
 	 */
-	public static boolean hasTag(String name) {
+	public boolean hasTag(String name) {
 		return tags.containsKey(name.toLowerCase());
 	}
 
@@ -113,7 +149,7 @@ public class LauncherUtils {
 	 * 
 	 * @return Program argument strings
 	 */
-	public static String[] getProgramArguments() {
+	public String[] getProgramArguments() {
 		return args;
 	}
 
@@ -123,7 +159,7 @@ public class LauncherUtils {
 	 * @param props Property set to parse
 	 * @return Properties map
 	 */
-	public static Map<String, String> parseProperties(String props) {
+	public Map<String, String> parseProperties(String props) {
 		HashMap<String, String> properties = new HashMap<String, String>();
 		for (String line : props.replace("\r", "").split("\n")) {
 			if (line.isEmpty() || line.startsWith("#") || !line.contains(": "))
@@ -146,7 +182,7 @@ public class LauncherUtils {
 	 * @return Downloaded string
 	 * @throws IOException If downloading fails
 	 */
-	public static String downloadString(String url) throws IOException {
+	public String downloadString(String url) throws IOException {
 		URLConnection conn = new URL(url).openConnection();
 		InputStream strm = conn.getInputStream();
 		String data = new String(strm.readAllBytes(), "UTF-8");
@@ -159,7 +195,7 @@ public class LauncherUtils {
 	 * 
 	 * @param dir Directory to download
 	 */
-	public static void deleteDir(File dir) {
+	public void deleteDir(File dir) {
 		if (!dir.exists())
 			return;
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
@@ -178,7 +214,7 @@ public class LauncherUtils {
 	 * @param destination Destination folder
 	 * @throws IOException If copying fails
 	 */
-	public static void copyDir(File source, File destination) throws IOException {
+	public void copyDir(File source, File destination) throws IOException {
 		if (!source.exists())
 			return;
 		destination.mkdirs();
@@ -191,7 +227,7 @@ public class LauncherUtils {
 		}
 	}
 
-	private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+	private final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
 	/**
 	 * Converts a byte array to a HEX string
@@ -199,7 +235,7 @@ public class LauncherUtils {
 	 * @param bytes Byte array
 	 * @return Hex string
 	 */
-	public static String bytesToHex(byte[] bytes) {
+	public String bytesToHex(byte[] bytes) {
 		char[] hexChars = new char[bytes.length * 2];
 		for (int j = 0; j < bytes.length; j++) {
 			int v = bytes[j] & 0xFF;
@@ -215,7 +251,7 @@ public class LauncherUtils {
 	 * @param data Data to hash
 	 * @return Hash string
 	 */
-	public static String sha256Hash(byte[] data) {
+	public String sha256Hash(byte[] data) {
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-256");
 			byte[] hash = digest.digest(data);
@@ -231,7 +267,7 @@ public class LauncherUtils {
 	 * @param data Data to hash
 	 * @return Hash string
 	 */
-	public static String sha512Hash(byte[] data) {
+	public String sha512Hash(byte[] data) {
 		try {
 			MessageDigest digest = MessageDigest.getInstance("SHA-512");
 			byte[] hash = digest.digest(data);
@@ -248,7 +284,7 @@ public class LauncherUtils {
 	 * @return True if signed, false otherwise
 	 * @throws IOException If verifying if the package is signed fails
 	 */
-	public static boolean isPackageSigned(File packageFile) throws IOException {
+	public boolean isPackageSigned(File packageFile) throws IOException {
 		// Load zip
 		ZipFile zip = new ZipFile(packageFile);
 		boolean signed = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG") != null;
@@ -263,7 +299,7 @@ public class LauncherUtils {
 	 * @param publicKeyOutputFile Package verification public key target file
 	 * @throws IOException If extracting fails
 	 */
-	public static void extractPackagePublicKey(File packageFile, File publicKeyOutputFile) throws IOException {
+	public void extractPackagePublicKey(File packageFile, File publicKeyOutputFile) throws IOException {
 		// Load zip
 		ZipFile zip = new ZipFile(packageFile);
 		ZipEntry keyEntry = zip.getEntry("SENTINEL.PACKAGEKEY.PEM");
@@ -294,7 +330,7 @@ public class LauncherUtils {
 	 * @return True if valid, false if invalid
 	 * @throws IOException If verification errors
 	 */
-	public static boolean verifyPackageSignature(File packageFile, File publicKeyFile) throws IOException {
+	public boolean verifyPackageSignature(File packageFile, File publicKeyFile) throws IOException {
 		// Load zip
 		ZipFile zip = new ZipFile(packageFile);
 		ZipEntry sigEntry = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG");
@@ -415,7 +451,7 @@ public class LauncherUtils {
 	 * @param versionCheck Version check string
 	 * @return True if valid, false otherwise
 	 */
-	public static boolean verifyVersionRequirement(String version, String versionCheck) {
+	public boolean verifyVersionRequirement(String version, String versionCheck) {
 		for (String filter : versionCheck.split("\\|\\|")) {
 			filter = filter.trim();
 			if (verifyVersionRequirementPart(version, filter))
@@ -424,7 +460,7 @@ public class LauncherUtils {
 		return false;
 	}
 
-	private static boolean verifyVersionRequirementPart(String version, String versionCheck) {
+	private boolean verifyVersionRequirementPart(String version, String versionCheck) {
 		// Handle versions
 		for (String filter : versionCheck.split("&")) {
 			filter = filter.trim();
@@ -525,7 +561,7 @@ public class LauncherUtils {
 		return true;
 	}
 
-	private static int[] parseVersionValues(String version) {
+	private int[] parseVersionValues(String version) {
 		ArrayList<Integer> values = new ArrayList<Integer>();
 
 		// Parse version string
@@ -591,7 +627,7 @@ public class LauncherUtils {
 	}
 
 	// PEM parser
-	static byte[] pemDecode(String pem) {
+	public static byte[] pemDecode(String pem) {
 		String base64 = pem.replace("\r", "");
 
 		// Strip header
