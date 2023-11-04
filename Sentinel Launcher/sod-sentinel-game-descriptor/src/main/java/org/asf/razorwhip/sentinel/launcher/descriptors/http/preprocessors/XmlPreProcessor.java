@@ -42,7 +42,7 @@ public class XmlPreProcessor implements IPreProcessor {
 		String xml = new String(xmlB, "UTF-8");
 
 		// Get local IP
-		String host = "localhost";
+		String host = "127.0.0.1";
 		if (client instanceof RemoteClientHttp_1_1) {
 			RemoteClientHttp_1_1 cl = (RemoteClientHttp_1_1) client;
 			Socket sock = cl.getSocket();

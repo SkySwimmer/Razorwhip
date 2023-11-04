@@ -51,7 +51,7 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 			endpoints = new ServerEndpoints();
 
 		// Get local IP
-		String host = "localhost";
+		String host = "127.0.0.1";
 		if (client instanceof RemoteClientHttp_1_1) {
 			RemoteClientHttp_1_1 cl = (RemoteClientHttp_1_1) client;
 			Socket sock = cl.getSocket();
@@ -103,7 +103,7 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 		JsonObject sfsHosts = descriptorDef.get("manifestSmartfoxEndpoints").getAsJsonObject();
 		for (String sfsH : sfsHosts.keySet()) {
 			manifest = manifest.replace("<MMOServer>" + sfsH + "</MMOServer>", "<MMOServer>"
-					+ (endpoints.smartFoxHost.equals("localhost") ? host : endpoints.smartFoxHost) + "</MMOServer>");
+					+ ((endpoints.smartFoxHost.equals("localhost") || endpoints.smartFoxHost.equals("127.0.0.1")) ? host : endpoints.smartFoxHost) + "</MMOServer>");
 			manifest = manifest.replace("<MMOServerPort>" + sfsHosts.get(sfsH).getAsInt() + "</MMOServerPort>",
 					"<MMOServerPort>" + endpoints.smartFoxPort + "</MMOServerPort>");
 		}
@@ -114,7 +114,7 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 
 	private String processURL(String url, String host) throws IOException {
 		URL u = new URL(url);
-		if (u.getHost().equals("localhost"))
+		if (u.getHost().equals("localhost") || u.getHost().equals("127.0.0.1"))
 			url = new URL(u.getProtocol(), host, u.getPort(), u.getFile()).toString();
 		if (!url.endsWith("/"))
 			url += "/";

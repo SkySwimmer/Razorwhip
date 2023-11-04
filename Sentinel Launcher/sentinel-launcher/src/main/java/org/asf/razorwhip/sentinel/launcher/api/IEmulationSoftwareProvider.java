@@ -104,4 +104,25 @@ public interface IEmulationSoftwareProvider {
 	public default void onGameLaunchSuccess(String version, File clientDir) {
 	}
 
+	/**
+	 * Called before the payload manager is loaded
+	 */
+	public default void onPreloadPayloadManager() {
+	}
+
+	/**
+	 * Called after the payload manager is loaded
+	 */
+	public default void onPostloadPayloadManager() {
+	}
+
+	/**
+	 * Called to retrieve external payloads added by eg. remote servers
+	 * 
+	 * @return Array of payload files
+	 */
+	public default File[] getExtraPayloadFiles() {
+		return new File[0];
+	}
+
 }

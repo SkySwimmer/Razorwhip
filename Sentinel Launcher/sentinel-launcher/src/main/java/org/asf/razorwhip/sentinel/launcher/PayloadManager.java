@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -247,6 +248,11 @@ public class PayloadManager {
 			}
 			return true;
 		}
+
+		// Index payloads that were added/removed
+		indexPayloads();
+
+		// Return
 		return false;
 	}
 
@@ -391,14 +397,101 @@ public class PayloadManager {
 				loadPayloadFile(spf, new File("cache/payloadcache/payloads", spf.getName()), index, enabled);
 			}
 
+			// Load old hash list for software-controlled payloads
+			JsonObject oldPayloadCache = new JsonObject();
+			File cacheFile = new File("cache/payloadcache/payloadhashes-sgdsvp.json");
+			if (cacheFile.exists())
+				oldPayloadCache = JsonParser
+						.parseString(Files.readString(Path.of("cache/payloadcache/payloadhashes-sgdsvp.json")))
+						.getAsJsonObject();
+
+			// Software-controlled payloads
+			boolean updated = false;
+			LauncherUtils.log("Synchronizing payloads...", true);
+			ArrayList<File> spfs = new ArrayList<File>();
+			ArrayList<String> sPayloadList = new ArrayList<String>();
+			HashMap<String, String> hashListSPayloads = new HashMap<String, String>();
+			LauncherUtils.log("Finding descriptor-controlled payloads...");
+			for (File spf : LauncherUtils.gameDescriptor.getExtraPayloadFiles())
+				spfs.add(spf);
+			LauncherUtils.log("Finding emulation-software-controlled payloads...");
+			for (File spf : LauncherUtils.emulationSoftware.getExtraPayloadFiles())
+				spfs.add(spf);
+			LauncherUtils.log("Loading discovered payloads...");
+			for (File spf : spfs) {
+				// Load SPF file descriptor
+				Map<String, String> descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
+				String id = spf.getName();
+
+				// Load settings
+				if (descriptor.containsKey("Payload-ID"))
+					id = descriptor.get("Payload-ID");
+
+				// Add
+				sPayloadList.add(id);
+
+				// Update payload
+				File fD = spf;
+				if (!fD.isDirectory()) {
+					// Check cache
+					String hash = LauncherUtils.sha512Hash(Files.readAllBytes(spf.toPath()));
+					String oHash = oldPayloadCache.has(id) ? oldPayloadCache.get(id).getAsString() : "";
+					if (!oHash.equals(hash)) {
+						// Updated
+
+						// Extract
+						LauncherUtils.log("Extracting payload " + spf.getName() + "...", true);
+						LauncherUtils.unZip(spf, new File("cache/payloadcache/payloads-sgdsvp/", id));
+						LauncherUtils.resetProgressBar();
+						LauncherUtils.hideProgressPanel();
+
+						// Mark updated
+						updated = true;
+					}
+
+					// Save hashes
+					hashListSPayloads.put(id, hash);
+					oldPayloadCache.addProperty(id, hash);
+
+					// Assign source folder
+					fD = new File("cache/payloadcache/payloads-sgdsvp/", id);
+				} else if (!new File("cache/payloadcache/requireupdate").exists()) {
+					// Force update, directory-based payloads cannot be checked easily
+					updated = true;
+				}
+
+				// Load file
+				loadPayloadFile(spf, fD, index, true);
+			}
+
+			// Check removed payloads, remove those from disk, and save the list
+			String[] ids = oldPayloadCache.keySet().toArray(t -> new String[t]);
+			for (String id : ids) {
+				if (!hashListSPayloads.containsKey(id)) {
+					// Removed
+					oldPayloadCache.remove(id);
+
+					// Delete directory
+					LauncherUtils.deleteDir(new File("cache/payloadcache/payloads-sgdsvp/", id));
+
+					// Mark updated
+					updated = true;
+				}
+			}
+
+			// Save to disk
+			if (updated && !new File("cache/payloadcache/requireupdate").exists())
+				new File("cache/payloadcache/requireupdate").createNewFile();
+			Files.writeString(Path.of("cache/payloadcache/payloadhashes-sgdsvp.json"), oldPayloadCache.toString());
+
 			// Load debug payloads
 			if (System.getProperty("debugPayloadFiles") != null
 					|| System.getProperty("debugPayloadHintClasses") != null) {
-				LauncherUtils.log("Loading debug payloads...");
+				LauncherUtils.log("Loading debug payloads...", true);
 
 				// Load debug files
-				if (System.getProperty("debugPayloadFiles") != null) {
-					String[] files = System.getProperty("debugPayloadFiles").split(File.pathSeparator);
+				if (System.getProperty("debugPayloadDirectories") != null) {
+					String[] files = System.getProperty("debugPayloadDirectories").split(File.pathSeparator);
 					for (String file : files) {
 						// Load
 						File spfD = new File(file);
@@ -423,6 +516,8 @@ public class PayloadManager {
 								LauncherUtils.log("Extracting payload " + f.getName() + "...");
 								LauncherUtils.unZip(f, new File("cache/payloadcache/payloadsdebug/" + clsN));
 								fD = new File("cache/payloadcache/payloadsdebug/" + clsN);
+								LauncherUtils.resetProgressBar();
+								LauncherUtils.hideProgressPanel();
 							}
 							loadPayloadFile(f, fD, index, true);
 						} catch (Exception e) {
@@ -433,6 +528,7 @@ public class PayloadManager {
 			}
 
 			// Compile load order
+			LauncherUtils.setStatus("Preparing to load payloads...");
 			LauncherUtils.log("Compiling load order...");
 			for (String id : payloads.keySet()) {
 				PayloadEntry payload = payloads.get(id);

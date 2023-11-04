@@ -5,9 +5,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,8 +30,10 @@ import javax.swing.JOptionPane;
 import org.asf.connective.ConnectiveHttpServer;
 import org.asf.connective.NetworkedConnectiveHttpServer;
 import org.asf.connective.tasks.AsyncTaskManager;
+import org.asf.razorwhip.sentinel.launcher.LauncherMain;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.api.IGameDescriptor;
+import org.asf.razorwhip.sentinel.launcher.api.ObjectTag;
 import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
@@ -39,7 +43,10 @@ import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequest
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.ApplicationManifestPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.AssetVersionsPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.XmlPreProcessor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.PayloadEntryData;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.PayloadListData;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -211,7 +218,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 		if (!endpoint.endsWith("/"))
 			endpoint += "/";
 		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "http://localhost:16518/sentinel/");
+		replaceData(resourcesData, endpoint, "http://127.0.0.1:16518/sentinel/");
 		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
 
 		// Check version
@@ -442,7 +449,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 			} catch (IOException e2) {
 				// Check if its the right server
 				try {
-					InputStream strm = new URL("http://localhost:16518/sentineltest/sod/testrunning").openStream();
+					InputStream strm = new URL("http://127.0.0.1:16518/sentineltest/sod/testrunning").openStream();
 					byte[] data = strm.readAllBytes();
 					strm.close();
 					if (!new String(data, "UTF-8").equalsIgnoreCase("assetserver-sentinel-sod-" + ASSET_SERVER_VERSION))
@@ -690,6 +697,83 @@ public class SodGameDescriptor implements IGameDescriptor {
 				buffer.clear();
 		}
 		return -1;
+	}
+
+	@Override
+	public File[] getExtraPayloadFiles() {
+		ArrayList<File> payloads = new ArrayList<File>();
+
+		// Get url
+		ObjectTag tag = LauncherUtils.getTag("SENTINEL_PAYLOADSYNC_URL");
+		if (tag != null) {
+			// Load url from tag
+			String url = tag.getValue(String.class);
+
+			// Prepare request body
+			// Using a SoD-like request for this
+			//
+			// Mostly to keep the Edge API a lil clean and to make it easier for other
+			// servers to implement this feature should they want payload sync too
+			//
+			// We are using the Windows version of the JS API key
+			LauncherUtils.log("Contacting remote server for payload sync...");
+			LinkedHashMap<String, String> req = new LinkedHashMap<String, String>();
+			req.put("apiKey", "b99f695c-7c6e-4e9b-b0f7-22034d799013");
+			req.put("softwareName", LauncherUtils.getSoftwareID());
+			req.put("softwareVersion", LauncherUtils.getSoftwareVersion());
+			req.put("sentinelVersion", LauncherMain.LAUNCHER_VERSION);
+
+			// Encode form
+			String form = encodeForm(req);
+
+			// Contact server
+			try {
+				// Open URL connection
+				HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+				conn.setDoOutput(true);
+				conn.setRequestMethod("POST");
+				conn.addRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+
+				// Send request
+				conn.getOutputStream().write(form.getBytes("UTF-8"));
+
+				// Get response
+				byte[] resp = conn.getInputStream().readAllBytes();
+				String respXml = new String(resp, "UTF-8");
+
+				// Parse response XML
+				XmlMapper mapper = new XmlMapper();
+				PayloadListData payloadList = mapper.readValue(respXml, PayloadListData.class);
+
+				// Go through response
+				for (PayloadEntryData payload : payloadList.payloads) {
+// TODO
+				}
+			} catch (Exception e) {
+				// Could not sync payloads
+				LauncherUtils.log(
+						"Payload sync could not be performed due to an error while communicating with the server, the server likely doesn't support payload sync.");
+			}
+		}
+
+		// Return
+		return payloads.toArray(t -> new File[t]);
+	}
+
+	private String encodeForm(Map<String, String> req) {
+		String form = "";
+		for (String key : req.keySet()) {
+			try {
+				// Add to form
+				if (!form.isEmpty())
+					form += "&";
+				form += URLEncoder.encode(key, "UTF-8");
+				form += "=";
+				form += URLEncoder.encode(req.get(key), "UTF-8");
+			} catch (IOException e) {
+			}
+		}
+		return form;
 	}
 
 }

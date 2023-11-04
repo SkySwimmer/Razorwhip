@@ -54,7 +54,7 @@ import java.awt.FlowLayout;
 
 public class LauncherMain {
 
-	public static final String LAUNCHER_VERSION = "1.0.0.A21";
+	public static String LAUNCHER_VERSION = "1.0.0.A22";
 
 	JFrame frmSentinelLauncher;
 	private JLabel lblStatusLabel;
@@ -1036,6 +1036,10 @@ public class LauncherMain {
 				LauncherUtils.resetProgressBar();
 				LauncherUtils.setStatus("Checking for updates...");
 
+				// Call payload preload methods
+				LauncherUtils.gameDescriptor.onPreloadPayloadManager();
+				LauncherUtils.emulationSoftware.onPreloadPayloadManager();
+
 				// Payloads
 				PayloadManager.checkForUpdates();
 
@@ -1045,6 +1049,10 @@ public class LauncherMain {
 				PayloadManager.showPayloadManagementWindowIfNeeded();
 				LauncherUtils.log("Loading payloads...", true);
 				PayloadManager.initPayloads();
+
+				// Post-load
+				LauncherUtils.gameDescriptor.onPostloadPayloadManager();
+				LauncherUtils.emulationSoftware.onPostloadPayloadManager();
 
 				// Post-init
 				PayloadManager.postInitPayloads();
