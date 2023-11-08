@@ -457,6 +457,10 @@ public class LauncherUtils {
 
 	private static int indexDir(File dir) {
 		int i = 0;
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// DONT RECURSE
+			return 1;
+		}
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
 			i += indexDir(subDir) + 1;
 		}
@@ -475,6 +479,11 @@ public class LauncherUtils {
 	public static void deleteDir(File dir) {
 		if (!dir.exists())
 			return;
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// DONT RECURSE
+			dir.delete();
+			return;
+		}
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
 			deleteDir(subDir);
 		}

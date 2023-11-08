@@ -273,6 +273,11 @@ public class LauncherUtils {
 	public void deleteDir(File dir) {
 		if (!dir.exists())
 			return;
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// DONT RECURSE
+			dir.delete();
+			return;
+		}
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
 			deleteDir(subDir);
 		}
