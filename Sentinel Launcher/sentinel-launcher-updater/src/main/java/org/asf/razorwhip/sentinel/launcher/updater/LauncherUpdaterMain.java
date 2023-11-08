@@ -594,7 +594,7 @@ public class LauncherUpdaterMain {
 			} catch (InvocationTargetException | InterruptedException e) {
 			}
 		}
-		copyDir(instSource, launcherOut, progressBar);
+		copyDir(instSource, instDir, progressBar);
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(100);
@@ -604,20 +604,13 @@ public class LauncherUpdaterMain {
 		} catch (InvocationTargetException | InterruptedException e) {
 		}
 
-		// Windows and linux only, macos package cannot be modified
-		if (os != 0) {
-			// Copy launcher info
-			log("Copying launcher information...");
-			File sOut = new File(launcherOut, "launcher.json");
-			if (sOut.exists())
-				sOut.delete();
-			Files.copy(new File("launcher.json").toPath(), sOut.toPath());
-
-			// Copy runtime
-			log("Copying java runtime...");
+		// MacOS
+		if (os == 0) {
+			// Install launcher
+			log("Installing launcher application...");
 			if (progressBar != null) {
 				try {
-					int c = countDir(new File(os == 1 ? "win" : "linux"));
+					int c = countDir(instSource);
 					SwingUtilities.invokeAndWait(() -> {
 						progressBar.setMaximum(c);
 						progressBar.setValue(0);
@@ -626,7 +619,7 @@ public class LauncherUpdaterMain {
 				} catch (InvocationTargetException | InterruptedException e) {
 				}
 			}
-			copyDir(new File(os == 1 ? "win" : "linux"), new File(launcherOut, os == 1 ? "win" : "linux"), progressBar);
+			copyDir(instSource, launcherOut, progressBar);
 			try {
 				SwingUtilities.invokeAndWait(() -> {
 					progressBar.setMaximum(100);
@@ -635,17 +628,48 @@ public class LauncherUpdaterMain {
 				});
 			} catch (InvocationTargetException | InterruptedException e) {
 			}
+		}
 
-			// Set perms
-			if (os == 2) {
-				// Linux-only
-				log("Setting permissions...");
-				ProcessBuilder proc = new ProcessBuilder("chmod", "+x",
-						new File(launcherOut, "launcher.sh").getCanonicalPath());
-				try {
-					proc.start().waitFor();
-				} catch (InterruptedException e1) {
-				}
+		// Copy launcher info
+		log("Copying launcher information...");
+		File sOut = new File(launcherOut, "launcher.json");
+		if (sOut.exists())
+			sOut.delete();
+		Files.copy(new File("launcher.json").toPath(), sOut.toPath());
+
+		// Copy runtime
+		log("Copying java runtime...");
+		if (progressBar != null) {
+			try {
+				int c = countDir(new File(os == 1 ? "win" : (os == 0 ? "osx" : "linux")));
+				SwingUtilities.invokeAndWait(() -> {
+					progressBar.setMaximum(c);
+					progressBar.setValue(0);
+					progressBar.repaint();
+				});
+			} catch (InvocationTargetException | InterruptedException e) {
+			}
+		}
+		copyDir(new File(os == 1 ? "win" : (os == 0 ? "osx" : "linux")),
+				new File(launcherOut, os == 1 ? "win" : (os == 0 ? "osx" : "linux")), progressBar);
+		try {
+			SwingUtilities.invokeAndWait(() -> {
+				progressBar.setMaximum(100);
+				progressBar.setValue(100);
+				progressBar.repaint();
+			});
+		} catch (InvocationTargetException | InterruptedException e) {
+		}
+
+		// Set perms
+		if (os == 2) {
+			// Linux-only
+			log("Setting permissions...");
+			ProcessBuilder proc = new ProcessBuilder("chmod", "+x",
+					new File(launcherOut, "launcher.sh").getCanonicalPath());
+			try {
+				proc.start().waitFor();
+			} catch (InterruptedException e1) {
 			}
 		}
 
@@ -971,6 +995,11 @@ public class LauncherUpdaterMain {
 	}
 
 	private static void deleteDir(File dir, JProgressBar progressBar) {
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// Skip symlink
+			dir.delete();
+			return;
+		}
 		if (!dir.exists() || dir.listFiles() == null) {
 			if (progressBar != null) {
 				try {

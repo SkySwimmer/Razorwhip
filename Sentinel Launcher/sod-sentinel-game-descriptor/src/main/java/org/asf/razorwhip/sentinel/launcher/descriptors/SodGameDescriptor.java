@@ -397,6 +397,124 @@ public class SodGameDescriptor implements IGameDescriptor {
 			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
 			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
 			Runnable successCallback, Consumer<String> errorCallback) {
+		try {
+			// Wine setup
+			String plat;
+			if (System.getProperty("os.name").toLowerCase().contains("win")
+					&& !System.getProperty("os.name").toLowerCase().contains("darwin")) { // Windows
+				plat = "windows";
+			} else if (System.getProperty("os.name").toLowerCase().contains("darwin")
+					|| System.getProperty("os.name").toLowerCase().contains("mac")) { // MacOS
+				plat = "macos";
+			} else if (System.getProperty("os.name").toLowerCase().contains("linux")) {// Linux
+				plat = "linux";
+			} else
+				throw new IOException("Unsupported platform");
+			if (plat.equalsIgnoreCase("linux") || plat.equalsIgnoreCase("macos")) {
+				File prefix = new File("wineprefix");
+				if (!new File(prefix, "completed").exists()) {
+					prefix.mkdirs();
+
+					// Set overrides
+					LauncherUtils.log("Configuring wine...", true);
+					LauncherUtils.resetProgressBar();
+					try {
+						ProcessBuilder proc = new ProcessBuilder("wine", "reg", "add",
+								"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "winhttp", "/d",
+								"native,builtin", "/f");
+						proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+						proc.start().waitFor();
+						proc = new ProcessBuilder("wine", "reg", "add",
+								"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d11", "/d", "native", "/f");
+						proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+						proc.start().waitFor();
+						proc = new ProcessBuilder("wine", "reg", "add",
+								"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d10core", "/d", "native",
+								"/f");
+						proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+						proc.start().waitFor();
+						proc = new ProcessBuilder("wine", "reg", "add",
+								"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "dxgi", "/d", "native", "/f");
+						proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+						proc.start().waitFor();
+						proc = new ProcessBuilder("wine", "reg", "add",
+								"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d9", "/d", "native", "/f");
+						proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+						proc.start().waitFor();
+					} catch (Exception e) {
+						prefix.delete();
+						JOptionPane.showMessageDialog(null,
+								"Failed to configure wine, please make sure you have wine installed.", "Launcher Error",
+								JOptionPane.ERROR_MESSAGE);
+						System.exit(1);
+					}
+
+					// Download DXVK
+					LauncherUtils.log("Installing DXVK...", true);
+					String man = LauncherUtils.downloadString(plat.equalsIgnoreCase("linux")
+							? "https://api.github.com/repos/doitsujin/dxvk/releases/latest"
+							: "https://api.github.com/repos/Gcenx/DXVK-macOS/releases/latest");
+					JsonArray assets = JsonParser.parseString(man).getAsJsonObject().get("assets").getAsJsonArray();
+					String dxvk = null;
+					for (JsonElement ele : assets) {
+						JsonObject asset = ele.getAsJsonObject();
+						if (asset.get("name").getAsString().endsWith(".tar.gz")
+								&& !asset.get("name").getAsString().contains("steam")) {
+							dxvk = asset.get("browser_download_url").getAsString();
+							break;
+						}
+					}
+					if (dxvk == null)
+						throw new Exception("Failed to find a DXVK download.");
+					LauncherUtils.resetProgressBar();
+					LauncherUtils.showProgressPanel();
+					LauncherUtils.downloadFile(dxvk, new File("cache/dxvk.tar.gz"));
+
+					// Extract
+					LauncherUtils.log("Extracting DXVK...", true);
+					LauncherUtils.resetProgressBar();
+					LauncherUtils.showProgressPanel();
+					LauncherUtils.unTarGz(new File("cache/dxvk.tar.gz"), new File("cache/dxvk"));
+					LauncherUtils.hideProgressPanel();
+					LauncherUtils.resetProgressBar();
+
+					// Install
+					LauncherUtils.log("Installing DXVK...", true);
+					File dxvkDir = new File("cache/dxvk").listFiles()[0];
+					File wineSys = new File(prefix, "drive_c/windows");
+					wineSys.mkdirs();
+
+					// Install for x32
+					new File(wineSys, "syswow64").mkdirs();
+					for (File f : new File(dxvkDir, "x32").listFiles()) {
+						Files.copy(f.toPath(), new File(wineSys, "syswow64/" + f.getName()).toPath(),
+								StandardCopyOption.REPLACE_EXISTING);
+					}
+
+					// Install for x64
+					new File(wineSys, "system32").mkdirs();
+					for (File f : new File(dxvkDir, "x64").listFiles()) {
+						Files.copy(f.toPath(), new File(wineSys, "system32/" + f.getName()).toPath(),
+								StandardCopyOption.REPLACE_EXISTING);
+					}
+
+					// Mark done
+					new File(prefix, "completed").createNewFile();
+				}
+			}
+		} catch (Exception e) {
+			String stackTrace = "";
+			Throwable t = e;
+			while (t != null) {
+				for (StackTraceElement ele : t.getStackTrace())
+					stackTrace += "\n     At: " + ele;
+				t = t.getCause();
+				if (t != null)
+					stackTrace += "\nCaused by: " + t;
+			}
+			errorCallback.accept("An error occurred while starting the client: " + e + stackTrace);
+		}
+
 		// Log
 		LauncherUtils.log("Preparing asset server...", true);
 
@@ -529,100 +647,6 @@ public class SodGameDescriptor implements IGameDescriptor {
 				else if (plat.equals("macos") || plat.equals("linux")) {
 					builder = new ProcessBuilder("wine", clientFile.getAbsolutePath()); // Linux/macos, need wine
 					File prefix = new File("wineprefix");
-					if (!new File(prefix, "completed").exists()) {
-						prefix.mkdirs();
-
-						// Set overrides
-						LauncherUtils.log("Configuring wine...", true);
-						LauncherUtils.resetProgressBar();
-						try {
-							ProcessBuilder proc = new ProcessBuilder("wine", "reg", "add",
-									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "winhttp", "/d",
-									"native,builtin", "/f");
-							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
-							proc.start().waitFor();
-							proc = new ProcessBuilder("wine", "reg", "add",
-									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d11", "/d", "native",
-									"/f");
-							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
-							proc.start().waitFor();
-							proc = new ProcessBuilder("wine", "reg", "add",
-									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d10core", "/d",
-									"native", "/f");
-							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
-							proc.start().waitFor();
-							proc = new ProcessBuilder("wine", "reg", "add",
-									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "dxgi", "/d", "native",
-									"/f");
-							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
-							proc.start().waitFor();
-							proc = new ProcessBuilder("wine", "reg", "add",
-									"HKEY_CURRENT_USER\\Software\\Wine\\DllOverrides", "/v", "d3d9", "/d", "native",
-									"/f");
-							proc.environment().put("WINEPREFIX", prefix.getCanonicalPath());
-							proc.start().waitFor();
-						} catch (Exception e) {
-							prefix.delete();
-							JOptionPane.showMessageDialog(null,
-									"Failed to configure wine, please make sure you have wine installed.",
-									"Launcher Error", JOptionPane.ERROR_MESSAGE);
-							System.exit(1);
-						}
-
-						// Download DXVK
-						if (plat.equals("linux")) {
-							LauncherUtils.log("Installing DXVK...", true);
-							String man = LauncherUtils
-									.downloadString("https://api.github.com/repos/doitsujin/dxvk/releases/latest");
-							JsonArray assets = JsonParser.parseString(man).getAsJsonObject().get("assets")
-									.getAsJsonArray();
-							String dxvk = null;
-							for (JsonElement ele : assets) {
-								JsonObject asset = ele.getAsJsonObject();
-								if (asset.get("name").getAsString().endsWith(".tar.gz")
-										&& !asset.get("name").getAsString().contains("steam")) {
-									dxvk = asset.get("browser_download_url").getAsString();
-									break;
-								}
-							}
-							if (dxvk == null)
-								throw new Exception("Failed to find a DXVK download.");
-							LauncherUtils.resetProgressBar();
-							LauncherUtils.showProgressPanel();
-							LauncherUtils.downloadFile(dxvk, new File("cache/dxvk.tar.gz"));
-
-							// Extract
-							LauncherUtils.log("Extracting DXVK...", true);
-							LauncherUtils.resetProgressBar();
-							LauncherUtils.showProgressPanel();
-							LauncherUtils.unTarGz(new File("cache/dxvk.tar.gz"), new File("cache/dxvk"));
-							LauncherUtils.hideProgressPanel();
-							LauncherUtils.resetProgressBar();
-
-							// Install
-							LauncherUtils.log("Installing DXVK...", true);
-							File dxvkDir = new File("cache/dxvk").listFiles()[0];
-							File wineSys = new File(prefix, "drive_c/windows");
-							wineSys.mkdirs();
-
-							// Install for x32
-							new File(wineSys, "syswow64").mkdirs();
-							for (File f : new File(dxvkDir, "x32").listFiles()) {
-								Files.copy(f.toPath(), new File(wineSys, "syswow64/" + f.getName()).toPath(),
-										StandardCopyOption.REPLACE_EXISTING);
-							}
-
-							// Install for x64
-							new File(wineSys, "system32").mkdirs();
-							for (File f : new File(dxvkDir, "x64").listFiles()) {
-								Files.copy(f.toPath(), new File(wineSys, "system32/" + f.getName()).toPath(),
-										StandardCopyOption.REPLACE_EXISTING);
-							}
-						}
-
-						// Mark done
-						new File(prefix, "completed").createNewFile();
-					}
 					builder.environment().put("WINEPREFIX", prefix.getCanonicalPath());
 				} else
 					throw new IOException("Unsupported platform");
