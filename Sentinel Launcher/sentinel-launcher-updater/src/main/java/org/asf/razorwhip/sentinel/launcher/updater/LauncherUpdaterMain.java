@@ -172,7 +172,8 @@ public class LauncherUpdaterMain {
 				boolean inHome = false;
 				if (System.getenv("LOCALAPPDATA") == null) {
 					instDir = new File(System.getProperty("user.home") + "/.local/share");
-					if (!instDir.exists()) {
+					if (!instDir.exists() || (System.getProperty("os.name").toLowerCase().contains("darwin")
+							|| System.getProperty("os.name").toLowerCase().contains("mac"))) {
 						inHome = true;
 						instDir = new File(System.getProperty("user.home"));
 					}
@@ -331,7 +332,8 @@ public class LauncherUpdaterMain {
 			boolean inHome = false;
 			if (System.getenv("LOCALAPPDATA") == null) {
 				instDir = new File(System.getProperty("user.home") + "/.local/share");
-				if (!instDir.exists()) {
+				if (!instDir.exists() || (System.getProperty("os.name").toLowerCase().contains("darwin")
+						|| System.getProperty("os.name").toLowerCase().contains("mac"))) {
 					inHome = true;
 					instDir = new File(System.getProperty("user.home"));
 				}
@@ -483,7 +485,8 @@ public class LauncherUpdaterMain {
 		File instDir2;
 		if (System.getenv("LOCALAPPDATA") == null) {
 			instDir2 = new File(System.getProperty("user.home") + "/.local/share");
-			if (!instDir2.exists()) {
+			if (!instDir2.exists() || (System.getProperty("os.name").toLowerCase().contains("darwin")
+					|| System.getProperty("os.name").toLowerCase().contains("mac"))) {
 				inHome = true;
 				instDir2 = new File(System.getProperty("user.home"));
 			}
@@ -651,7 +654,7 @@ public class LauncherUpdaterMain {
 			}
 		}
 		copyDir(new File(os == 1 ? "win" : (os == 0 ? "osx" : "linux")),
-				new File(launcherOut, os == 1 ? "win" : (os == 0 ? "osx" : "linux")), progressBar);
+				new File(launcherOut, os == 1 ? "win" : (os == 0 ? "Contents/Resources/osx" : "linux")), progressBar);
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(100);
@@ -912,7 +915,8 @@ public class LauncherUpdaterMain {
 		boolean inHome = false;
 		if (System.getenv("LOCALAPPDATA") == null) {
 			instDir = new File(System.getProperty("user.home") + "/.local/share");
-			if (!instDir.exists()) {
+			if (!instDir.exists() || (System.getProperty("os.name").toLowerCase().contains("darwin")
+					|| System.getProperty("os.name").toLowerCase().contains("mac"))) {
 				inHome = true;
 				instDir = new File(System.getProperty("user.home"));
 			}
@@ -1051,6 +1055,10 @@ public class LauncherUpdaterMain {
 
 	private static int countDir(File dir) {
 		if (!dir.exists() || dir.listFiles() == null) {
+			return 1;
+		}
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// Skip symlink
 			return 1;
 		}
 

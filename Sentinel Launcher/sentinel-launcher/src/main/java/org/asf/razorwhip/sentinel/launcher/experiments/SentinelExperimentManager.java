@@ -29,7 +29,7 @@ public class SentinelExperimentManager extends ExperimentManager {
 	 * Shows the experiment manager window
 	 */
 	public static void showExperimentManagerWindow() {
-		ExperimentManagerWindow window = new ExperimentManagerWindow();
+		ExperimentManagerWindow window = new ExperimentManagerWindow(LauncherUtils.getLauncherWindow());
 		if (window.showDialog()) {
 			// Restart sentinel
 			LauncherUtils.log("Requesting restart via exit code 237...");

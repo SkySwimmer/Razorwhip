@@ -209,6 +209,7 @@ public class LauncherUtils {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressPanel.setVisible(true);
+				progressPanel.repaint();
 				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
@@ -251,6 +252,8 @@ public class LauncherUtils {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(100);
 				progressBar.setValue(0);
+				progressBar.repaint();
+				progressPanel.repaint();
 				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
@@ -270,6 +273,8 @@ public class LauncherUtils {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(max);
 				progressBar.setValue(value);
+				progressBar.repaint();
+				progressPanel.repaint();
 				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
@@ -287,6 +292,8 @@ public class LauncherUtils {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setValue(value);
+				progressBar.repaint();
+				progressPanel.repaint();
 				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
@@ -324,6 +331,8 @@ public class LauncherUtils {
 				progressBar.setValue(progressBar.getMaximum());
 			else
 				progressBar.setValue(progressBar.getValue() + value);
+			progressBar.repaint();
+			progressPanel.repaint();
 			panel.repaint();
 		});
 	}
@@ -339,6 +348,8 @@ public class LauncherUtils {
 				progressBar.setValue(progressBar.getMaximum());
 			else
 				progressBar.setValue(progressBar.getValue() + 1);
+			progressBar.repaint();
+			progressPanel.repaint();
 			panel.repaint();
 		});
 	}
@@ -354,6 +365,8 @@ public class LauncherUtils {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				progressBar.setMaximum(max);
+				progressBar.repaint();
+				progressPanel.repaint();
 				panel.repaint();
 			});
 		} catch (InvocationTargetException | InterruptedException e) {
@@ -560,6 +573,8 @@ public class LauncherUtils {
 				SwingUtilities.invokeAndWait(() -> {
 					LauncherUtils.progressBar.setMaximum(l < 1000 ? 1 : l / 1000);
 					LauncherUtils.progressBar.setValue(0);
+					progressBar.repaint();
+					progressPanel.repaint();
 					LauncherUtils.panel.repaint();
 				});
 			}
@@ -576,6 +591,8 @@ public class LauncherUtils {
 				if (progressBar != null) {
 					SwingUtilities.invokeLater(() -> {
 						LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getValue() + 1);
+						progressBar.repaint();
+						progressPanel.repaint();
 						LauncherUtils.panel.repaint();
 					});
 				}
@@ -587,6 +604,8 @@ public class LauncherUtils {
 			if (progressBar != null) {
 				SwingUtilities.invokeAndWait(() -> {
 					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					progressBar.repaint();
+					progressPanel.repaint();
 					LauncherUtils.panel.repaint();
 				});
 			}
@@ -625,6 +644,8 @@ public class LauncherUtils {
 				SwingUtilities.invokeAndWait(() -> {
 					progressBar.setMaximum(fcount);
 					progressBar.setValue(0);
+					progressBar.repaint();
+					progressPanel.repaint();
 					panel.repaint();
 				});
 			}
@@ -653,6 +674,8 @@ public class LauncherUtils {
 			if (progressBar != null) {
 				SwingUtilities.invokeLater(() -> {
 					progressBar.setValue(progressBar.getValue() + 1);
+					progressBar.repaint();
+					progressPanel.repaint();
 					panel.repaint();
 				});
 			}
@@ -663,6 +686,8 @@ public class LauncherUtils {
 			if (progressBar != null) {
 				SwingUtilities.invokeAndWait(() -> {
 					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					progressBar.repaint();
+					progressPanel.repaint();
 					LauncherUtils.panel.repaint();
 				});
 			}
@@ -703,6 +728,8 @@ public class LauncherUtils {
 				SwingUtilities.invokeAndWait(() -> {
 					progressBar.setMaximum(fcount);
 					progressBar.setValue(0);
+					progressBar.repaint();
+					progressPanel.repaint();
 					panel.repaint();
 				});
 			}
@@ -730,6 +757,8 @@ public class LauncherUtils {
 			if (progressBar != null) {
 				SwingUtilities.invokeLater(() -> {
 					progressBar.setValue(progressBar.getValue() + 1);
+					progressBar.repaint();
+					progressPanel.repaint();
 					panel.repaint();
 				});
 			}
@@ -740,6 +769,8 @@ public class LauncherUtils {
 			if (progressBar != null) {
 				SwingUtilities.invokeAndWait(() -> {
 					LauncherUtils.progressBar.setValue(LauncherUtils.progressBar.getMaximum());
+					progressBar.repaint();
+					progressPanel.repaint();
 					LauncherUtils.panel.repaint();
 				});
 			}
