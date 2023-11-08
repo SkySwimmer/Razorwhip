@@ -635,7 +635,7 @@ public class LauncherUpdaterMain {
 
 		// Copy launcher info
 		log("Copying launcher information...");
-		File sOut = new File(launcherOut, "launcher.json");
+		File sOut = new File(launcherOut, os == 0 ? "Contents/Resources/launcher.json" : "launcher.json");
 		if (sOut.exists())
 			sOut.delete();
 		Files.copy(new File("launcher.json").toPath(), sOut.toPath());
