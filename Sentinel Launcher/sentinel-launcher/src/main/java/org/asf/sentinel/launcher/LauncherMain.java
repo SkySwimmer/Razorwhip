@@ -19,8 +19,9 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import org.asf.connective.ConnectiveHttpServer;
+import org.asf.sentinel.launcher.bindings.SentinelLauncherJsBindings;
 import org.asf.sentinel.launcher.http.UiContentProcessor;
-import org.asf.sentinel.launcher.ui.SentinelLauncherJsBindings;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -127,11 +128,17 @@ public class LauncherMain {
 			}
 		});
 		launcherWindow.addPostLoadListener(t -> {
-			getUtils().log("Running sentinelInited() in javascript environment...");
-			try {
-				launcherWindow.getWebEngine().executeScript("sentinelInited()");
-			} catch (Exception e) {
+			JSObject win = (JSObject) launcherWindow.getWebEngine().executeScript("window");
+			Object m = win.getMember("sentinel");
+			if (m.equals("undefined")) {
+				getUtils().log("Binding sentinel functions to JavaScript...");
+				win.setMember("sentinel", bindings);
 			}
+			getUtils().log("Running sentinelInited() in javascript environment...");
+			launcherWindow.getWebEngine().executeScript("console.log = (msg) => sentinel.log(msg)");
+			launcherWindow.getWebEngine().executeScript("console.error = (msg) => sentinel.logError(msg)");
+			launcherWindow.getWebEngine().executeScript("console.debug = (msg) => sentinel.logDebug(msg)");
+			launcherWindow.getWebEngine().executeScript("sentinelInited()");
 		});
 
 		// Open page

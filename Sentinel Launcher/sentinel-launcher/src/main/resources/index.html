@@ -1,31 +1,41 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" href="/icon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>Sentinel Launcher</title>
-    <script type="module" crossorigin src="/assets/index-dcc73b39.js"></script>
-    <link rel="stylesheet" href="/assets/index-9bcca7c4.css">
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="/icon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <body>
-    <div id="root"></div>
-    
-  </body>
+  <title>Sentinel Launcher</title>
+  <link rel="stylesheet" href="/assets/index-fbf30794.css">
+  <script type="module" crossorigin src="/assets/index-429b8738.js"></script>
+</head>
 
-  <script>
-    function FetchLocalStorage(key) {
-      return JSON.parse(window.localStorage.getItem(key));
-    }
-  </script>
+<body>
+  <div id="root"></div>
   
-	<script>
-		function sentinelInited()
-		{
-			sentinel.log("e");
-			sentinel.launcherUtils.log("test");	
-		}		
-	</script>
+</body>
+
+<script>
+	  if (window.sentinel == undefined) {
+	 	  window.sentinel = {}
+	 	  window.sentinel.available = false
+	 	  window.sentinelBindFailure = false
+		  window.sentinel.sentinelBind = function() {
+			  window.sentinelBindFailure = true
+		  }
+	  }
+	  
+	  function sentinelInited()
+	  {
+		  if (window.sentinelBindFailure)
+		      window.sentinel.sentinelBind()
+	  }
+	  
+	  function bind()
+	  {
+		  servers.sentinelInit()
+	  }
+</script>
+
 </html>

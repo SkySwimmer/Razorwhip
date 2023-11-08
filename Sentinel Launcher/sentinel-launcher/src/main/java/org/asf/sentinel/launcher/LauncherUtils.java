@@ -5,7 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -31,8 +31,13 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
 import org.asf.sentinel.launcher.api.ObjectTag;
+
+import com.sun.javafx.application.PlatformImpl;
+
+import netscape.javascript.JSObject;
 
 /**
  * 
@@ -79,6 +84,76 @@ public class LauncherUtils {
 	 */
 	public void log(String message) {
 		System.out.println("[LAUNCHER] [SENTINEL LAUNCHER] " + message);
+	}
+
+	/**
+	 * Exits the launcher
+	 */
+	public void exit() {
+		if (launcherInstance.getWindow() == null || launcherInstance.getWindow() == null
+				|| launcherInstance.getWindow().getFrame() == null
+				|| !launcherInstance.getWindow().getFrame().isVisible())
+			System.exit(0);
+		runRunnableLaterOnAwt(() -> launcherInstance.getWindow().getFrame().dispose());
+	}
+
+	private static class ResCont {
+		public Object obj;
+	}
+
+	/**
+	 * Converts javascript functions to runnables
+	 * 
+	 * @param func Function to cast
+	 * @return Runnable instance
+	 */
+	public Runnable functionToRunnable(JSObject func) {
+		return () -> {
+			ResCont res = new ResCont();
+			PlatformImpl.runAndWait(() -> {
+				res.obj = func.eval("this()");
+			});
+		};
+	}
+
+	/**
+	 * Runs functions later
+	 * 
+	 * @param func Javascript function to run later
+	 */
+	public void runLaterOnAwt(JSObject func) {
+		SwingUtilities.invokeLater(functionToRunnable(func));
+	}
+
+	/**
+	 * Runs functions later
+	 * 
+	 * @param run Runnable to run later
+	 */
+	public void runRunnableLaterOnAwt(Runnable run) {
+		SwingUtilities.invokeLater(run);
+	}
+
+	/**
+	 * Runs functions later
+	 * 
+	 * @param func Javascript function to run later
+	 * @throws InterruptedException      If our thread is interrupted while waiting
+	 * @throws InvocationTargetException If an exception is thrown in the runnable
+	 */
+	public void runOnAwtAndWait(JSObject func) throws InvocationTargetException, InterruptedException {
+		SwingUtilities.invokeAndWait(functionToRunnable(func));
+	}
+
+	/**
+	 * Runs functions later
+	 * 
+	 * @param run Runnable to run later
+	 * @throws InterruptedException      If our thread is interrupted while waiting
+	 * @throws InvocationTargetException If an exception is thrown in the runnable
+	 */
+	public void runRunnableOnAwtAndWait(Runnable run) throws InvocationTargetException, InterruptedException {
+		SwingUtilities.invokeAndWait(run);
 	}
 
 	/**
