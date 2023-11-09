@@ -60,7 +60,7 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 			SocketAddress addr = sock.getLocalSocketAddress();
 			if (addr instanceof InetSocketAddress) {
 				InetSocketAddress iA = (InetSocketAddress) addr;
-				host = iA.getAddress().getCanonicalHostName();
+				host = iA.getAddress().getHostAddress();
 			}
 		}
 
@@ -103,7 +103,9 @@ public class ApplicationManifestPreProcessor implements IPreProcessor {
 		JsonObject sfsHosts = descriptorDef.get("manifestSmartfoxEndpoints").getAsJsonObject();
 		for (String sfsH : sfsHosts.keySet()) {
 			manifest = manifest.replace("<MMOServer>" + sfsH + "</MMOServer>", "<MMOServer>"
-					+ ((endpoints.smartFoxHost.equals("localhost") || endpoints.smartFoxHost.equals("127.0.0.1")) ? host : endpoints.smartFoxHost) + "</MMOServer>");
+					+ ((endpoints.smartFoxHost.equals("localhost") || endpoints.smartFoxHost.equals("127.0.0.1")) ? host
+							: endpoints.smartFoxHost)
+					+ "</MMOServer>");
 			manifest = manifest.replace("<MMOServerPort>" + sfsHosts.get(sfsH).getAsInt() + "</MMOServerPort>",
 					"<MMOServerPort>" + endpoints.smartFoxPort + "</MMOServerPort>");
 		}
