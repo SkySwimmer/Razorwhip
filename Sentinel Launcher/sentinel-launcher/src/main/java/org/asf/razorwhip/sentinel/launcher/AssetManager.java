@@ -561,7 +561,7 @@ public class AssetManager {
 						String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
 								.getAsJsonObject().get(clientVersion).getAsString();
 						if (!oHash.equals(cHash) || !clientFolder.exists()
-								|| !new File(clientFolder, "client-updated").exists()) {
+								|| !new File(clientFolder, "sentinel-client-updated").exists()) {
 							// Not up to date
 							clientsUpToDate = false;
 							break;
@@ -684,7 +684,7 @@ public class AssetManager {
 				String cHash = activeArchive.descriptorDef.get("versionHashes").getAsJsonObject().get(plat)
 						.getAsJsonObject().get(clientVersion).getAsString();
 				if (!oHash.equals(cHash) || !clientFolder.exists()
-						|| !new File(clientFolder, "client-updated").exists()) {
+						|| !new File(clientFolder, "sentinel-client-updated").exists()) {
 					// Download client
 					if (activeArchive.mode == ArchiveMode.REMOTE)
 						LauncherUtils.log("Updating client " + clientVersion + "...", true);
@@ -841,8 +841,8 @@ public class AssetManager {
 					Files.writeString(localVersions.toPath(), localHashList.toString());
 
 					// Success
-					if (!new File(clientFolder, "client-updated").exists())
-						new File(clientFolder, "client-updated").createNewFile();
+					if (!new File(clientFolder, "sentinel-client-updated").exists())
+						new File(clientFolder, "sentinel-client-updated").createNewFile();
 				}
 			}
 		}
