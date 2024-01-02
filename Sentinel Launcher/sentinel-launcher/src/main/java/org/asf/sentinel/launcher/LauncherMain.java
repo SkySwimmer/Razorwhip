@@ -37,7 +37,7 @@ import netscape.javascript.JSObject;
  */
 public class LauncherMain {
 
-	public static String LAUNCHER_VERSION = "1.0.0.A26";
+	public static String LAUNCHER_VERSION = "1.0.0.A27";
 
 	private static boolean protocolsBound = false;
 

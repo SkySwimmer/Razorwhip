@@ -290,6 +290,7 @@ public class LauncherUpdaterMain {
 		String launcherDir;
 		String projName;
 		File instDir;
+		boolean independent;
 
 		// Read launcher info
 		String dirName;
@@ -299,6 +300,7 @@ public class LauncherUpdaterMain {
 			projName = conf.get("projectName").getAsString();
 			dirName = conf.get("launcherDirName").getAsString();
 			url = conf.get("launcherUpdateListUrl").getAsString();
+			independent = conf.get("independent").getAsBoolean();
 		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null,
 					"Invalid " + (installerMode ? "installer" : "launcher") + " configuration.",
@@ -367,7 +369,7 @@ public class LauncherUpdaterMain {
 
 			// Start launcher
 			if (!installerMode)
-				startLauncher(instDir, progressBar, launcherVersion, projName, launcherURL);
+				startLauncher(instDir, progressBar, launcherVersion, projName, launcherURL, independent);
 			else {
 				File dir = instDir;
 
@@ -1075,7 +1077,7 @@ public class LauncherUpdaterMain {
 	}
 
 	private void startLauncher(File instDir, JProgressBar progressBar, String launcherVersion, String projName,
-			String launcherURL) {
+			String launcherURL, boolean independentMode) {
 		File dir = instDir;
 		Thread th = new Thread(() -> {
 			// Set progress bar status
@@ -1088,7 +1090,7 @@ public class LauncherUpdaterMain {
 
 				// Check version file
 				File verFile = new File(dir, "currentversion.info");
-				String currentVersion = "";
+				String currentVersion = "none";
 				boolean isNew = !verFile.exists();
 				if (!isNew)
 					currentVersion = Files.readString(verFile.toPath());
@@ -1109,7 +1111,10 @@ public class LauncherUpdaterMain {
 						return;
 					}
 				}
-				if (launcherVersion != null && !currentVersion.equals(launcherVersion)) {
+
+				// Check update
+				if (launcherVersion != null && !currentVersion.equals(launcherVersion)
+						&& (!independentMode || currentVersion.equals("none"))) {
 					if (isNew) {
 						// Prompt
 						SwingUtilities.invokeAndWait(() -> {
@@ -1224,7 +1229,7 @@ public class LauncherUpdaterMain {
 					} catch (IOException e) {
 						// Offline
 					}
-					startLauncher(instDir, progressBar, launcherVersion2, projName2, launcherURL2);
+					startLauncher(instDir, progressBar, launcherVersion2, projName2, launcherURL2, independentMode);
 					return;
 				}
 				System.exit(exitCode);

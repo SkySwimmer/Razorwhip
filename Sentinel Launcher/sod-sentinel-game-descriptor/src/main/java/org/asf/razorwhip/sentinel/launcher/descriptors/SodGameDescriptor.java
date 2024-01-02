@@ -14,8 +14,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -38,15 +42,26 @@ import org.asf.razorwhip.sentinel.launcher.assets.ActiveArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.ArchiveInformation;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
 import org.asf.razorwhip.sentinel.launcher.descriptors.data.LauncherController;
+import org.asf.razorwhip.sentinel.launcher.descriptors.data.ServerEndpoints;
+import org.asf.razorwhip.sentinel.launcher.descriptors.gui.AccountHolder;
+import org.asf.razorwhip.sentinel.launcher.descriptors.gui.AccountLoginError;
+import org.asf.razorwhip.sentinel.launcher.descriptors.gui.LoginResult;
+import org.asf.razorwhip.sentinel.launcher.descriptors.gui.LoginWindow;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.ContentServerRequestHandler.IPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.ApplicationManifestPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.AssetVersionsPreProcessor;
 import org.asf.razorwhip.sentinel.launcher.descriptors.http.preprocessors.XmlPreProcessor;
+import org.asf.razorwhip.sentinel.launcher.descriptors.util.TripleDesUtil;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.LoginStatusType;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.ParentLoginData;
+import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.ParentLoginResponseData;
 import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.PayloadEntryData;
 import org.asf.razorwhip.sentinel.launcher.descriptors.xmls.PayloadListData;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -213,13 +228,15 @@ public class SodGameDescriptor implements IGameDescriptor {
 		// Modify the client
 
 		// Modify resources.assets
-		byte[] resourcesData = Files.readAllBytes(new File(clientDir, "DOMain_Data/resources.assets").toPath());
-		String endpoint = descriptorDef.get("clientEndpoints").getAsJsonObject().get(version).getAsString();
-		if (!endpoint.endsWith("/"))
-			endpoint += "/";
-		endpoint += "DWADragonsUnity/";
-		replaceData(resourcesData, endpoint, "http://127.0.0.1:16518/sentinel/");
-		Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
+		if (descriptorDef.get("clientEndpoints").getAsJsonObject().has(version)) {
+			byte[] resourcesData = Files.readAllBytes(new File(clientDir, "DOMain_Data/resources.assets").toPath());
+			String endpoint = descriptorDef.get("clientEndpoints").getAsJsonObject().get(version).getAsString();
+			if (!endpoint.endsWith("/"))
+				endpoint += "/";
+			endpoint += "DWADragonsUnity/";
+			replaceData(resourcesData, endpoint, "http://127.0.0.1:16518/sentinel/");
+			Files.write(new File(clientDir, "DOMain_Data/resources.assets").toPath(), resourcesData);
+		}
 
 		// Check version
 		if (LauncherUtils.verifyVersionRequirement(version, ">=" + BEPINEX_MINIMAL_GAME_VERSION)) {
@@ -605,7 +622,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 			AssetInformation[] allAssets, File assetModifications, ActiveArchiveInformation archive,
 			JsonObject archiveDef, JsonObject descriptorDef, String clientVersion, File clientDir,
 			Runnable successCallback, Runnable exitCallback, Consumer<String> errorCallback) {
-		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
+		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback, descriptorDef);
 	}
 
 	@Override
@@ -613,11 +630,11 @@ public class SodGameDescriptor implements IGameDescriptor {
 			File assetModifications, ActiveArchiveInformation archive, JsonObject archiveDef, JsonObject descriptorDef,
 			String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
 			Consumer<String> errorCallback) {
-		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback);
+		launchGame(clientVersion, clientDir, successCallback, exitCallback, errorCallback, descriptorDef);
 	}
 
 	private void launchGame(String clientVersion, File clientDir, Runnable successCallback, Runnable exitCallback,
-			Consumer<String> errorCallback) {
+			Consumer<String> errorCallback, JsonObject descriptorDef) {
 		// Check tags
 		if (!LauncherUtils.hasTag("no_launch_client")) {
 			try {
@@ -640,16 +657,241 @@ public class SodGameDescriptor implements IGameDescriptor {
 				} else
 					throw new IOException("Unsupported platform");
 
+				// Variables
+				HashMap<String, String> vars = new HashMap<String, String>();
+				vars.put("version", clientVersion);
+				vars.put("platform", plat);
+				vars.put("assetserver", "http://127.0.0.1:16518");
+
+				// Load endpoints
+				ServerEndpoints endpoints = null;
+				if (LauncherUtils.hasTag("server_endpoints"))
+					endpoints = LauncherUtils.getTag("server_endpoints").getValue(ServerEndpoints.class);
+				if (endpoints == null)
+					endpoints = new ServerEndpoints();
+				// Add vars
+				vars.put("achievementwebservice", cleanURLNoTrail(endpoints.achievementServiceEndpoint));
+				vars.put("commonwebservice", cleanURLNoTrail(endpoints.commonServiceEndpoint));
+				vars.put("contentwebservice", cleanURLNoTrail(endpoints.contentserverServiceEndpoint));
+				vars.put("groupswebservice", cleanURLNoTrail(endpoints.groupsServiceEndpoint));
+				vars.put("itemstorewebservice", cleanURLNoTrail(endpoints.itemstoremissionServiceEndpoint));
+				vars.put("messagingwebservice", cleanURLNoTrail(endpoints.messagingServiceEndpoint));
+				vars.put("userwebservice", cleanURLNoTrail(endpoints.userServiceEndpoint));
+				vars.put("smartfoxhost", endpoints.smartFoxHost);
+				vars.put("smartfoxport", Integer.toString(endpoints.smartFoxPort));
+
+				// User variables
+				if (descriptorDef.has("launchVariables")) {
+					JsonObject varsJ = descriptorDef.get("launchVariables").getAsJsonObject();
+					String uPlat = plat;
+					if (!varsJ.has(plat))
+						uPlat = "default";
+					if (varsJ.has(uPlat)) {
+						varsJ = varsJ.get(uPlat).getAsJsonObject();
+						if (varsJ.has("default")) {
+							JsonObject varsI = varsJ.get("default").getAsJsonObject();
+							for (String k : varsI.keySet())
+								vars.put(k, varsI.get(k).getAsString());
+						}
+						if (varsJ.has(clientVersion)) {
+							JsonObject varsI = varsJ.get(clientVersion).getAsJsonObject();
+							for (String k : varsI.keySet())
+								vars.put(k, varsI.get(k).getAsString());
+						}
+					}
+				}
+
+				// Authentication
+				if (descriptorDef.has("authenticationRequirement")) {
+					JsonObject authReqJ = descriptorDef.get("authenticationRequirement").getAsJsonObject();
+					String uPlat = plat;
+					if (!authReqJ.has(plat))
+						uPlat = "default";
+					if (authReqJ.has(uPlat)) {
+						authReqJ = authReqJ.get(uPlat).getAsJsonObject();
+						boolean require = authReqJ.has("default") && authReqJ.get("default").getAsBoolean();
+						if (authReqJ.has(clientVersion)) {
+							require = authReqJ.get(clientVersion).getAsBoolean();
+						}
+						if (require) {
+							// Authenticate
+							// Find existing details
+							String prevUser = "";
+							File authCache = new File("cache", "authentication.json");
+							if (authCache.exists()) {
+								JsonObject auth = JsonParser.parseString(Files.readString(authCache.toPath()))
+										.getAsJsonObject();
+								prevUser = auth.get("user").getAsString();
+							}
+
+							// Generate URL
+							String url = endpoints.commonServiceEndpoint;
+							if (!url.endsWith("/"))
+								url += "/";
+							url += "/v3/AuthenticationWebService.asmx/";
+							url += "LoginParent";
+							String urlF = url;
+
+							// Open window
+							LoginWindow win = new LoginWindow(LauncherUtils.getLauncherWindow(), details -> {
+								LoginResult res = new LoginResult();
+
+								// Build login
+								ParentLoginData login = new ParentLoginData();
+								login.username = details.username;
+								login.password = details.password;
+
+								// Contact server
+								try {
+									// Generate XML
+									XmlMapper mapper = new XmlMapper();
+									mapper.configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true);
+									mapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
+									String authXml = mapper.writerWithDefaultPrettyPrinter()
+											.withFeatures(ToXmlGenerator.Feature.WRITE_NULLS_AS_XSI_NIL)
+											.withRootName("ParentLoginData").writeValueAsString(login);
+
+									// Compute key
+									byte[] key;
+									try {
+										MessageDigest digest = MessageDigest.getInstance("MD5");
+										key = digest
+												.digest("56BB211B-CF06-48E1-9C1D-E40B5173D759".getBytes("UTF-16LE"));
+									} catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+										throw new RuntimeException(e);
+									}
+
+									// Encrypt
+									String encryptedAuth = Base64.getEncoder()
+											.encodeToString(TripleDesUtil.encrypt(authXml.getBytes("UTF-16LE"), key));
+
+									// Generate request
+									LinkedHashMap<String, String> req = new LinkedHashMap<String, String>();
+									req.put("apiKey", "b99f695c-7c6e-4e9b-b0f7-22034d799013");
+									req.put("parentLoginData", encryptedAuth);
+
+									// Open URL connection
+									HttpURLConnection conn = (HttpURLConnection) new URL(urlF).openConnection();
+									conn.setDoOutput(true);
+									conn.setRequestMethod("POST");
+									conn.addRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+
+									// Send request
+									conn.getOutputStream().write(encodeForm(req).getBytes("UTF-8"));
+
+									// Get response
+									byte[] resp = conn.getInputStream().readAllBytes();
+									String respXml = new String(resp, "UTF-8");
+
+									// Get string
+									respXml = mapper.readValue(respXml, String.class);
+
+									// Decrypt
+									respXml = new String(
+											TripleDesUtil.decrypt(Base64.getDecoder().decode(respXml), key),
+											"UTF-16LE");
+
+									// Parse
+									ParentLoginResponseData response = mapper.readValue(respXml,
+											ParentLoginResponseData.class);
+
+									// Check status
+									if (response.status != LoginStatusType.Success) {
+										// Error
+										res = new LoginResult();
+										res.success = false;
+										res.error = AccountLoginError.INVALID_LOGIN;
+										return res;
+									}
+
+									// Return success
+									res.success = true;
+									res.account = new AccountHolder();
+									res.account.accountName = details.username;
+									res.account.authToken = response.apiToken;
+									return res;
+								} catch (Exception e) {
+									// Error
+									res = new LoginResult();
+									res.success = false;
+								}
+								return res;
+							}, prevUser);
+							AccountHolder acc = win.getAccount();
+							if (acc == null) {
+								// Cancelled
+								exitCallback.run();
+								System.exit(0);
+								return;
+							}
+
+							// Add variables
+							vars.put("authtoken", acc.authToken);
+							vars.put("accountname", acc.accountName);
+
+							// Save
+							authCache.getParentFile().mkdirs();
+							JsonObject auth = new JsonObject();
+							auth.addProperty("user", acc.accountName);
+							Files.writeString(authCache.toPath(), auth.toString());
+						}
+					}
+				}
+
 				// Prepare startup
-				File clientFile = new File(clientDir, "DOMain.exe");
+				File clientFile = new File(clientDir,
+						descriptorDef.has("defaultGameExecutableName")
+								? descriptorDef.get("defaultGameExecutableName").getAsString()
+								: "DOMain.exe");
+				if (descriptorDef.has("gameExecutableNames")) {
+					JsonObject names = descriptorDef.get("gameExecutableNames").getAsJsonObject();
+					String uPlat = plat;
+					if (!names.has(plat))
+						uPlat = "default";
+					if (names.has(uPlat)) {
+						names = names.get(uPlat).getAsJsonObject();
+						if (names.has(clientVersion))
+							clientFile = new File(clientDir, processVars(names.get(clientVersion).getAsString(), vars));
+						else if (names.has("default"))
+							clientFile = new File(clientDir, processVars(names.get("default").getAsString(), vars));
+					}
+				}
+				ArrayList<String> prog = new ArrayList<String>();
 				if (plat.equals("windows"))
-					builder = new ProcessBuilder(clientFile.getAbsolutePath()); // Windows
+					prog.add(clientFile.getAbsolutePath()); // Windows
 				else if (plat.equals("macos") || plat.equals("linux")) {
-					builder = new ProcessBuilder("wine", clientFile.getAbsolutePath()); // Linux/macos, need wine
-					File prefix = new File("wineprefix");
-					builder.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+					// Linux/macos, need wine
+					prog.add("wine");
+					prog.add(clientFile.getAbsolutePath());
 				} else
 					throw new IOException("Unsupported platform");
+
+				// Add arguments
+				if (descriptorDef.has("gameExecutableArguments")) {
+					JsonObject args = descriptorDef.get("gameExecutableArguments").getAsJsonObject();
+					String uPlat = plat;
+					if (!args.has(plat))
+						uPlat = "default";
+					if (args.has(uPlat)) {
+						args = args.get(uPlat).getAsJsonObject();
+						if (args.has(clientVersion)) {
+							// By version
+							for (JsonElement ele : args.get(clientVersion).getAsJsonArray())
+								prog.add(processVars(ele.getAsString(), vars));
+						} else if (args.has("default")) {
+							// Defaults
+							for (JsonElement ele : args.get("default").getAsJsonArray())
+								prog.add(processVars(ele.getAsString(), vars));
+						}
+					}
+				}
+
+				// Build
+				builder = new ProcessBuilder(prog.toArray(t -> new String[t]));
+				if (plat.equals("macos") || plat.equals("linux")) {
+					File prefix = new File("wineprefix");
+					builder.environment().put("WINEPREFIX", prefix.getCanonicalPath());
+				}
 				builder.inheritIO();
 				builder.directory(clientDir);
 
@@ -689,6 +931,21 @@ public class SodGameDescriptor implements IGameDescriptor {
 
 		// Finish
 		successCallback.run();
+	}
+
+	private String cleanURLNoTrail(String url) {
+		while (url.endsWith("/"))
+			url = url.substring(0, url.length() - 1);
+		return url;
+	}
+
+	private String processVars(String str, HashMap<String, String> vars) {
+		for (String key : vars.keySet()) {
+			str = str.replace("${" + key + "}", vars.get(key));
+			str = str.replace("${" + key + "^^}", vars.get(key).toUpperCase());
+			str = str.replace("${" + key + ",,}", vars.get(key).toLowerCase());
+		}
+		return str;
 	}
 
 	private void replaceData(byte[] assetsData, String source, String target) throws UnsupportedEncodingException {
