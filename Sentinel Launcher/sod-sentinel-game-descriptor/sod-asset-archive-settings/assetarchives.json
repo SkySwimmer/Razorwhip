@@ -7,10 +7,10 @@
 		"type": "projectedge-revised-v2",
 		
 		"allowFullDownload": true,
-		"allowStreaming": true,
-		
-		"deprecated": false,
-		"deprecationNotice": null,
+		"allowStreaming": false,
+
+		"deprecated": true,
+		"deprecationNotice": "Project Edge is being discontinued, full archive downloads are now forcefully enabled so that the game can still be playable after full termination.\n\nProject Edge is scheduled to officially shut down in 4 months (on the 1st of May),\nno updates are scheduled to be released, and support and our discord will terminate on the 7th of february.\n\nWe recommend switching over to SoDOff, you can find their discord here: https://discord.gg/yFajR866\n\nOnce Project Edge shuts down, the asset servers will only be available until our billing lapses.\nWhen it does lapse, since all player data is local, you will still be able to transfer it over, albeit with more difficulty.",
 		
 		"clients": {
 			"3.31.0": "https://assetarchive.projectedge.net/clients/original-3.31.0.zip",
