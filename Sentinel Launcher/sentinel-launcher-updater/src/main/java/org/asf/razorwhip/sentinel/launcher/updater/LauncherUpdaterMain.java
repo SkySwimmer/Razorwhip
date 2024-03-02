@@ -45,6 +45,8 @@ public class LauncherUpdaterMain {
 	private static JFrame frmLauncher;
 	private static JLabel lblNewLabel;
 
+	private static String[] args;
+
 	/**
 	 * Launch the application.
 	 * 
@@ -52,6 +54,7 @@ public class LauncherUpdaterMain {
 	 * @throws JsonSyntaxException
 	 */
 	public static void main(String[] args) throws JsonSyntaxException, IOException {
+		LauncherUpdaterMain.args = args;
 		if (new File("installerdata").exists()) {
 			installerMode = true;
 
@@ -369,7 +372,7 @@ public class LauncherUpdaterMain {
 
 			// Start launcher
 			if (!installerMode)
-				startLauncher(instDir, progressBar, launcherVersion, projName, launcherURL, independent);
+				startLauncher(instDir, progressBar, launcherVersion, projName, launcherURL, independent, args);
 			else {
 				File dir = instDir;
 
@@ -1077,7 +1080,7 @@ public class LauncherUpdaterMain {
 	}
 
 	private void startLauncher(File instDir, JProgressBar progressBar, String launcherVersion, String projName,
-			String launcherURL, boolean independentMode) {
+			String launcherURL, boolean independentMode, String[] args) {
 		File dir = instDir;
 		Thread th = new Thread(() -> {
 			// Set progress bar status
@@ -1169,6 +1172,11 @@ public class LauncherUpdaterMain {
 					cmd.add(ele.getAsString().replace("$<dir>", new File(dir, "launcher").getAbsolutePath())
 							.replace("$<jvm>", ProcessHandle.current().info().command().get())
 							.replace("$<pathsep>", File.pathSeparator).replace("$<project>", projName));
+				for (String arg : args)
+					cmd.add(arg);
+				// TODO: support URL protocols (register them during installation)
+				// TODO: implement bg image support
+				// FIXME: ZERA YOU HAVE TO PUBLISH THESE INSTALLERS (AND NON-AUTO-UPDATE ONES)
 
 				// Detect OS
 				int os;
@@ -1229,7 +1237,8 @@ public class LauncherUpdaterMain {
 					} catch (IOException e) {
 						// Offline
 					}
-					startLauncher(instDir, progressBar, launcherVersion2, projName2, launcherURL2, independentMode);
+					startLauncher(instDir, progressBar, launcherVersion2, projName2, launcherURL2, independentMode,
+							args);
 					return;
 				}
 				System.exit(exitCode);

@@ -87,6 +87,8 @@ public class VersionManagerWindow extends JDialog {
 	private JButton btnCancel;
 	private JButton btnOk;
 
+	private boolean isFirstSelection;
+
 	private ArrayList<QualityLevelEntry> qualityLevelElements = new ArrayList<QualityLevelEntry>();
 	private ArrayList<ClientEntry> clients = new ArrayList<ClientEntry>();
 	private ArchiveInformation lastArchive;
@@ -138,6 +140,7 @@ public class VersionManagerWindow extends JDialog {
 	public boolean showDialog() throws IOException {
 		clients.clear();
 		lastArchive = null;
+		isFirstSelection = false;
 
 		// Load last archive ID from disk
 		File localArchiveSettings = new File("assets/localdata.json");
@@ -165,6 +168,7 @@ public class VersionManagerWindow extends JDialog {
 			checkBoxDownload.setSelected(!streaming);
 		} else if (AssetManager.getArchives().length > 0) {
 			lastArchive = AssetManager.getArchives()[0];
+			isFirstSelection = true;
 			checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 			checkBoxDownload.setEnabled(
 					!lastArchive.isDeprecated && lastArchive.supportsDownloads && lastArchive.supportsStreaming);
@@ -455,6 +459,7 @@ public class VersionManagerWindow extends JDialog {
 								lblQualityLevels.setVisible(checkBoxDownload.isSelected());
 								qualityLevelBox.setVisible(checkBoxDownload.isSelected());
 							}
+							isFirstSelection = false;
 							lastArchive = eA;
 							checkBoxDownload.setVisible(lastArchive.mode == ArchiveMode.REMOTE);
 							btnExport
@@ -479,6 +484,19 @@ public class VersionManagerWindow extends JDialog {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				// Check deprecation
+				if (isFirstSelection && lastArchive.isDeprecated) {
+					String message = lastArchive.deprecationNotice;
+					if (JOptionPane.showConfirmDialog(VersionManagerWindow.this,
+							"Warning! The archive you selected has been deprecated and may be removed!\n\n" + message
+									+ "\n\nDo you want to continue?",
+							"Deprecated archive", JOptionPane.YES_NO_OPTION,
+							JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) {
+						// Cancel
+						return;
+					}
+				}
+
 				// Check
 				if (checkBoxDownload.isSelected()) {
 					// Disable
