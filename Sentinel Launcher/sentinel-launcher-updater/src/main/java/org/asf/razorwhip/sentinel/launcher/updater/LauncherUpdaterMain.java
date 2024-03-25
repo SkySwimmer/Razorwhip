@@ -692,6 +692,9 @@ public class LauncherUpdaterMain {
 		installDirFile.getParentFile().mkdirs();
 		Files.writeString(installDirFile.toPath(), infoJson.toString());
 
+		// TODO: support URL protocols
+		// TODO: register uninstall stuff for windows
+
 		// Windows and linux only, macos already has the app installed now
 		if (os != 0) {
 			log("Creating shortcuts...");
@@ -736,7 +739,8 @@ public class LauncherUpdaterMain {
 				sO.write(("Name=" + projName + "\n").getBytes("UTF-8"));
 				sO.write(("Categories=Game;\n").getBytes("UTF-8"));
 				sO.write(("Comment=Launcher for " + projName + "\n").getBytes("UTF-8"));
-				sO.write(("Exec=" + new File(launcherOut, "launcher.sh").getAbsolutePath() + "\n").getBytes("UTF-8"));
+				sO.write(("Exec=\"" + new File(launcherOut, "launcher.sh").getAbsolutePath() + "\"\n")
+						.getBytes("UTF-8"));
 				sO.write(("Icon=" + new File(launcherOut, "icon.png").getAbsolutePath() + "\n").getBytes("UTF-8"));
 				sO.write(("Path=" + launcherOut.getAbsolutePath() + "\n").getBytes("UTF-8"));
 				sO.write(("StartupNotify=true\n").getBytes("UTF-8"));
@@ -1174,7 +1178,6 @@ public class LauncherUpdaterMain {
 							.replace("$<pathsep>", File.pathSeparator).replace("$<project>", projName));
 				for (String arg : args)
 					cmd.add(arg);
-				// TODO: support URL protocols (register them during installation)
 				// TODO: implement bg image support
 				// FIXME: ZERA YOU HAVE TO PUBLISH THESE INSTALLERS (AND NON-AUTO-UPDATE ONES)
 
