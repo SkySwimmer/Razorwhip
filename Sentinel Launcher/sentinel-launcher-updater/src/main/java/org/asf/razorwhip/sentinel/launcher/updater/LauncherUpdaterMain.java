@@ -682,8 +682,10 @@ public class LauncherUpdaterMain {
 		}
 
 		// Write initial version
-		log("Saving initial version...");
-		Files.writeString(new File(instDir, "currentversion.info").toPath(), "none");
+		if (!new File(instDir, "currentversion.info").exists()) {
+			log("Saving initial version...");
+			Files.writeString(new File(instDir, "currentversion.info").toPath(), "none");
+		}
 
 		// Write installation directory
 		JsonObject infoJson = new JsonObject();
