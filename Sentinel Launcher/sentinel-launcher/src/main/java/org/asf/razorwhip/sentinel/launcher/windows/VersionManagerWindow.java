@@ -1778,6 +1778,8 @@ public class VersionManagerWindow extends JDialog {
 								lblThanks.setVisible(true);
 							});
 							archiveDetails.addProperty("isSgaFile", true);
+							archiveDetails.addProperty("allowFullDownload", true);
+							archiveDetails.addProperty("allowStreaming", false);
 							archiveDetails.addProperty("archiveName", f.getSelectedFile().getName());
 							archiveDetails.addProperty("filePath", f.getSelectedFile().getCanonicalPath());
 

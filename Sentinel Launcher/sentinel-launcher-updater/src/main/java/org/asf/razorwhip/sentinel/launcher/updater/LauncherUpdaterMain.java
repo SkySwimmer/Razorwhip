@@ -303,7 +303,10 @@ public class LauncherUpdaterMain {
 			projName = conf.get("projectName").getAsString();
 			dirName = conf.get("launcherDirName").getAsString();
 			url = conf.get("launcherUpdateListUrl").getAsString();
-			independent = conf.get("independent").getAsBoolean();
+			if (conf.has("independent"))
+				independent = conf.get("independent").getAsBoolean();
+			else
+				independent = false;
 		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null,
 					"Invalid " + (installerMode ? "installer" : "launcher") + " configuration.",
