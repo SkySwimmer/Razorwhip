@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -94,66 +95,8 @@ public class LauncherUtils {
 				|| launcherInstance.getWindow().getFrame() == null
 				|| !launcherInstance.getWindow().getFrame().isVisible())
 			System.exit(0);
-		runRunnableLaterOnAwt(() -> launcherInstance.getWindow().getFrame().dispose());
-	}
-
-	private static class ResCont {
-		public Object obj;
-	}
-
-	/**
-	 * Converts javascript functions to runnables
-	 * 
-	 * @param func Function to cast
-	 * @return Runnable instance
-	 */
-	public Runnable functionToRunnable(JSObject func) {
-		return () -> {
-			ResCont res = new ResCont();
-			PlatformImpl.runAndWait(() -> {
-				res.obj = func.eval("this()");
-			});
-		};
-	}
-
-	/**
-	 * Runs functions later
-	 * 
-	 * @param func Javascript function to run later
-	 */
-	public void runLaterOnAwt(JSObject func) {
-		SwingUtilities.invokeLater(functionToRunnable(func));
-	}
-
-	/**
-	 * Runs functions later
-	 * 
-	 * @param run Runnable to run later
-	 */
-	public void runRunnableLaterOnAwt(Runnable run) {
-		SwingUtilities.invokeLater(run);
-	}
-
-	/**
-	 * Runs functions later
-	 * 
-	 * @param func Javascript function to run later
-	 * @throws InterruptedException      If our thread is interrupted while waiting
-	 * @throws InvocationTargetException If an exception is thrown in the runnable
-	 */
-	public void runOnAwtAndWait(JSObject func) throws InvocationTargetException, InterruptedException {
-		SwingUtilities.invokeAndWait(functionToRunnable(func));
-	}
-
-	/**
-	 * Runs functions later
-	 * 
-	 * @param run Runnable to run later
-	 * @throws InterruptedException      If our thread is interrupted while waiting
-	 * @throws InvocationTargetException If an exception is thrown in the runnable
-	 */
-	public void runRunnableOnAwtAndWait(Runnable run) throws InvocationTargetException, InterruptedException {
-		SwingUtilities.invokeAndWait(run);
+		getLauncherInstance().getBindings()
+				.runRunnableLaterOnAwt(() -> launcherInstance.getWindow().getFrame().dispose());
 	}
 
 	/**
@@ -362,14 +305,21 @@ public class LauncherUtils {
 	 * 
 	 * @param packageFile Package file
 	 * @return True if signed, false otherwise
-	 * @throws IOException If verifying if the package is signed fails
 	 */
-	public boolean isPackageSigned(File packageFile) throws IOException {
+	public boolean isPackageSigned(File packageFile) {
 		// Load zip
-		ZipFile zip = new ZipFile(packageFile);
-		boolean signed = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG") != null;
-		zip.close();
-		return signed;
+		try {
+			ZipFile zip = new ZipFile(packageFile);
+			try {
+				boolean signed = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG") != null;
+				zip.close();
+				return signed;
+			} finally {
+				zip.close();
+			}
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	/**
@@ -408,119 +358,122 @@ public class LauncherUtils {
 	 * @param packageFile   Package file
 	 * @param publicKeyFile Package verification public key
 	 * @return True if valid, false if invalid
-	 * @throws IOException If verification errors
 	 */
-	public boolean verifyPackageSignature(File packageFile, File publicKeyFile) throws IOException {
-		// Load zip
-		ZipFile zip = new ZipFile(packageFile);
-		ZipEntry sigEntry = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG");
-		boolean hasSignature = sigEntry != null;
-		if (!hasSignature) {
-			// Signature missing, public key exists
-			zip.close();
-			return !publicKeyFile.exists();
-		}
-
-		// Read signature
-		InputStream strm = zip.getInputStream(sigEntry);
-		byte[] sig = strm.readAllBytes();
-		strm.close();
-
-		// Write key if it doesnt exist
-		if (!publicKeyFile.exists()) {
-			ZipEntry keyEntry = zip.getEntry("SENTINEL.PACKAGEKEY.PEM");
-			if (keyEntry == null) {
-				// Key missing
-				zip.close();
-				return false;
-			}
-
-			// Transfer
-			strm = zip.getInputStream(keyEntry);
-			if (publicKeyFile.getParentFile() != null)
-				publicKeyFile.getParentFile().mkdirs();
-			FileOutputStream fOut = new FileOutputStream(publicKeyFile);
-			strm.transferTo(fOut);
-			fOut.close();
-			strm.close();
-		}
-
-		// Read key
-		byte[] key = pemDecode(Files.readString(publicKeyFile.toPath()));
-
-		// Copy zip
-		File zipTemp = new File(packageFile.getPath() + ".vtp");
+	public boolean verifyPackageSignature(File packageFile, File publicKeyFile) {
 		try {
-			// Transfer package without signature
-			FileOutputStream fO = new FileOutputStream(zipTemp);
-			ZipOutputStream zO = new ZipOutputStream(fO);
+			// Load zip
+			ZipFile zip = new ZipFile(packageFile);
 			try {
-				// Load old
-				FileInputStream fIn = new FileInputStream(packageFile);
-				ZipInputStream zIn = new ZipInputStream(fIn);
-				try {
-					// Transfer
-					ZipEntry entry = zIn.getNextEntry();
-					while (entry != null) {
-						// Check name
-						if (entry.getName().equals("SENTINEL.PACKAGESIGNATURE.SIG")) {
-							// Get next
-							entry = zIn.getNextEntry();
-							continue;
-						}
+				ZipEntry sigEntry = zip.getEntry("SENTINEL.PACKAGESIGNATURE.SIG");
+				boolean hasSignature = sigEntry != null;
+				if (!hasSignature) {
+					// Signature missing, public key exists
+					return !publicKeyFile.exists();
+				}
 
-						// Put entry
-						zO.putNextEntry(entry);
-						if (!entry.getName().replace("\\", "/").endsWith("/")) {
-							// Transfer data
-							zIn.transferTo(zO);
-						}
-						zO.closeEntry();
+				// Read signature
+				InputStream strm = zip.getInputStream(sigEntry);
+				byte[] sig = strm.readAllBytes();
+				strm.close();
 
-						// Get next
-						entry = zIn.getNextEntry();
+				// Write key if it doesnt exist
+				if (!publicKeyFile.exists()) {
+					ZipEntry keyEntry = zip.getEntry("SENTINEL.PACKAGEKEY.PEM");
+					if (keyEntry == null) {
+						// Key missing
+						return false;
 					}
 
-					// Close zip
-					zip.close();
+					// Transfer
+					strm = zip.getInputStream(keyEntry);
+					if (publicKeyFile.getParentFile() != null)
+						publicKeyFile.getParentFile().mkdirs();
+					FileOutputStream fOut = new FileOutputStream(publicKeyFile);
+					strm.transferTo(fOut);
+					fOut.close();
+					strm.close();
+				}
+
+				// Read key
+				byte[] key = pemDecode(Files.readString(publicKeyFile.toPath()));
+
+				// Copy zip
+				File zipTemp = File.createTempFile("sentinelsigverif-", "-" + packageFile.getPath() + ".vtp");
+				zipTemp.deleteOnExit();
+				try {
+					// Transfer package without signature
+					FileOutputStream fO = new FileOutputStream(zipTemp);
+					ZipOutputStream zO = new ZipOutputStream(fO);
+					try {
+						// Load old
+						FileInputStream fIn = new FileInputStream(packageFile);
+						ZipInputStream zIn = new ZipInputStream(fIn);
+						try {
+							// Transfer
+							ZipEntry entry = zIn.getNextEntry();
+							while (entry != null) {
+								// Check name
+								if (entry.getName().equals("SENTINEL.PACKAGESIGNATURE.SIG")) {
+									// Get next
+									entry = zIn.getNextEntry();
+									continue;
+								}
+
+								// Put entry
+								zO.putNextEntry(entry);
+								if (!entry.getName().replace("\\", "/").endsWith("/")) {
+									// Transfer data
+									zIn.transferTo(zO);
+								}
+								zO.closeEntry();
+
+								// Get next
+								entry = zIn.getNextEntry();
+							}
+						} finally {
+							zIn.close();
+							fIn.close();
+						}
+					} finally {
+						zO.close();
+						fO.close();
+					}
+
+					// Verfiy
+					try {
+						// Load key
+						KeyFactory fac = KeyFactory.getInstance("RSA");
+						PublicKey publicKey = fac.generatePublic(new X509EncodedKeySpec(key));
+
+						// Init verification
+						Signature s = Signature.getInstance("Sha512WithRSA");
+						s.initVerify(publicKey);
+
+						// Update
+						FileInputStream fIn = new FileInputStream(zipTemp);
+						while (true) {
+							byte[] data = new byte[20480];
+							int i = fIn.read(data);
+							if (i <= 0)
+								break;
+							s.update(data, 0, i);
+						}
+						fIn.close();
+
+						// Verify
+						return s.verify(sig);
+					} catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException
+							| SignatureException e) {
+						throw new IOException("Signature verification error", e);
+					}
 				} finally {
-					zIn.close();
-					fIn.close();
+					zipTemp.delete();
 				}
 			} finally {
-				zO.close();
-				fO.close();
+				zip.close();
 			}
-
-			// Verfiy
-			try {
-				// Load key
-				KeyFactory fac = KeyFactory.getInstance("RSA");
-				PublicKey publicKey = fac.generatePublic(new X509EncodedKeySpec(key));
-
-				// Init verification
-				Signature s = Signature.getInstance("Sha512WithRSA");
-				s.initVerify(publicKey);
-
-				// Update
-				FileInputStream fIn = new FileInputStream(zipTemp);
-				while (true) {
-					byte[] data = new byte[20480];
-					int i = fIn.read(data);
-					if (i <= 0)
-						break;
-					s.update(data, 0, i);
-				}
-				fIn.close();
-
-				// Verify
-				return s.verify(sig);
-			} catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException | SignatureException e) {
-				throw new IOException("Signature verification error", e);
-			}
-
-		} finally {
-			zipTemp.delete();
+		} catch (Exception e) {
+			return false;
 		}
 	}
 

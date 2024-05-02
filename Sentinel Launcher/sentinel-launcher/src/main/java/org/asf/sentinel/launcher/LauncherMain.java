@@ -134,11 +134,26 @@ public class LauncherMain {
 				getUtils().log("Binding sentinel functions to JavaScript...");
 				win.setMember("sentinel", bindings);
 			}
-			getUtils().log("Running sentinelInited() in javascript environment...");
-			launcherWindow.getWebEngine().executeScript("console.log = (msg) => sentinel.log(msg)");
-			launcherWindow.getWebEngine().executeScript("console.error = (msg) => sentinel.logError(msg)");
-			launcherWindow.getWebEngine().executeScript("console.debug = (msg) => sentinel.logDebug(msg)");
-			launcherWindow.getWebEngine().executeScript("sentinelInited()");
+			try {
+				getUtils().log("Running sentinelInited() in javascript environment...");
+				launcherWindow.getWebEngine().executeScript("console.log = (msg) => sentinel.log(msg)");
+				launcherWindow.getWebEngine().executeScript("console.error = (msg) => sentinel.logError(msg)");
+				launcherWindow.getWebEngine().executeScript("console.debug = (msg) => sentinel.logDebug(msg)");
+				launcherWindow.getWebEngine().executeScript("sentinelInited()");
+			} catch (Throwable e) {
+				String stackTrace = "";
+				Throwable t2 = e;
+				while (t2 != null) {
+					for (StackTraceElement ele : t2.getStackTrace())
+						stackTrace += "\n     At: " + ele;
+					t2 = t2.getCause();
+					if (t2 != null)
+						stackTrace += "\nCaused by: " + t2;
+				}
+				getUtils().log("Error: " + e.getClass().getTypeName()
+						+ (e.getMessage() != null && !e.getMessage().isBlank() ? ": " + e.getMessage() : "")
+						+ stackTrace);
+			}
 		});
 
 		// Open page

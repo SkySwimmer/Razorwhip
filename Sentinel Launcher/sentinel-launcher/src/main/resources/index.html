@@ -7,8 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Sentinel Launcher</title>
-  <link rel="stylesheet" href="/assets/index-fbf30794.css">
-  <script type="module" crossorigin src="/assets/index-429b8738.js"></script>
+  <link rel="stylesheet" href="/assets/index-9e5eef2d.css">
 </head>
 
 <body>
@@ -17,24 +16,23 @@
 </body>
 
 <script>
-	  if (window.sentinel == undefined) {
-	 	  window.sentinel = {}
-	 	  window.sentinel.available = false
-	 	  window.sentinelBindFailure = false
-		  window.sentinel.sentinelBind = function() {
-			  window.sentinelBindFailure = true
-		  }
-	  }
-	  
 	  function sentinelInited()
 	  {
-		  if (window.sentinelBindFailure)
-		      window.sentinel.sentinelBind()
-	  }
-	  
-	  function bind()
-	  {
-		  servers.sentinelInit()
+		  var bootstrap = document.createElement('script')
+		  bootstrap.type = "module"
+		  bootstrap.src = "/assets/index-326e2831.js"
+		  var head = document.getElementsByTagName('head')[0]
+		  head.appendChild(bootstrap);
+		  function scriptReadyCheck() {
+			  if (window.servers == undefined) {
+				  // Wait
+				  setTimeout(scriptReadyCheck, 5)
+			  } else {
+				  // Call inited
+		          servers.sentinelInit()
+			  }
+		  }
+		  scriptReadyCheck()
 	  }
 </script>
 

@@ -65,29 +65,29 @@ dependencies {
 	implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.0'	
 	implementation group: 'org.apache.commons', name: 'commons-compress', version: '1.21'
 	
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-swing', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-swing', version: '23-ea+3', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-web', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-web', version: '23-ea+3', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-controls', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-controls', version: '23-ea+3', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-base', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-base', version: '23-ea+3', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-graphics', version: '23-ea+3', classifier: 'mac'
 	
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'linux'
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'win'
-	implementation group: 'org.openjfx', name: 'javafx-media', version: '22-ea+16', classifier: 'mac'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '23-ea+3', classifier: 'linux'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '23-ea+3', classifier: 'win'
+	implementation group: 'org.openjfx', name: 'javafx-media', version: '23-ea+3', classifier: 'mac'
 	
 	implementation group: 'javax.activation', name: 'activation', version: '1.1.1'
 }

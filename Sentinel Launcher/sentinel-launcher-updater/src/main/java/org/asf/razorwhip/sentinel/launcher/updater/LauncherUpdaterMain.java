@@ -1144,19 +1144,123 @@ public class LauncherUpdaterMain {
 					frmLauncher.setVisible(true);
 
 					// Download zip
+					boolean validPkg = true;
 					File tmpOut = new File(dir, "launcher.zip");
 					downloadFile(launcherURL, tmpOut, progressBar);
 
-					// Extract zip
+					// Check signing
 					try {
-						log("Extracting launcher update...");
 						SwingUtilities.invokeAndWait(() -> {
 							progressBar.setMaximum(100);
 							progressBar.setValue(0);
 						});
 					} catch (InvocationTargetException | InterruptedException e) {
 					}
-					unZip(tmpOut, new File(dir, "launcher"), progressBar);
+					File pubKey = new File(dir, "updatepublickey.pem");
+					if (pubKey.exists()) {
+						// Verify signature
+						log("Verifying signature...");
+						if (!PackageSignatureUtils.verifyPackageSignature(tmpOut, pubKey)) {
+							// Invalid
+							tmpOut.delete();
+
+							// Invalid
+							validPkg = false;
+
+							// Check state of current launcher data
+							if (!new File(new File(dir, "launcher"), "startup.json").exists()) {
+								// Error
+								JOptionPane.showMessageDialog(null,
+										"The update file that was downloaded could not be verified!\n" //
+												+ "\n" //
+												+ "To protect your device, the launcher update software has rejected the update!\n"
+												+ "Please contact support, it is possible that something is interfering with the launcher.\n" //
+												+ "\n" //
+												+ "Unable to launch, the launcher requires an update and the downloaded data is not compatible!" //
+												+ "\n" //
+												+ "\n" //
+												+ "What can cause this: it is possible there is a form of launcher takeover attack being executed\n" //
+												+ "and to prevent that there are signature checks in place for launcher update data. However there\n" //
+												+ "is also a chance that the keys to verify the signature of the launcher update payload have changed,\n" //
+												+ "it is recommended to contact support asking if there is a manual update required." //
+										, "Signature Error", JOptionPane.ERROR_MESSAGE);
+								System.exit(1);
+								return;
+							} else {
+								// Warn
+								JOptionPane.showMessageDialog(null,
+										"The update file that was downloaded could not be verified!\n" //
+												+ "\n" //
+												+ "To protect your device, the launcher update software has rejected the update!\n"
+												+ "Please contact support, it is possible that something is interfering with the launcher.\n" //
+												+ "\n" //
+												+ "\n" //
+												+ "What can cause this: it is possible there is a form of launcher takeover attack being executed\n" //
+												+ "and to prevent that there are signature checks in place for launcher update data. However there\n" //
+												+ "is also a chance that the keys to verify the signature of the launcher update payload have changed,\n" //
+												+ "it is recommended to contact support asking if there is a manual update required.\n" //
+												+ "\n" //
+												+ "Proceeding with launcher version " + currentVersion,
+										"Signature Error", JOptionPane.WARNING_MESSAGE);
+							}
+						}
+					} else {
+						// Check signed
+						if (PackageSignatureUtils.isPackageSigned(tmpOut)) {
+							// Invalid
+							tmpOut.delete();
+
+							// Invalid
+							validPkg = false;
+
+							// Check state of current launcher data
+							if (!new File(new File(dir, "launcher"), "startup.json").exists()) {
+								// Error
+								JOptionPane.showMessageDialog(null,
+										"The update file that was downloaded was signed however this copy of the launcher\n" //
+												+ "is not configured for signature verification! Please contact support.\n" //
+												+ "\n" //
+												+ "Unable to launch, the launcher requires an update and the downloaded data is not compatible!" //
+												+ "\n" //
+												+ "\n" //
+												+ "What can cause this: outdated launcher update software is the likeliest cause. It is very likely that the\n"
+												+ "team has introduced additional security to prevent launcher takeover attacks. It is recommended to contact\n"
+												+ "support to ask if a manual update is required.",
+										"Signature Error", JOptionPane.ERROR_MESSAGE);
+								System.exit(1);
+								return;
+							} else {
+								// Warn
+								JOptionPane.showMessageDialog(null,
+										"The update file that was downloaded was signed however this copy of the launcher\n" //
+												+ "is not configured for signature verification! Please contact support if you believe this is an error.\n" //
+												+ "\n" //
+												+ "The launcher will proceed with the previously installed version to protect your data.\n" //
+												+ "\n" //
+												+ "\n" //
+												+ "What can cause this: outdated launcher update software is the likeliest cause. It is very likely that the\n"
+												+ "team has introduced additional security to prevent launcher takeover attacks. It is recommended to contact\n"
+												+ "support to ask if a manual update is required.\n" //
+												+ "\n" //
+												+ "Proceeding with launcher version " + currentVersion,
+										"Signature Error", JOptionPane.WARNING_MESSAGE);
+							}
+						}
+					}
+
+					// Extract
+					if (validPkg) {
+						// Extract zip
+						try {
+							log("Extracting launcher update...");
+							SwingUtilities.invokeAndWait(() -> {
+								progressBar.setMaximum(100);
+								progressBar.setValue(0);
+							});
+						} catch (InvocationTargetException | InterruptedException e) {
+						}
+						unZip(tmpOut, new File(dir, "launcher"), progressBar);
+					}
 				}
 
 				// Prepare to start launcher
@@ -1184,7 +1288,6 @@ public class LauncherUpdaterMain {
 				for (String arg : args)
 					cmd.add(arg);
 				// TODO: implement bg image support
-				// FIXME: ZERA YOU HAVE TO PUBLISH THESE INSTALLERS (AND NON-AUTO-UPDATE ONES)
 
 				// Detect OS
 				int os;
