@@ -1696,8 +1696,7 @@ public class VersionManagerWindow extends JDialog {
 							};
 							f.addChoosableFileFilter(filter);
 							f.setFileFilter(filter);
-							f.showOpenDialog(VersionManagerWindow.this);
-							if (f.getSelectedFile() == null) {
+							if (f.showOpenDialog(VersionManagerWindow.this) != JFileChooser.APPROVE_OPTION) {
 								// Re-enable
 								SwingUtilities.invokeLater(() -> {
 									btnOk.setEnabled(true);
@@ -1721,6 +1720,7 @@ public class VersionManagerWindow extends JDialog {
 										lblThanks.setText("Assets kindly mirrored by "
 												+ lastArchive.archiveDef.get("thanksTo").getAsString());
 								});
+								return;
 							}
 
 							// Read file

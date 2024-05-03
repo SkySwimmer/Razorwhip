@@ -866,8 +866,13 @@ public class PayloadManager {
 					// Add
 					PayloadDependency conflict = new PayloadDependency();
 					conflict.id = dep.get("id").getAsString();
-					if (dep.has("version"))
+					if (dep.has("version")) {
 						conflict.version = dep.get("version").getAsString();
+						if (dep.has("versionString"))
+							conflict.versionString = dep.get("versionString").getAsString();
+						else
+							conflict.versionString = conflict.version;
+					}
 					conflicts.add(conflict);
 				}
 			}
@@ -937,13 +942,21 @@ public class PayloadManager {
 					// Check version
 					if (LauncherUtils.verifyVersionRequirement(dependency.version, dep.version)) {
 						// Success
-						if (!loadPayload(payloads.get(dep.id), payloadLoadOrder, payloads))
-							return false; // Error while loading dependency
+						if (!loadPayload(payloads.get(dep.id), payloadLoadOrder, payloads)) {
+							JOptionPane.showMessageDialog(null,
+									"There were dependency errors, the payload manager will be opened.",
+									"Dependency error", JOptionPane.ERROR_MESSAGE);
+							return false;
+						}
 					}
 				} else {
 					// Success
-					if (!loadPayload(payloads.get(dep.id), payloadLoadOrder, payloads))
-						return false; // Error while loading dependency
+					if (!loadPayload(payloads.get(dep.id), payloadLoadOrder, payloads)) {
+						JOptionPane.showMessageDialog(null,
+								"There were dependency errors, the payload manager will be opened.", "Dependency error",
+								JOptionPane.ERROR_MESSAGE);
+						return false;
+					}
 				}
 			}
 		}
