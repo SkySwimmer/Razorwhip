@@ -120,7 +120,7 @@ public class PackageSignatureUtils {
 				byte[] key = pemDecode(Files.readString(publicKeyFile.toPath()));
 
 				// Copy zip
-				File zipTemp = File.createTempFile("sentinelsigverif-", "-" + packageFile.getPath() + ".vtp");
+				File zipTemp = File.createTempFile("sentinelsigverif-", "-" + packageFile.getName() + ".vtp");
 				zipTemp.deleteOnExit();
 				try {
 					// Transfer package without signature
