@@ -5,6 +5,3 @@ Game-Descriptor-Version: 1.0.0.A20
 
 # Assets
 Asset-Information-Root-URL: sgd://asset-information/
-
-# Updating
-Update-List-URL: https://sentinel.projectedge.net/descriptors/sod/updates.json
