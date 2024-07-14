@@ -454,10 +454,44 @@ public class PayloadManagerWindow extends JDialog {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
+					ArrayList<PayloadEntry> entries = new ArrayList<PayloadEntry>(payloads.values());
+					if (System.getProperty("debugPayloadFiles") != null
+							|| System.getProperty("debugPayloadHintClasses") != null) {
+						// Load debug files
+						if (System.getProperty("debugPayloadDirectories") != null) {
+							String[] files = System.getProperty("debugPayloadDirectories").split(File.pathSeparator);
+							for (String file : files) {
+								// Load
+								File spf = new File(file);
+								PayloadEntry en = loadPayloadData(spf);
+								if (en != null)
+									entries.add(en);
+							}
+						}
+
+						// Load debug classes
+						if (System.getProperty("debugPayloadHintClasses") != null) {
+							String[] classes = System.getProperty("debugPayloadHintClasses").split(":");
+							for (String clsN : classes) {
+								try {
+									Class<?> cls = Class.forName(clsN);
+									URL loc = cls.getProtectionDomain().getCodeSource().getLocation();
+									File f = new File(loc.toURI());
+
+									// Load payload
+									PayloadEntry en = loadPayloadData(f);
+									if (en != null)
+										entries.add(en);
+								} catch (Exception e2) {
+								}
+							}
+						}
+					}
+
 					while (true) {
 						// Verify payloads
 						boolean allPassed = true;
-						for (PayloadEntry payload : payloads.values()) {
+						for (PayloadEntry payload : entries) {
 							if (!payload.enabled)
 								continue;
 
@@ -580,36 +614,30 @@ public class PayloadManagerWindow extends JDialog {
 
 							// Check optional dependencies
 							for (PayloadDependency dep : payload.optionalDependencies) {
-								while (true) {
-									if (payloads.containsKey(dep.id)) {
-										// Check version if needed
-										PayloadEntry dependency = payloads.get(dep.id);
-										if (dep.version != null) {
-											// Check version
-											if (!LauncherUtils.verifyVersionRequirement(dependency.version,
-													dep.version)) {
-												// Failed
-												allPassed = false;
+								if (payloads.containsKey(dep.id)) {
+									// Check version if needed
+									PayloadEntry dependency = payloads.get(dep.id);
+									if (dep.version != null) {
+										// Check version
+										if (!LauncherUtils.verifyVersionRequirement(dependency.version, dep.version)) {
+											// Failed
+											allPassed = false;
 
-												// Error
-												JOptionPane.showMessageDialog(PayloadManagerWindow.this,
-														"Payload dependency mismatch!" //
-																+ "\n" //
-																+ "\nPayload ID: " + payload.id //
-																+ "\nPayload file: " + payload.file //
-																+ "\n" //
-																+ "\nFailed dependency: " + dep.id + "\n" //
-																+ "\nExpected version: " + dep.versionString //
-																+ "\nCurrent version: " + dependency.version //
-																+ "\n" //
-																+ "\nUnable to save at this time, please resolve these issues.",
-														"Dependency mismatch", JOptionPane.ERROR_MESSAGE);
-												return;
-											}
+											// Error
+											JOptionPane.showMessageDialog(PayloadManagerWindow.this,
+													"Payload dependency mismatch!" //
+															+ "\n" //
+															+ "\nPayload ID: " + payload.id //
+															+ "\nPayload file: " + payload.file //
+															+ "\n" //
+															+ "\nFailed dependency: " + dep.id + "\n" //
+															+ "\nExpected version: " + dep.versionString //
+															+ "\nCurrent version: " + dependency.version //
+															+ "\n" //
+															+ "\nUnable to save at this time, please resolve these issues.",
+													"Dependency mismatch", JOptionPane.ERROR_MESSAGE);
+											return;
 										}
-
-										// Success
-										break;
 									}
 								}
 							}
@@ -797,6 +825,129 @@ public class PayloadManagerWindow extends JDialog {
 				dispose();
 			}
 		});
+	}
+
+	private PayloadEntry loadPayloadData(File spf) {
+		// Read descriptor
+		Map<String, String> descriptor;
+		try {
+			descriptor = LauncherUtils.parseProperties(getStringFrom(spf, "payloadinfo"));
+		} catch (IOException e) {
+			return null;
+		}
+
+		// Verify descriptor validity
+		String type = "Full";
+		if (descriptor.containsKey("Type"))
+			type = descriptor.get("Type");
+		type = type.toLowerCase();
+		if (!type.equals("resource") && !type.equals("full")) {
+			return null;
+		}
+		if (descriptor.containsKey("Game-ID")) {
+			// Check
+			if (!descriptor.get("Game-ID").equalsIgnoreCase(LauncherUtils.getGameID())) {
+				return null;
+			}
+		}
+		if (descriptor.containsKey("Software-ID")) {
+			// Check
+			if (!descriptor.get("Software-ID").equalsIgnoreCase(LauncherUtils.getSoftwareID())) {
+				return null;
+			}
+		}
+
+		// Add
+		PayloadEntry payload = new PayloadEntry();
+		payload.id = spf.getName();
+		payload.name = spf.getName();
+		payload.version = "default";
+		payload.file = spf.getName();
+		payload.enabled = false;
+
+		// Set type
+		payload.type = type.equals("resource") ? PayloadType.RESOURCE : PayloadType.PAYLOAD;
+
+		// Load settings
+		if (descriptor.containsKey("Payload-ID")) {
+			payload.id = descriptor.get("Payload-ID");
+			payload.name = payload.id;
+		}
+		if (descriptor.containsKey("Payload-Name"))
+			payload.name = descriptor.get("Payload-Name");
+		if (descriptor.containsKey("Payload-Version"))
+			payload.version = descriptor.get("Payload-Version");
+
+		// Load dependencies
+		payload.dependencies = new PayloadDependency[0];
+		payload.conflictsWith = new PayloadDependency[0];
+		try {
+			JsonObject depsConfig = JsonParser.parseString(getStringFrom(spf, "dependencies.json")).getAsJsonObject();
+
+			// Prepare lists
+			ArrayList<PayloadDependency> deps = new ArrayList<PayloadDependency>();
+			ArrayList<PayloadDependency> optDeps = new ArrayList<PayloadDependency>();
+			ArrayList<PayloadDependency> conflicts = new ArrayList<PayloadDependency>();
+
+			// Read from config
+			if (depsConfig.has("dependencies")) {
+				for (JsonElement ele : depsConfig.get("dependencies").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency dependency = new PayloadDependency();
+					dependency.id = dep.get("id").getAsString();
+					if (dep.has("version")) {
+						dependency.version = dep.get("version").getAsString();
+						if (dep.has("versionString"))
+							dependency.versionString = dep.get("versionString").getAsString();
+						else
+							dependency.versionString = dependency.version;
+					}
+					if (dep.has("url"))
+						dependency.url = dep.get("url").getAsString();
+					deps.add(dependency);
+				}
+			}
+			if (depsConfig.has("optionalDependencies")) {
+				for (JsonElement ele : depsConfig.get("optionalDependencies").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency dependency = new PayloadDependency();
+					dependency.id = dep.get("id").getAsString();
+					if (dep.has("version")) {
+						dependency.version = dep.get("version").getAsString();
+						if (dep.has("versionString"))
+							dependency.versionString = dep.get("versionString").getAsString();
+						else
+							dependency.versionString = dependency.version;
+					}
+					if (dep.has("url"))
+						dependency.url = dep.get("url").getAsString();
+					optDeps.add(dependency);
+				}
+			}
+			if (depsConfig.has("conflicts")) {
+				for (JsonElement ele : depsConfig.get("conflicts").getAsJsonArray()) {
+					JsonObject dep = ele.getAsJsonObject();
+
+					// Add
+					PayloadDependency conflict = new PayloadDependency();
+					conflict.id = dep.get("id").getAsString();
+					if (dep.has("version"))
+						conflict.version = dep.get("version").getAsString();
+					conflicts.add(conflict);
+				}
+			}
+
+			// Apply
+			payload.dependencies = deps.toArray(t -> new PayloadDependency[t]);
+			payload.optionalDependencies = optDeps.toArray(t -> new PayloadDependency[t]);
+			payload.conflictsWith = conflicts.toArray(t -> new PayloadDependency[t]);
+		} catch (IOException e) {
+		}
+		return payload;
 	}
 
 	protected boolean importPayload(File spf, boolean throwError) throws IOException {
