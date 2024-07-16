@@ -1,4 +1,6 @@
 #!/bin/bash
+export PATH="$PATH:/opt/bin:/opt/homebrew/bin"
+
 chmod +x "$0"
 cd "$(dirname "$0")"
 export SENTINEL_LAUNCHER_PATH="$PWD/$(basename "$0")"
