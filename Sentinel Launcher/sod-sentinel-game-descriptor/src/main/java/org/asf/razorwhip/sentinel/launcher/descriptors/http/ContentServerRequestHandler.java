@@ -150,6 +150,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 									url += asset.assetHash + ".sa";
 							} else
 								url += assetPath;
+							// FIXME: flaw: no hash check being done
 							for (String line : LauncherUtils.downloadString(url).split("\n")) {
 								if (!line.isBlank() && !line.startsWith("#") && line.contains("=")) {
 									String k = line.substring(0, line.indexOf("="));
