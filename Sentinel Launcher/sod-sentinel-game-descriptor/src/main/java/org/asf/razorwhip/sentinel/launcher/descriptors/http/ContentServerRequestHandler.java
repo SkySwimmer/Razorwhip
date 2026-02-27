@@ -19,9 +19,9 @@ import javax.activation.FileTypeMap;
 import javax.activation.MimetypesFileTypeMap;
 
 import org.asf.connective.RemoteClient;
+import org.asf.connective.handlers.HttpPushHandler;
 import org.asf.connective.objects.HttpRequest;
 import org.asf.connective.objects.HttpResponse;
-import org.asf.connective.processors.HttpPushProcessor;
 import org.asf.razorwhip.sentinel.launcher.AssetManager;
 import org.asf.razorwhip.sentinel.launcher.LauncherUtils;
 import org.asf.razorwhip.sentinel.launcher.assets.AssetInformation;
@@ -31,7 +31,7 @@ import org.asf.razorwhip.sentinel.launcher.descriptors.util.TripleDesUtil;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
-public class ContentServerRequestHandler extends HttpPushProcessor {
+public class ContentServerRequestHandler extends HttpPushHandler {
 
 	private boolean encryptedInput;
 
@@ -212,7 +212,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 	}
 
 	@Override
-	public HttpPushProcessor createNewInstance() {
+	public HttpPushHandler createNewInstance() {
 		return new ContentServerRequestHandler(hashed, assets, path, preProcessors, fallbackAssetServerEndpoint,
 				overrideDir, encryptedDocs, encryptedInput, overriddenAssetFiles);
 	}
@@ -233,7 +233,7 @@ public class ContentServerRequestHandler extends HttpPushProcessor {
 	}
 
 	@Override
-	public void process(String path, String method, RemoteClient client, String contentType) throws IOException {
+	public void handle(String path, String method, RemoteClient client, String contentType) throws IOException {
 		try {
 			// Compute subpath
 			path = sanitizePath(path.substring(this.path.length()));

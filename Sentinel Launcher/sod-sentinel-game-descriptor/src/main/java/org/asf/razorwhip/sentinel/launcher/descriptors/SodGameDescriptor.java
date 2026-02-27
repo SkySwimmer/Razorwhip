@@ -424,7 +424,7 @@ public class SodGameDescriptor implements IGameDescriptor {
 			}
 
 			// Register
-			server.registerProcessor(new ContentServerRequestHandler(archiveDef, descriptorDef, assets, "/",
+			server.registerHandler(new ContentServerRequestHandler(archiveDef, descriptorDef, assets, "/",
 					new IPreProcessor[] {
 
 							new ApplicationManifestPreProcessor(descriptorDef),

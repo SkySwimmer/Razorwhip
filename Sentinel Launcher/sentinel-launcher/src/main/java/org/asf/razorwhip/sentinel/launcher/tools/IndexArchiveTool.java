@@ -3,6 +3,7 @@ package org.asf.razorwhip.sentinel.launcher.tools;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.stream.Stream;
 
 public class IndexArchiveTool {
 
@@ -28,10 +29,12 @@ public class IndexArchiveTool {
 
 	private static void indexFolder(File source, FileOutputStream outputFile, String prefix) throws IOException {
 		System.out.println("Indexing /" + prefix);
-		for (File dir : source.listFiles(t -> t.isDirectory())) {
+		for (File dir : Stream.of(source.listFiles(t -> t.isDirectory()))
+				.sorted((t1, t2) -> t1.getName().compareTo(t2.getName())).toArray(t -> new File[t])) {
 			indexFolder(dir, outputFile, prefix + dir.getName() + "/");
 		}
-		for (File f : source.listFiles(t -> !t.isDirectory())) {
+		for (File f : Stream.of(source.listFiles(t -> !t.isDirectory()))
+				.sorted((t1, t2) -> t1.getName().compareTo(t2.getName())).toArray(t -> new File[t])) {
 			String name = prefix + f.getName();
 			name = name.replace(";", ";sl;").replace(":", ";cl;").replace(" ", ";sp;");
 			outputFile.write((name + ": " + f.length() + "\n").getBytes("UTF-8"));

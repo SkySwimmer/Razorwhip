@@ -473,6 +473,11 @@ public class LauncherUtils {
 	 * @param dir Directory to download
 	 */
 	public static void deleteDir(File dir) {
+		if (Files.isSymbolicLink(dir.toPath())) {
+			// Skip symlink
+			dir.delete();
+			return;
+		}
 		if (!dir.exists())
 			return;
 		for (File subDir : dir.listFiles(t -> t.isDirectory())) {
